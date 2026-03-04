@@ -1,4 +1,5 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
+import { useRouter } from "expo-router";
 import {
     View,
     Text, 
@@ -6,13 +7,13 @@ import {
     ScrollView,
     TouchableOpacity,
     FlatList,
+    Pressable,
     Animated,
     ImageBackground,
 } from 'react-native';
 
 // for now I am hardcoding the habits to get a glimpse of how it would look like
 // ALPHA RELEASE - no features
-
 const habits = [
     {id: "1", title: "Fitness Habit", progress: 0.4},
     {id: "2", title: "Nutrition Habit", progress: 0.7},
@@ -20,21 +21,20 @@ const habits = [
 ];
 
 export default function HomeScreen() {
-    const glow = useRef(new Animated.Value(0)).current; // when you click on the switch to go from public to private, it glows for sec
 
-    const triggerGlow = () => {
-        Animated.sequence([
-            Animated.timing(glow, {
-                toValue: 0.6,
-                duration: 250,
-                useNativeDriver: false,
-            }),
-            Animated.timing(glow, {
-                toValue: 0,
-                duration: 700,
-                useNativeDriver: false,
-            }),
-        ]).start();
+    const [open, setOpen] = useState(false);
+    const animation = useRef(new Animated.Value(0)).current;
+    const router = useRouter();
+
+    // the toggle option when adding a habit
+    const toggleMenu = () => {
+        const toValue = open ? 0 : 1;
+        Animated.spring(animation, {
+            toValue,
+            useNativeDriver: true,
+        }).start();
+
+        setOpen(!open);
     };
 
     return (
@@ -43,21 +43,19 @@ export default function HomeScreen() {
         style={styles.background}
         imageStyle={{ opacity: 0.08}} // want the leaves to be a bit transparent on the screen
         >
-            <Animated.View
+            <View
                 style={[
                     styles.overlay, 
                     {
                         shadowColor: "#9BE7A0",
-                        shadowOpacity: glow,
                         shadowRadius: 40,
                     },
                 ]}
             >
-                <ScrollView showsVerticalScrollIndicator={false}>
+                <ScrollView 
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 120 }}>
                     <View style={styles.topNav}>
-                        <TouchableOpacity onPress={triggerGlow}>
-                            <View style={styles.toggle}/>
-                        </TouchableOpacity>
 
                         <Text style={styles.navText}>Calendar</Text>
                         <Text style={styles.navText}>Settings</Text>
@@ -102,6 +100,47 @@ export default function HomeScreen() {
                         )}
                     />
 
+                    <View style={styles.fabWrapper}>
+                        {open && (
+                            <Animated.View
+                                style={[
+                                    styles.popupContainer,
+                                    {
+                                        opacity: animation,
+                                        transform: [
+                                            {
+                                                translateY: animation.interpolate({
+                                                    inputRange: [0, 1],
+                                                    outputRange: [20, 0],
+                                                }),
+                                            },
+                                        ],
+                                    },
+                                ]}
+                            >
+
+                                <Pressable 
+                                style={styles.popupButton}
+                                onPress = {() => router.push("/add-ai-habit")}>
+                                    <Text style={styles.popupText}>Add a habit with AI</Text>
+                                </Pressable>
+
+                                <Pressable 
+                                style={styles.popupButton}
+                                onPress = {() => router.push("/add-custom-habit")}>
+                                    <Text style={styles.popupText}>My Own Habit</Text>
+                                </Pressable>
+
+                            </Animated.View>
+                        )}
+                        
+
+                        <TouchableOpacity style={styles.fab} onPress={toggleMenu}>
+                            <Text style={styles.fabText}>+</Text>
+                        </TouchableOpacity>
+
+                    </View>
+
                     <Text style={styles.sectionTitle}>Friends</Text>
 
                     <View style={styles.friendContainer}>
@@ -113,22 +152,26 @@ export default function HomeScreen() {
 
                     <View style={styles.friendContainer}>
                         <Text style={styles.friendText}>Friend 2</Text>
-                        <View style={[styles.progressFill, { width: "70%" }]} />
+                        <View style={styles.progressBackground}>
+                            <View style={[styles.progressFill, { width: "70%" }]} />
+                        </View>
                     </View>
 
-                    <View style={styles.bottomNav}>
-                        <TouchableOpacity style={styles.bottomButton}>
-                            <Text style={styles.bottomButtonText}>Maps</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.bottomButton}>
-                            <Text style={styles.bottomButtonText}>Chat</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.bottomButton}>
-                            <Text style={styles.bottomButtonText}>Wrapped</Text>
-                        </TouchableOpacity>
-                    </View>
                 </ScrollView>
-            </Animated.View>
+
+
+                <View style={styles.bottomNav}>
+                    <TouchableOpacity style={styles.bottomButton}>
+                        <Text style={styles.bottomButtonText}>Maps</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.bottomButton}>
+                        <Text style={styles.bottomButtonText}>Chat</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.bottomButton}>
+                        <Text style={styles.bottomButtonText}>Wrapped</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
         </ImageBackground>
     );
 }
@@ -148,12 +191,6 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         alignItems: "center",
         marginBottom: 20,
-    },
-    toggle: {
-        width: 55,
-        height: 28,
-        borderRadius: 20,
-        backgroundColor: "#A8D5BA",
     },
     navText: {
         fontSize: 16,
@@ -186,13 +223,13 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: "600",
         marginTop: 30,
-        marginBottom: 10,
+        marginBottom: 20,
         color: "#355E3B",
     },
     habitCard: {
         width: 280,
         backgroundColor: "#2E6F40", // darker eco green
-        borderRadius: 16,
+        borderRadius: 18,
         padding: 20,
         marginRight: 15,
     },
@@ -228,34 +265,82 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         paddingHorizontal: 20,
         backgroundColor: "#B7E4C7",
-        borderRadius: 8,
+        borderRadius: 10,
     },
     buttonText: {
         color: "#1B4332",
         fontWeight: "500",
     },
     friendContainer: {
-        marginBottom: 15,
+        marginBottom: 20,
     },
     friendText: {
         color: "#355E3B",
-        marginBottom: 5,
+        marginBottom: 6,
+        fontWeight: "500",
     },
     bottomNav: {
+        position: "absolute",
+        bottom: 25,
+        left: 20,
+        right: 20,
         flexDirection: "row",
-        justifyContent: "space-around",
-        marginTop: 30,
-        marginBottom: 40,
+        justifyContent: "space-between",
+        backgroundColor: "rgba(234,246,232,0.95)",
+        paddingVertical: 10,
+        borderRadius: 20,
     },
     bottomButton: {
+        flex: 1, 
+        marginHorizontal: 5,
         backgroundColor: "#74C69D",
         paddingVertical: 15,
         paddingHorizontal: 25,
         borderRadius: 14,
+        alignItems: "center",
     },
     bottomButtonText: {
         color: "white",
         fontWeight: "600",
+    },
+    fabWrapper: {
+        alignItems: "flex-end",
+        marginTop: 10,
+        marginBottom: 20,
+    },
+    fab: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: "#2E6F40",
+        justifyContent: "center",
+        alignItems: "center",
+        elevation: 4,
+    },
+    fabText: {
+        color: "white",
+        fontSize: 28,
+        fontWeight: "bold",
+    },
+    popupContainer: {
+        marginBottom: 10,
+        backgroundColor: "#74C69D",
+        borderRadius: 16,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        width: 200,
+        shadowColor: "#000",
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+    },
+    popupButton: {
+        paddingVertical: 10,
+    },
+    popupText: {
+        color: "white",
+        fontWeight: "600",
+        fontSize: 14,
     },
 });
 
