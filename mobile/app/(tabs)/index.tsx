@@ -1,5 +1,5 @@
-import HomeScreen from './home';
+import ProfileScreen from './profile';
 
 export default function Index() {
-  return <HomeScreen />;
+  return <ProfileScreen />;
 }
