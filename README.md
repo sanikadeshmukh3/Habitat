@@ -30,20 +30,31 @@ _Note: If you have already installed PostgreSQL but ``psql --version`` is not ve
 If any of these are not verified, please install the necessary packages and verify again.
 
 Push changes first
+</br>
 Git add .
+</br>
 Git commit -m <message>
+</br>
 Git push
 
 To merge into main in terminal
+</br>
 Git checkout main
+</br>
 Git merge <your-branch-name> 
+</br>
 Fix merge conflicts if necessary
+</br>
 If you get a funny looking prompt that tells you to write a message just write a message and do Escape → “:q!” without quotes
 
 
 To merge from main to your branch in terminal
+</br>
 (Starting in main branch)
 Git pull
+</br>
 Git checkout <your-branch-name>
+</br>
 Git merge main
+</br>
 Git push
