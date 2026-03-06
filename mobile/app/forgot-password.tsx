@@ -2,10 +2,10 @@ import { View, TouchableOpacity, Button, TextInput, Text} from "react-native";
 import { router } from "expo-router";
 
 
-export default function Maps() {
+export default function ForgotPassword() {
     
-    const handleMaps = () => {
-        console.log("Maps.");
+    const handleforgotPassword = () => {
+        console.log("Forgot Password.");
     };
 
 return (
@@ -14,11 +14,11 @@ return (
 
 <TextInput placeholder="Email" style={{borderWidth: 1, padding: 10, marginBottom: 10}}/>
 
-<Button title="Contact" onPress={handleMaps} />
+<Button title="Send Code" onPress={handleforgotPassword} />
     
-{/* <TouchableOpacity style={{ marginTop: 20}} onPress={() => router.push("/login")}>
+<TouchableOpacity style={{ marginTop: 20}} onPress={() => router.push("/login")}>
     <Text>Back</Text>
-</TouchableOpacity> */}
+</TouchableOpacity>
     
 </View>
 );

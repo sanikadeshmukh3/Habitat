@@ -1,5 +1,5 @@
-import ProfileScreen from './profile';
+import { Redirect }from "expo-router";
 
 export default function Index() {
-  return <ProfileScreen />;
+  return <Redirect href="/login" />;
 }
