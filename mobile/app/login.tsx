@@ -12,7 +12,7 @@ export default function Login() {
     const handleLogin = async (): Promise<void> => {
         try {
           const response: Response = await fetch(
-            "http://10.75.156.249:3000/login",
+            "http://10.75.156.249:3000/login",  //use your computer's IP address
             {
               method: "POST",
               headers: {
