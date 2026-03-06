@@ -1,145 +1,383 @@
-import React from "react";
+// recap.tsx
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
-  SafeAreaView,
+  Pressable,
   ScrollView,
-  TouchableOpacity,
-  Alert,
-} from "react-native";
+  FlatList,
+  Image,
+  ImageBackground,
+  ImageSourcePropType,
+  useWindowDimensions,
+  Platform,
+} from 'react-native';
 
-const HomeScreen: React.FC = () => {
-  const handlePress = () => {
-    Alert.alert("Button Pressed", "Backend call can go here 🚀");
-  };
+type WeekdayKey = 'Sun' | 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat';
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Your Habitat</Text>
-
-        <Text style={styles.subtitle}>
-          A recap of your health and habits this week.
-        </Text>
-        <Text>
-            This week, you were a...
-        </Text>
-        <Image
-          source={require("@/assets/images/android-icon-background.png")}
-            style={{ width: "100%", height: 200, marginBottom: 20 }}
-        />
-        {/* Horizontal, two-rows-per-column grid */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.horizontalScroll}
-        >
-          <View style={styles.columnsContainer}>
-            {/* Build columns of two cards each */}
-            {(() => {
-              const cards = [
-                { title: "Habit Score", text: "You can place dashboard content, stats, or API results here." },
-                { title: "Sleep Snapshot", text: "You can place dashboard content, stats, or API results here." },
-                { title: "Activity", text: "You can place dashboard content, stats, or API results here." },
-                { title: "Nutrition", text: "You can place dashboard content, stats, or API results here." },
-                { title: "Mood", text: "You can place dashboard content, stats, or API results here." },
-              ];
-
-              const cols: Array<typeof cards> = [];
-              for (let i = 0; i < cards.length; i += 2) {
-                cols.push(cards.slice(i, i + 2));
-              }
-
-              return cols.map((col, idx) => (
-                <View style={styles.column} key={idx}>
-                  {col.map((c, j) => (
-                    <View style={styles.card} key={j}>
-                      <Text style={styles.cardTitle}>{c.title}</Text>
-                      <Text style={styles.cardText}>{c.text}</Text>
-                    </View>
-                  ))}
-                </View>
-              ));
-            })()}
-          </View>
-        </ScrollView>
-
-        <TouchableOpacity style={styles.button} onPress={handlePress}>
-          <Text style={styles.buttonText}>Press Me</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
-  );
+type WeekdayItem = {
+  key: WeekdayKey;
+  dateNumber: number;
+  done: boolean;
+  isToday: boolean;
 };
 
-export default HomeScreen;
+export type SnapshotCard = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  body?: React.ReactNode; // graphs/components/etc.
+};
+
+export type AnimalRecap = {
+  imageUri?: string;
+  typeLabel?: string;
+};
+
+export type RecapScreenProps = {
+  userDisplayName: string;
+
+  /**
+   * Completion map for the current week, keyed by weekday.
+   * If you don’t have real data yet, you can omit it.
+   */
+  weeklyProgressDoneByDay?: Partial<Record<WeekdayKey, boolean>>;
+
+  animal?: AnimalRecap;
+
+  snapshotCards?: SnapshotCard[];
+
+  backgroundImage?: string;
+
+  onPressSettings?: () => void;
+  onPressHelp?: () => void;
+  onPressWeeklyChecklist?: () => void;
+  onPressHome?: () => void;
+
+  /** Optional override for testing */
+  now?: Date;
+};
+
+const WEEKDAY_ORDER: WeekdayKey[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function startOfWeekSunday(date: Date) {
+  const d = new Date(date);
+  const day = d.getDay(); // 0=Sun..6=Sat
+  d.setDate(d.getDate() - day);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function buildWeekItems(
+  now: Date,
+  doneByDay?: Partial<Record<WeekdayKey, boolean>>,
+): WeekdayItem[] {
+  const safeDoneByDay = doneByDay ?? {}; // ✅ prevents undefined crash
+
+  const todayIndex = now.getDay();
+  const sunday = startOfWeekSunday(now);
+
+  const items: WeekdayItem[] = [];
+  for (let i = 0; i < WEEKDAY_ORDER.length; i++) {
+    const date = new Date(sunday);
+    date.setDate(sunday.getDate() + i);
+
+    const key = WEEKDAY_ORDER[i];
+
+    items.push({
+      key,
+      dateNumber: date.getDate(),
+      done: Boolean(safeDoneByDay[key]),
+      isToday: i === todayIndex,
+    });
+  }
+
+  return items;
+}
+
+function DayChip({ item }: { item: WeekdayItem }) {
+  return (
+    <View style={styles.dayChip}>
+      <Text style={[styles.dateNumber, item.isToday && styles.dateNumberToday]}>
+        {item.dateNumber}
+      </Text>
+
+      <View style={[styles.circle, item.done && styles.circleDone, item.isToday && styles.circleToday]}>
+        {item.done && <Text style={styles.check}>✓</Text>}
+      </View>
+
+      <Text style={[styles.dayLabel, item.isToday && styles.dayLabelToday]}>{item.key}</Text>
+    </View>
+  );
+}
+
+function SnapshotCardView({ card }: { card: SnapshotCard }) {
+  return (
+    <View style={styles.snapshotCard}>
+      <View style={styles.snapshotHeader}>
+        <Text style={styles.snapshotTitle}>{card.title}</Text>
+        {card.subtitle ? <Text style={styles.snapshotSubtitle}>{card.subtitle}</Text> : null}
+      </View>
+
+      <View style={styles.snapshotBody}>
+        {card.body ?? <Text style={styles.snapshotBodyText}>{'<analytics component>'}</Text>}
+      </View>
+    </View>
+  );
+}
+
+export default function RecapScreen({
+  userDisplayName,
+  weeklyProgressDoneByDay,
+  animal,
+  snapshotCards,
+  backgroundImage,
+  onPressSettings,
+  onPressHelp,
+  onPressWeeklyChecklist,
+  onPressHome,
+  now: nowProp,
+}: RecapScreenProps) {
+  const now = nowProp ?? new Date();
+  const { width } = useWindowDimensions();
+
+  const weekItems = useMemo(
+    () => buildWeekItems(now, weeklyProgressDoneByDay),
+    // using nowProp time if provided; otherwise build once per mount + when data changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [nowProp?.getTime(), weeklyProgressDoneByDay],
+  );
+
+  const safeAnimal: AnimalRecap = animal ?? {};
+  const animalUri =
+    safeAnimal.imageUri ??
+    'https://images.unsplash.com/photo-1474511320723-9a56873867b5?auto=format&fit=crop&w=1200&q=80';
+
+  const animalType = safeAnimal.typeLabel ?? '<insert animal type>';
+
+  const safeCards: SnapshotCard[] =
+    snapshotCards ??
+    [
+      {
+        id: 'habit-score',
+        title: 'Habit Score',
+        subtitle: '—',
+        body: <Text style={styles.snapshotBodyText}>{'<score chart>'}</Text>,
+      },
+      { id: 'sleep', title: 'Sleep Snapshot', body: <Text style={styles.snapshotBodyText}>{'<sleep graph>'}</Text> },
+      { id: 'mood', title: 'Mood', body: <Text style={styles.snapshotBodyText}>{'<mood trend>'}</Text> },
+    ];
+
+  const homeButtonWidth = Math.min(360, Math.max(220, width - 48));
+
+  return (
+    <ImageBackground source={require('../../assets/images/habitat-gradient.png')} style={styles.background} resizeMode="cover">
+      <View style={styles.overlay} />
+
+      <ScrollView
+        contentContainerStyle={[
+          styles.container,
+          { paddingTop: Platform.OS === 'ios' ? 16 : 12 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Top bar */}
+        <View style={styles.topBar}>
+          <Pressable onPress={onPressSettings} style={styles.topButton} hitSlop={10}>
+            <Text style={styles.topIcon}>⚙</Text>
+          </Pressable>
+
+          <View style={styles.titleWrap}>
+            <Text numberOfLines={1} style={styles.title}>
+              {userDisplayName}’s Natural Habitat
+            </Text>
+            <Pressable onPress={onPressHelp} style={styles.helpPill} hitSlop={10}>
+              <Text style={styles.helpText}>i</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.rightSpacer} />
+        </View>
+
+        <Text style={styles.subtitle}>A recap of your health & habits this week.</Text>
+
+        {/* Week progress (Sun → today) */}
+        <View style={styles.weekRow}>
+          <FlatList
+            data={weekItems}
+            keyExtractor={(i) => i.key}
+            horizontal
+            renderItem={({ item }) => <DayChip item={item} />}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.weekList}
+          />
+        </View>
+
+        <Pressable onPress={onPressWeeklyChecklist} style={styles.morePill} hitSlop={10}>
+            <Text style={styles.moreText}>•••</Text>
+        </Pressable>
+
+        {/* Animal */}
+        <Text style={styles.sectionTitle}>This week, you were a…</Text>
+        <View style={styles.animalCard}>
+          <Image source={{ uri: animalUri }} style={styles.animalImage} />
+          <Text style={styles.animalType}>{animalType}</Text>
+        </View>
+
+        {/* Snapshots */}
+        <View style={styles.snapHeaderRow}>
+          <Text style={styles.sectionTitle}>Snapshots</Text>
+        </View>
+
+        <FlatList
+          horizontal
+          data={safeCards}
+          keyExtractor={(i) => i.id}
+          renderItem={({ item }) => <SnapshotCardView card={item} />}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.snapList}
+        />
+
+        {/* Home */}
+        <View style={styles.homeWrap}>
+          <Pressable style={[styles.homeButton, { width: homeButtonWidth }]} onPress={onPressHome}>
+            <Text style={styles.homeText}>Home</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </ImageBackground>
+  );
+}
+
+const CARD_WIDTH = 240;
 
 const styles = StyleSheet.create({
-  safeArea: {
+  background: { flex: 1 },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    // backgroundColor: 'rgba(255,255,255,0.2)', // light wash over background image
+  },
+
+  container: { paddingHorizontal: 18, paddingBottom: 28 },
+
+  topBar: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  topButton: { padding: 6 },
+  topIcon: { fontSize: 20, color: '#23503e' },
+
+  rightSpacer: { width: 38 },
+
+  titleWrap: {
     flex: 1,
-    backgroundColor: "#F5F6FA",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
   },
-  container: {
-    flexGrow: 1,
-    padding: 20,
-    alignItems: "stretch",
+  title: { fontSize: 18, fontWeight: '800', color: '#111827', maxWidth: '82%' },
+
+  helpPill: {
+    borderWidth: 1,
+    borderColor: 'rgba(17,24,39,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.75)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center",
-    marginBottom: 25,
-  },
-  horizontalScroll: {
-    paddingVertical: 4,
+  helpText: { fontWeight: '900', color: '#111827' },
+
+  subtitle: { marginTop: 10, marginBottom: 12, color: '#374151' },
+
+  weekRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  weekList: { gap: 12, paddingRight: 8 },
+
+  morePill: {
+    borderWidth: 1,
+    borderColor: 'rgba(17,24,39,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.75)',
     paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
   },
-  columnsContainer: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+  moreText: { fontSize: 16, fontWeight: '900', color: '#111827', letterSpacing: 2 },
+
+  dayChip: { alignItems: 'center', gap: 6, minWidth: 42 },
+  dateNumber: { fontSize: 12, fontWeight: '700', color: '#6B7280' },
+  dateNumberToday: { color: '#111827' },
+
+  circle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(17,24,39,0.25)',
+    backgroundColor: 'rgba(255,255,255,0.75)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  column: {
-    width: 300,
-    marginRight: 16,
-    justifyContent: "space-between",
+  circleDone: {
+    borderColor: 'rgba(16,185,129,0.50)',
+    backgroundColor: 'rgba(16,185,129,0.20)',
   },
-  card: {
-    width: "100%",
-    backgroundColor: "#FFFFFF",
-    padding: 20,
+  circleToday: {
+    borderColor: 'rgba(17,24,39,0.55)',
+  },
+  check: { color: '#065F46', fontWeight: '900' },
+
+  dayLabel: { fontSize: 12, color: '#4B5563', fontWeight: '700' },
+  dayLabelToday: { color: '#111827' },
+
+  sectionTitle: { fontSize: 16, fontWeight: '800', marginTop: 18, color: '#111827' },
+
+  animalCard: { marginTop: 10, gap: 10 },
+  animalImage: {
+    width: '100%',
+    height: 210,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+  },
+  animalType: { fontWeight: '800', color: '#111827' },
+
+  snapHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
+  hint: { color: '#6B7280', fontSize: 12, marginTop: 18 },
+
+  snapList: { gap: 12, paddingVertical: 10, paddingRight: 8 },
+
+  snapshotCard: {
+    width: CARD_WIDTH,
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.82)',
+    borderWidth: 1,
+    borderColor: 'rgba(17,24,39,0.10)',
+  },
+  snapshotHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  snapshotTitle: { fontWeight: '800', color: '#111827' },
+  snapshotSubtitle: { fontWeight: '900', color: '#111827' },
+
+  snapshotBody: {
+    marginTop: 10,
+    minHeight: 92,
     borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(17,24,39,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 8,
+  snapshotBodyText: { color: '#374151', fontWeight: '700' },
+
+  homeWrap: { alignItems: 'center', marginTop: 22 },
+  homeButton: {
+    backgroundColor: '#111827',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
   },
-  cardText: {
-    fontSize: 14,
-    color: "#444",
-  },
-  button: {
-    backgroundColor: "#3478F6",
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  homeText: { color: 'white', fontWeight: '900' },
 });
