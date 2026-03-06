@@ -53,7 +53,6 @@ export type RecapScreenProps = {
   onPressSettings?: () => void;
   onPressHelp?: () => void;
   onPressWeeklyChecklist?: () => void;
-  onPressHome?: () => void;
 
   /** Optional override for testing */
   now?: Date;
@@ -136,7 +135,6 @@ export default function RecapScreen({
   onPressSettings,
   onPressHelp,
   onPressWeeklyChecklist,
-  onPressHome,
   now: nowProp,
 }: RecapScreenProps) {
   const now = nowProp ?? new Date();
@@ -169,7 +167,6 @@ export default function RecapScreen({
       { id: 'mood', title: 'Mood', body: <Text style={styles.snapshotBodyText}>{'<mood trend>'}</Text> },
     ];
 
-  const homeButtonWidth = Math.min(360, Math.max(220, width - 48));
 
   return (
     <ImageBackground source={require('../../assets/images/habitat-gradient.png')} style={styles.background} resizeMode="cover">
@@ -190,7 +187,7 @@ export default function RecapScreen({
 
           <View style={styles.titleWrap}>
             <Text numberOfLines={1} style={styles.title}>
-              {userDisplayName}’s Natural Habitat
+              User’s Natural Habitat
             </Text>
             <Pressable onPress={onPressHelp} style={styles.helpPill} hitSlop={10}>
               <Text style={styles.helpText}>i</Text>
@@ -238,13 +235,6 @@ export default function RecapScreen({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.snapList}
         />
-
-        {/* Home */}
-        <View style={styles.homeWrap}>
-          <Pressable style={[styles.homeButton, { width: homeButtonWidth }]} onPress={onPressHome}>
-            <Text style={styles.homeText}>Home</Text>
-          </Pressable>
-        </View>
       </ScrollView>
     </ImageBackground>
   );
@@ -372,12 +362,4 @@ const styles = StyleSheet.create({
   },
   snapshotBodyText: { color: '#374151', fontWeight: '700' },
 
-  homeWrap: { alignItems: 'center', marginTop: 22 },
-  homeButton: {
-    backgroundColor: '#111827',
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  homeText: { color: 'white', fontWeight: '900' },
 });
