@@ -16,7 +16,7 @@ return (
 
 <Button title="Send Code" onPress={handleforgotPassword} />
     
-<TouchableOpacity style={{ marginTop: 20}} onPress={() => router.push("/login")}>
+<TouchableOpacity style={{ marginTop: 20}} onPress={() => router.push("./login")}>
     <Text>Back</Text>
 </TouchableOpacity>
     

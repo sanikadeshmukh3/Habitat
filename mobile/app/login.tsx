@@ -50,11 +50,11 @@ return (
 
 <Button title="Login" onPress={handleLogin} />
 
-<TouchableOpacity style={{ marginTop: 20}} onPress={() => router.push("/signup")}>
+<TouchableOpacity style={{ marginTop: 20}} onPress={() => router.push("./signup")}>
     <Text>Create Account</Text>
 </TouchableOpacity>
     
-<TouchableOpacity style={{ marginTop: 10}} onPress={() => router.push("/forgot-password")}>
+<TouchableOpacity style={{ marginTop: 10}} onPress={() => router.push("./forgot-password")}>
     <Text>Forgot Password?</Text>
 </TouchableOpacity>
     
