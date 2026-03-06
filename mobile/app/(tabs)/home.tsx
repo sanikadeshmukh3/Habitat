@@ -124,14 +124,14 @@ export default function HomeScreen() {
                 >
                   <Pressable
                     style={styles.popupButton}
-                    onPress={() => router.push("/add-ai-habit")}
+                    onPress={() => router.push("./add-ai-habit")}
                   >
                     <Text style={styles.popupText}>Add a habit with AI</Text>
                   </Pressable>
 
                   <Pressable
                     style={styles.popupButton}
-                    onPress={() => router.push("/add-custom-habit")}
+                    onPress={() => router.push("./add-custom-habit")}
                   >
                     <Text style={styles.popupText}>My Own Habit</Text>
                   </Pressable>
