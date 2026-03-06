@@ -28,3 +28,22 @@ pg_isready
 _Note: If you have already installed PostgreSQL but ``psql --version`` is not verified, you may not have PostgreSQL in your PATH._
 </br></br>
 If any of these are not verified, please install the necessary packages and verify again.
+
+Push changes first
+Git add .
+Git commit -m <message>
+Git push
+
+To merge into main in terminal
+Git checkout main
+Git merge <your-branch-name> 
+Fix merge conflicts if necessary
+If you get a funny looking prompt that tells you to write a message just write a message and do Escape → “:q!” without quotes
+
+
+To merge from main to your branch in terminal
+(Starting in main branch)
+Git pull
+Git checkout <your-branch-name>
+Git merge main
+Git push
