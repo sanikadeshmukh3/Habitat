@@ -9,6 +9,7 @@ export const unstable_settings = {
   initialRouteName: 'login',
 };
 
+// no tabs from the beginning
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
