@@ -25,6 +25,31 @@ export const Colors = {
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
   },
+
+  // --- Backgrounds ---
+  pageBg:        "#EAF6E8",   // very light green page background
+  cardBg:        "#FFFFFF",   // white cards / panels
+  inputBg:       "#F4FBF4",   // light-green input fields
+
+  // --- Brand greens ---
+  primaryGreen:  "#2E6F40",   // dark forest green  (buttons, headers)
+  midGreen:      "#4C9A67",   // medium green        (accents, borders)
+  lightGreen:    "#A8D5BA",   // soft green          (tags, toggles)
+  paleGreen:     "#CDECCD",   // very pale green     (points box, chips)
+
+  // --- Browns (text & borders) ---
+  darkBrown:     "#3B2A1A",   // darkest text
+  medBrown:      "#5C3D22",   // section titles, labels
+  lightBrown:    "#8B6344",   // secondary text, placeholders
+
+  // --- Utility ---
+  white:         "#FFFFFF",
+  danger:        "#C0392B",   // error / private badge
+  badgeGold:     "#D4AC0D",   // badge icon colour
+  overlay:       "rgba(0,0,0,0.35)",  // modal backdrop
+
+  // --- Borders ---
+  border:        "#C5E0C5",   // subtle dividers
 };
 
 export const Fonts = Platform.select({
@@ -51,3 +76,27 @@ export const Fonts = Platform.select({
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
+
+export const FontSize = {
+  xs:   11,
+  sm:   13,
+  md:   15,
+  lg:   18,
+  xl:   22,
+  xxl:  28,
+};
+
+export const Radius = {
+  sm:  8,
+  md:  14,
+  lg:  20,
+  full: 999,
+};
+
+export const Spacing = {
+  xs:  4,
+  sm:  8,
+  md:  16,
+  lg:  24,
+  xl:  36,
+};
