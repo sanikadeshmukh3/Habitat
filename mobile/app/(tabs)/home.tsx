@@ -66,8 +66,13 @@ export default function HomeScreen() {
             contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
           >
             <View style={styles.topNav}>
-              <Text style={styles.navText}>Calendar</Text>
-              <Text style={styles.navText}>Settings</Text>
+              <TouchableOpacity onPress={() => router.push("/calendar")}>
+                <Text style={styles.navText}>Calendar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => router.push("/settings")}>
+                <Text style={styles.navText}>Settings</Text>
+              </TouchableOpacity>
             </View>
 
             <Text style={styles.welcome}>Welcome!</Text>
@@ -124,14 +129,14 @@ export default function HomeScreen() {
                 >
                   <Pressable
                     style={styles.popupButton}
-                    onPress={() => router.push("./add-ai-habit")}
+                    onPress={() => router.push("/create-habit-ai")}
                   >
                     <Text style={styles.popupText}>Add a habit with AI</Text>
                   </Pressable>
 
                   <Pressable
                     style={styles.popupButton}
-                    onPress={() => router.push("./add-custom-habit")}
+                    onPress={() => router.push("/create-habit")}
                   >
                     <Text style={styles.popupText}>My Own Habit</Text>
                   </Pressable>
