@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import { Modal } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import {
   View,
   Text,
@@ -30,7 +31,6 @@ const habits: Habit[] = [
 
 export default function HomeScreen() {
   const [open, setOpen] = useState(false);
-  const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
   const animation = useRef(new Animated.Value(0)).current;
   const router = useRouter();
 
@@ -66,16 +66,38 @@ export default function HomeScreen() {
             contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
           >
             <View style={styles.topNav}>
-              <TouchableOpacity onPress={() => router.push("/calendar")}>
+              <TouchableOpacity
+                style={styles.navButton}
+                activeOpacity={0.7}
+                onPress={() => router.push("/calendar")}
+              >
                 <Text style={styles.navText}>Calendar</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={() => router.push("/settings")}>
+              <TouchableOpacity
+                style={styles.navButton}
+                activeOpacity={0.7}
+                onPress={() => router.push("/settings")}
+              >
                 <Text style={styles.navText}>Settings</Text>
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.welcome}>Welcome!</Text>
+            <View style={styles.welcomeRow}>
+              <Text style={styles.welcome}>Welcome!</Text>
+
+              <TouchableOpacity
+                onPress={() => router.push("/profile")}
+                style={styles.profileButton}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="person-circle-outline"
+                  size={34}
+                  color="#2E6F40"
+                />
+              </TouchableOpacity>
+            </View>
             <Text style={styles.pointsLabel}>Current Points</Text>
 
             <View style={styles.pointsBox}>
@@ -92,7 +114,11 @@ export default function HomeScreen() {
               renderItem={({ item }) => (
                 <TouchableOpacity
                   activeOpacity={0.85}
-                  onPress={() => setSelectedHabit(item)}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/habit-detail",
+                    })
+                  }
                   style={styles.habitCard}
                 >
                   <Text style={styles.habitTitle}>{item.title}</Text>
@@ -166,25 +192,6 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
       </ImageBackground>
-
-      <Modal visible={selectedHabit !== null} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{selectedHabit?.title}</Text>
-
-            <Text style={styles.modalDescription}>
-              This habit helps improve consistency and personal growth.
-            </Text>
-
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setSelectedHabit(null)}
-            >
-              <Text style={styles.closeText}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </>
   );
 }
@@ -207,6 +214,7 @@ const styles = StyleSheet.create({
   },
   navText: {
     fontSize: 16,
+    fontWeight: "600",
     color: "#355E3B",
   },
   welcome: {
@@ -378,5 +386,22 @@ const styles = StyleSheet.create({
   closeText: {
     color: "white",
     fontWeight: "600",
+  },
+  navButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: "rgba(46, 111, 64, 0.08)",
+  },
+  welcomeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  profileButton: {
+    backgroundColor: "rgba(46,111,64,0.08)",
+    padding: 6,
+    borderRadius: 30,
   },
 });
