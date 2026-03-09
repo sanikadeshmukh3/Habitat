@@ -19,7 +19,7 @@ return (
 
 <Button title="Sign up" onPress={handleSignup} />
 
-<TouchableOpacity style={{ marginTop: 20}} onPress={() => router.push("/login")}>
+<TouchableOpacity style={{ marginTop: 20}} onPress={() => router.push("./login")}>
     <Text>Back</Text>
 </TouchableOpacity>
 
