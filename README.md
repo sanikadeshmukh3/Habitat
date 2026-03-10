@@ -58,3 +58,7 @@ Git checkout <your-branch-name>
 Git merge main
 </br>
 Git push
+
+
+</br>
+npx expo install expo-image-picker for my changes
