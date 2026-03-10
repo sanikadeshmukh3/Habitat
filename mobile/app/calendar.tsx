@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import React, { useState } from 'react';
 import {
   View,
@@ -34,6 +35,22 @@ function getFirstDayOfWeek(year: number, month: number) {
   return new Date(year, month, 1).getDay();
 }
 
+// Returns 0–1 representing a ratio of how many habits were checked on a given day.
+// Used to render the partial green fill inside each day cell.
+function completionRatio(
+  habitCount: number,
+  entries: EntryMap,
+  year: number,
+  month: number,
+  day: number,
+): number {
+  if (habitCount === 0) return 0;
+  const checked = HABITS.filter(
+    h => entries[`${h.id}-${year}-${month}-${day}`]?.checked
+  ).length;
+  return checked / habitCount;
+}
+
 // ── Types ─────────────────────────────────────────────────────
 type HabitEntry = {
   checked: boolean;
@@ -50,6 +67,9 @@ export default function CalendarScreen() {
 
   // Which day's habits are shown below the grid (defaults to today)
   const [selectedDay, setSelectedDay] = useState(today.getDate());
+
+  // Pixel height of a single day cell, measured via onLayout.
+  const [cellHeight, setCellHeight] = useState(0);
 
   // Stored mood entries
   const [entries, setEntries] = useState<EntryMap>({});
@@ -82,12 +102,6 @@ export default function CalendarScreen() {
   // pad to full weeks
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const isToday = (day: number | null) =>
-    day !== null &&
-    day === today.getDate() &&
-    month === today.getMonth() &&
-    year === today.getFullYear();
-
   // ── Modal helpers ───────────────────────────────────────────
   const openModal = (habitId: string, day: number) => {
     const key = `${habitId}-${year}-${month}-${day}`;
@@ -109,8 +123,7 @@ export default function CalendarScreen() {
   const entryForKey = (habitId: string, day: number) =>
     entries[`${habitId}-${year}-${month}-${day}`];
 
-  // navigation placeholder
-  const goBack = () => console.log('Navigate back');
+  const goBack = () => router.push("./(tabs)/home");
 
   return (
     <ImageBackground
@@ -156,28 +169,40 @@ export default function CalendarScreen() {
           ))}
 
           {/* ── Day cells ─────────────────────────────────────── */}
-          {cells.map((day, i) => (
-            <TouchableOpacity
-              key={i}
-              activeOpacity={day !== null ? 0.7 : 1}
-              style={[
-                styles.cell,
-                isToday(day) && styles.todayCell,
-                day === selectedDay && styles.selectedCell,
-              ]}
-              onPress={() => { if (day !== null) setSelectedDay(day); }}
-            >
-              {day !== null && (
-                <Text style={[
-                  styles.dayText,
-                  isToday(day) && styles.todayText,
-                  day === selectedDay && styles.selectedDayText,
-                ]}>
-                  {day}
-                </Text>
-              )}
-            </TouchableOpacity>
-          ))}
+          {cells.map((day, i) => {
+            const ratio = day !== null
+              ? completionRatio(HABITS.length, entries, year, month, day)
+              : 0;
+
+            const fillPx = cellHeight * ratio;
+
+            return (
+              <TouchableOpacity
+                key={i}
+                activeOpacity={day !== null ? 0.7 : 1}
+                style={[
+                  styles.cell,
+                  day === selectedDay && styles.selectedCell,
+                ]}
+                onLayout={i === 0 && cellHeight === 0
+                  ? e => setCellHeight(e.nativeEvent.layout.height)
+                  : undefined}
+                onPress={() => { if (day !== null) setSelectedDay(day); }}
+              >
+                {day !== null && fillPx > 0 && (
+                  <View style={[styles.cellFill, { height: fillPx }]} />
+                )}
+                {day !== null && (
+                  <Text style={[
+                    styles.dayText,
+                    day === selectedDay && styles.selectedDayText,
+                  ]}>
+                    {day}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* ── Habits section ─────────────────────────────────── */}
@@ -199,7 +224,18 @@ export default function CalendarScreen() {
                   Pressing it opens the mood/notes modal          */}
               <TouchableOpacity
                 style={[styles.checkCircle, checked && styles.checkCircleDone]}
-                onPress={() => openModal(habit.id, selectedDay)}
+                onPress={() => {
+                  if (checked) {
+                    // Uncheck: keep the entry but flip checked to false
+                    const key = `${habit.id}-${year}-${month}-${selectedDay}`;
+                    setEntries(prev => ({
+                      ...prev,
+                      [key]: { ...prev[key], checked: false },
+                    }));
+                  } else {
+                    openModal(habit.id, selectedDay);
+                  }
+                }}
               >
                 {checked && <Text style={styles.checkMark}>✓</Text>}
               </TouchableOpacity>
@@ -280,7 +316,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.pageBg,
   },
   container: {
-    padding: Spacing.md,
+    paddingTop: Spacing.lg * 2,
+    paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.xl,
   },
   backBtn: {
@@ -346,6 +383,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 0.5,
     borderColor: Colors.border,
+    overflow: 'hidden',   // clips the fill bar to the cell boundary
+    position: 'relative',
+  },
+  cellFill: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.lightGreen,
+    opacity: 0.55,        // translucent so the day number stays readable
+    zIndex: 0,
   },
   dowText: {
     fontSize: FontSize.xs,
@@ -356,14 +404,7 @@ const styles = StyleSheet.create({
   dayText: {
     fontSize: FontSize.sm,
     color: Colors.darkBrown,
-  },
-  todayCell: {
-    backgroundColor: Colors.paleGreen,
-    borderRadius: Radius.sm,
-  },
-  todayText: {
-    color: Colors.primaryGreen,
-    fontWeight: '800',
+    zIndex: 1,
   },
 
   // ── Habits ──

@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import React, { useState } from 'react';
 import {
   View,
@@ -34,8 +35,7 @@ export default function SettingsScreen() {
   const [highContrast, setHighContrast] = useState(false);
   const [largeText,    setLargeText]    = useState(false); // bonus setting stub
 
-  // navigation placeholder
-  const goBack = () => console.log('Navigate back');
+  const goBack = () => router.push("./(tabs)/home");
 
   // ── Content renderer ─────────────────────────────────────
   //  ADD NEW SETTING PANELS HERE by adding cases.
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: Spacing.md,
-    paddingTop: Spacing.lg,
+    paddingTop: Spacing.lg * 2,
     backgroundColor: Colors.cardBg,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
@@ -220,7 +220,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.cardBg,
     borderRightWidth: 1,
     borderRightColor: Colors.border,
-    paddingTop: Spacing.sm,
   },
   tabBtn: {
     paddingVertical: Spacing.md,
