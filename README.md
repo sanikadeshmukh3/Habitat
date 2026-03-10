@@ -72,3 +72,6 @@ npx prisma db seed
 # if this doesn't work
 npm install ts-node --save-dev
 ```
+Both of the following use port 3000: <\br>
+When running on android studio, use "10.0.2.2" as the ip address.
+For ios, use "localhost" as ip address.
