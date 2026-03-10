@@ -7,6 +7,7 @@ import {
   ScrollView,
   Switch,
   TextInput,
+  Image,
   ImageBackground,
 } from 'react-native';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
@@ -59,6 +60,25 @@ export default function ProfileScreen() {
 
   const cancelEdit = () => setIsEditing(false);
 
+  // ── Photo state ────────────────────
+  // `photoUri` holds the raw picked image URI.
+  // To persist across launches: save photoUri to AsyncStorage in saveEdit().
+  const [photoUri,    setPhotoUri]    = useState<string | null>(null);
+
+  // Opens the device photo library.
+  const pickPhoto = async () => {
+    try {
+      const { launchImageLibraryAsync, requestMediaLibraryPermissionsAsync } =
+        await import('expo-image-picker');
+      const { status } = await requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') { alert('Photo library permission required'); return; }
+      const result = await launchImageLibraryAsync({ mediaTypes: 'images', quality: 1 });
+      if (!result.canceled) setPhotoUri(result.assets[0].uri);
+    } catch (e) {
+      console.error('Image pick error:', e);
+    }
+  };
+
   // navigation placeholder – swap with your router call
   const goBack = () => console.log('Navigate back to Home');
 
@@ -82,11 +102,29 @@ export default function ProfileScreen() {
 
           {/* Left block – avatar circle + email / tag / password */}
           <View style={styles.infoBlock}>
-            {/* Avatar placeholder */}
-            <View style={styles.avatarCircle}>
-              <Text style={styles.avatarInitial}>
-                {email[0].toUpperCase()}
-              </Text>
+            {/* ── Avatar
+                View mode: shows photo (clipped to circle) or initial letter.
+                Edit mode: same, plus a camera button underneath to pick a photo.
+                After picking, the cropper modal (below) lets the user pan */}
+            <View style={styles.avatarWrapper}>
+              <View style={styles.avatarCircle}>
+                {photoUri ? (
+                  <Image
+                    source={{ uri: photoUri }}
+                    style={styles.avatarImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Text style={styles.avatarInitial}>
+                    {email[0].toUpperCase()}
+                  </Text>
+                )}
+              </View>
+              {isEditing && (
+                <TouchableOpacity style={styles.cameraBtn} onPress={pickPhoto}>
+                  <Text style={styles.cameraBtnText}>📷</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             <View style={styles.infoText}>
@@ -251,6 +289,67 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.sm,
+    overflow: 'hidden',
+  },
+  // Wrapper holds the circle + the camera button underneath
+  avatarWrapper: {
+    alignItems: 'center',
+    marginRight: Spacing.sm,
+  },
+  // The photo fills the circle; translateX/Y shifts it per cropOffset
+  avatarImage: {
+    width: 64,
+    height: 64,
+    borderRadius: Radius.full,
+  },
+  cameraBtn: {
+    marginTop: 4,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: 2,
+    backgroundColor: Colors.paleGreen,
+    borderRadius: Radius.sm,
+  },
+  cameraBtnText: {
+    fontSize: 14,
+  },
+  // ── Cropper (shown inline above the fields after picking a photo) ──
+  // LOCATION: sits inside infoBlock, above infoText.
+  // To make it a full-screen overlay instead, move it outside topRow
+  // and add position:'absolute', top:0, left:0, right:0, bottom:0.
+  cropperModal: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    backgroundColor: Colors.cardBg,
+    borderRadius: Radius.md,
+    padding: Spacing.sm,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.midGreen,
+  },
+  cropperHint: {
+    fontSize: FontSize.xs,
+    color: Colors.lightBrown,
+    marginBottom: Spacing.xs,
+  },
+  // The circular mask window – overflow:hidden clips the dragged image
+  cropWindow: {
+    width: 120,
+    height: 120,
+    borderRadius: Radius.full,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: Colors.primaryGreen,
+    marginBottom: Spacing.sm,
+  },
+  // Larger than the window so there's room to pan
+  dragImage: {
+    width: 280,
+    height: 280,
+    marginLeft: -80,   // center the image inside the window initially
+    marginTop: -80,
   },
   avatarInitial: {
     color: Colors.white,
