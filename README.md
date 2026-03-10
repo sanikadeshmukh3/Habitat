@@ -68,7 +68,7 @@ npx expo install expo-image-picker for my changes
 ```
 npx migrate prisma dev
 npx prisma generate
-npx prisma db -c
+npx prisma db seed
 # if this doesn't work
 npm install ts-node --save-dev
 ```
