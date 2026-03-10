@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import React, { useState } from 'react';
 import {
   View,
@@ -122,8 +123,7 @@ export default function CalendarScreen() {
   const entryForKey = (habitId: string, day: number) =>
     entries[`${habitId}-${year}-${month}-${day}`];
 
-  // navigation placeholder
-  const goBack = () => console.log('Navigate back');
+  const goBack = () => router.push("./(tabs)/home");
 
   return (
     <ImageBackground
@@ -316,7 +316,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.pageBg,
   },
   container: {
-    padding: Spacing.md,
+    paddingTop: Spacing.lg * 2,
+    paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.xl,
   },
   backBtn: {

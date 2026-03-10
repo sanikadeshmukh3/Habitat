@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import React, { useState } from 'react';
 import {
   View,
@@ -79,8 +80,7 @@ export default function ProfileScreen() {
     }
   };
 
-  // navigation placeholder – swap with your router call
-  const goBack = () => console.log('Navigate back to Home');
+  const goBack = () => router.push("./(tabs)/home");
 
   return (
     <ImageBackground
@@ -244,7 +244,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.pageBg,
   },
   container: {
-    padding: Spacing.md,
+    paddingTop: Spacing.lg * 2,
+    paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.xl,
   },
 
