@@ -1,3 +1,5 @@
+import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { router } from 'expo-router';
 import React, { useMemo, useRef, useState } from 'react';
 import {
     View,
@@ -12,6 +14,7 @@ import {
     Animated,
     Dimensions,
     Platform,
+    TouchableOpacity,
 } from 'react-native';
 
 // Some of the following are hardcoded, but general structure of the recap screen exists.
@@ -287,6 +290,13 @@ export default function RecapScreen() {
             ]}
             showsVerticalScrollIndicator={false}
         >
+            <TouchableOpacity 
+            style={styles.backBtn} 
+            onPress={() => router.push('/home')}
+            >
+                <Text style={styles.backBtnText}>← Back</Text>
+            </TouchableOpacity>
+
             <Modal
             visible={showInfoModal}
             transparent
@@ -421,6 +431,20 @@ const styles = StyleSheet.create({
     overlay: {
         ...StyleSheet.absoluteFillObject,
         backgroundColor: 'rgba(250,246,239,0.20)',
+    },
+
+    backBtn: {
+        marginBottom: Spacing.md,
+        alignSelf: 'flex-start',
+        paddingVertical: Spacing.xs,
+        paddingHorizontal: Spacing.sm,
+        backgroundColor: Colors.paleGreen,
+        borderRadius: Radius.sm,
+    },
+    backBtnText: {
+        color: Colors.primaryGreen,
+        fontWeight: '600',
+        fontSize: FontSize.md,
     },
 
     container: {
