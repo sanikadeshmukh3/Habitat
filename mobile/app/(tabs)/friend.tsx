@@ -221,11 +221,11 @@ export default function FriendScreen() {
 
     return (
         <ImageBackground
-        source={require('../../assets/images/habitat-gradient.png')}
+        source={require("../../assets/images/leaf.png")}
         style={styles.background}
-        resizeMode="cover"
+        imageStyle={{ opacity: 0.08 }} // want the leaves to be a bit transparent on the screen
         >
-        <View style={styles.overlay} />
+        <View />
 
         <ScrollView
             contentContainerStyle={[
@@ -343,7 +343,10 @@ export default function FriendScreen() {
 }
 
 const styles = StyleSheet.create({
-    background: { flex: 1 },
+    background: {
+        flex: 1,
+        backgroundColor: "#EAF6E8",
+    },
     overlay: {
         ...StyleSheet.absoluteFillObject,
         backgroundColor: 'rgba(250,246,239,0.20)',
