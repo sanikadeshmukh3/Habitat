@@ -22,7 +22,21 @@ style={{width: 250, height:250, marginBottom: 50 }}
 
 <TextInput placeholder="Message" style={{width:"100%", backgroundColor: "white", borderRadius: 10, borderWidth: 1, padding: 12, marginBottom: 20}}/>
 
-<Button title="Contact" onPress={handleMaps} />
+<TouchableOpacity
+  onPress={handleMaps}
+  style={{
+    backgroundColor: "#2d6a4f",
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    borderRadius: 12,
+    alignItems: "center"
+  }}
+>
+  <Text style={{ color: "white", fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
+    Contact
+  </Text>
+</TouchableOpacity>
+
 </View>
 );
 }
