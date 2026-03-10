@@ -114,7 +114,7 @@ export default function CalendarScreen() {
 
   return (
     <ImageBackground
-      source={require('../../assets/images/leaf.png')}
+      source={require('../assets/images/leaf.png')}
       style={styles.bg}
       imageStyle={{ opacity: 0.06 }}
     >
