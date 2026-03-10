@@ -224,7 +224,7 @@ export default function FriendScreen() {
 
     return (
         <ImageBackground
-        source={require("../../assets/images/leaf.png")}
+        source={require("../assets/images/leaf.png")}
         style={styles.background}
         imageStyle={{ opacity: 0.08 }} // want the leaves to be a bit transparent on the screen
         >

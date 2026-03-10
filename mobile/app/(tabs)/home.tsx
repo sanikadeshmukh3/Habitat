@@ -176,19 +176,32 @@ export default function HomeScreen() {
 
             <Text style={styles.sectionTitle}>Friends</Text>
 
-            <View style={styles.friendContainer}>
+            <TouchableOpacity
+            style={styles.friendContainer}
+            activeOpacity={0.8}
+            onPress={() => 
+              router.push("/friend")
+            }
+            >
               <Text style={styles.friendText}>Friend 1</Text>
               <View style={styles.progressBackground}>
                 <View style={[styles.progressFill, { width: "80%" }]} />
               </View>
-            </View>
+            </TouchableOpacity>
 
-            <View style={styles.friendContainer}>
+            <TouchableOpacity
+            style={styles.friendContainer}
+            activeOpacity={0.8}
+            onPress={() => 
+              router.push("/friend")
+            }
+            >
               <Text style={styles.friendText}>Friend 2</Text>
               <View style={styles.progressBackground}>
                 <View style={[styles.progressFill, { width: "70%" }]} />
               </View>
-            </View>
+            </TouchableOpacity>
+
           </ScrollView>
         </View>
       </ImageBackground>
