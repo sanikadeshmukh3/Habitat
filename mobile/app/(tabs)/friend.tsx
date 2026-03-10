@@ -233,7 +233,6 @@ export default function FriendScreen() {
         <ScrollView
             contentContainerStyle={[
             styles.container,
-            { paddingTop: Platform.OS === 'ios' ? 18 : 14 },
             ]}
             showsVerticalScrollIndicator={false}
         >
@@ -376,6 +375,7 @@ const styles = StyleSheet.create({
     },
 
     container: {
+        paddingTop: Dimensions.get('window').height * 0.05,
         paddingHorizontal: SIDE_SPACER,
         paddingBottom: 34,
     },
