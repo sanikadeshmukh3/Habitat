@@ -62,3 +62,13 @@ Git push
 
 </br>
 npx expo install expo-image-picker for my changes
+
+
+
+```
+npx migrate prisma dev
+npx prisma generate
+npx prisma db -c
+# if this doesn't work
+npm install ts-node --save-dev
+```
