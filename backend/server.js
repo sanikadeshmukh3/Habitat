@@ -1,28 +1,42 @@
 const express = require("express");
+const { PrismaClient } = require("@prisma/client");
 
+const prisma = new PrismaClient();
 const app = express();
 app.use(express.json());
 
 // Temporary fake login route
-app.post("/login", (req, res) => {
+app.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
-  const fakeUser = {
-    userid: "12345",
-    email: "test@test.com",
-    password: "password123"
-  };
+  try{
+    const user = await prisma.user.findUnique({
+      where: {email: email}
+    });
 
-  if (email === fakeUser.email && password === fakeUser.password) {
+    if(!user) {
+      return res.status(401).json({
+        message: "User not found"
+      });
+    }
+    if (user.password !== password) {
+      return res.status(401).json({
+        message: "Invalif password"
+      });
+    }
+
     return res.json({
       message: "Login successful",
-      userId: fakeUser.userid
+      userId: user.userId
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Server error"
     });
   }
 
-  return res.status(401).json({
-    message: "Invalid credentials"
-  });
+
 });
 
 app.listen(3000, () => {

@@ -9,7 +9,7 @@ export default function Signup() {
 
 return (
 <View style={{ flex:1, padding: 40, backgroundColor: "#74c69d"}}>
-<Text style={{fontSize: 24, marginBottom: 20, marginTop: 180, color: "green"}}>Habitat</Text>
+<Text style={{fontSize: 24, marginBottom: 20, marginTop: 180, color: "#EAF6E8"}}>Habitat</Text>
 
 <TextInput placeholder="First Name" style={{borderWidth: 1, padding: 10, marginBottom: 10}}/>
 <TextInput placeholder="Last Name" style={{borderWidth: 1, padding: 10, marginBottom: 10}}/>
@@ -19,8 +19,8 @@ return (
 
 <Button title="Sign up" onPress={handleSignup} />
 
-<TouchableOpacity style={{ marginTop: 20}} onPress={() => router.push("./login")}>
-    <Text>Back</Text>
+<TouchableOpacity style={{ marginTop: 20}} onPress={() => router.push("/login")}>
+    <Text style={{color: "#EAF6E8"}}>Back</Text>
 </TouchableOpacity>
 
 </View>
