@@ -174,34 +174,53 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.sectionTitle}>Friends</Text>
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle2}>Friends</Text>
 
-            <TouchableOpacity
-            style={styles.friendContainer}
-            activeOpacity={0.8}
-            onPress={() => 
-              router.push("/friend")
-            }
-            >
-              <Text style={styles.friendText}>Friend 1</Text>
-              <View style={styles.progressBackground}>
-                <View style={[styles.progressFill, { width: "80%" }]} />
-              </View>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.friendRow}
+                onPress={() =>
+                  router.push({
+                    pathname: "/friend",
+                    params: { name: "Friend 1", progress: "80" },
+                  })
+                }
+              >
+                <View style={styles.friendAvatar}>
+                  <Text style={styles.friendAvatarText}>F</Text>
+                </View>
 
-            <TouchableOpacity
-            style={styles.friendContainer}
-            activeOpacity={0.8}
-            onPress={() => 
-              router.push("/friend")
-            }
-            >
-              <Text style={styles.friendText}>Friend 2</Text>
-              <View style={styles.progressBackground}>
-                <View style={[styles.progressFill, { width: "70%" }]} />
-              </View>
-            </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.friendName}>Friend 1</Text>
 
+                  <View style={styles.progressBackground}>
+                    <View style={[styles.progressFill, { width: "80%" }]} />
+                  </View>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.friendRow}
+                onPress={() =>
+                  router.push({
+                    pathname: "/friend",
+                    params: { name: "Friend 2", progress: "70" },
+                  })
+                }
+              >
+                <View style={styles.friendAvatar}>
+                  <Text style={styles.friendAvatarText}>F</Text>
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.friendName}>Friend 2</Text>
+
+                  <View style={styles.progressBackground}>
+                    <View style={[styles.progressFill, { width: "70%" }]} />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </View>
           </ScrollView>
         </View>
       </ImageBackground>
@@ -242,16 +261,21 @@ const styles = StyleSheet.create({
     color: "#4F7942",
   },
   pointsBox: {
-    marginTop: 15,
+    marginTop: 20,
     alignSelf: "center",
-    padding: 30,
-    borderRadius: 14,
-    backgroundColor: "#CDECCD",
+    paddingVertical: 25,
+    paddingHorizontal: 40,
+    borderRadius: 25,
+    backgroundColor: "#2E6F40",
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
   },
   points: {
-    fontSize: 38,
-    fontWeight: "bold",
-    color: "#2F4F2F",
+    fontSize: 40,
+    fontWeight: "700",
+    color: "white",
   },
   sectionTitle: {
     fontSize: 20,
@@ -282,7 +306,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#B7E4C7",
+    backgroundColor: "#95D5B2",
   },
   habitButtons: {
     flexDirection: "row",
@@ -305,6 +329,24 @@ const styles = StyleSheet.create({
     color: "#1B4332",
     fontWeight: "500",
   },
+
+  sectionCard: {
+    backgroundColor: "#CDECCD",
+    borderRadius: 20,
+    padding: 20,
+    marginTop: 25,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+
+  sectionTitle2: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1B4332",
+    marginBottom: 15,
+  },
   friendContainer: {
     marginBottom: 20,
   },
@@ -312,6 +354,32 @@ const styles = StyleSheet.create({
     color: "#355E3B",
     marginBottom: 6,
     fontWeight: "500",
+  },
+  friendRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+
+  friendAvatar: {
+    width: 45,
+    height: 45,
+    borderRadius: 22,
+    backgroundColor: "#2E6F40",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+
+  friendAvatarText: {
+    color: "white",
+    fontWeight: "600",
+  },
+  friendName: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#2E6F40",
+    marginBottom: 5,
   },
   fabWrapper: {
     alignItems: "flex-end",
