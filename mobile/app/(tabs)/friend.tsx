@@ -399,7 +399,6 @@ const styles = StyleSheet.create({
         fontSize: 24,
         color: COLORS.forest,
         maxWidth: '82%',
-        fontFamily: FONTS.title,
         fontWeight: '700',
         letterSpacing: 0.2,
     },
@@ -417,7 +416,6 @@ const styles = StyleSheet.create({
     helpText: {
         color: COLORS.brown,
         fontSize: 14,
-        fontFamily: FONTS.bodyBold,
     },
 
     subtitle: {
@@ -426,7 +424,6 @@ const styles = StyleSheet.create({
         color: COLORS.bark,
         fontSize: 15,
         lineHeight: 22,
-        fontFamily: FONTS.body,
         textAlign: 'center',
     },
 
@@ -447,13 +444,11 @@ const styles = StyleSheet.create({
         fontSize: 11,
         letterSpacing: 1.1,
         textTransform: 'uppercase',
-        fontFamily: FONTS.bodyBold,
     },
     profileTag: {
         marginTop: 6,
         fontSize: 15,
         color: COLORS.forest,
-        fontFamily: FONTS.bodyBold,
         textAlign: 'center',
     },
     profileDescription: {
@@ -461,7 +456,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         lineHeight: 21,
         color: COLORS.brown,
-        fontFamily: FONTS.body,
         textAlign: 'center',
     },
 
@@ -478,13 +472,11 @@ const styles = StyleSheet.create({
         color: COLORS.moss,
         fontSize: 11,
         letterSpacing: 1.1,
-        fontFamily: FONTS.bodyBold,
     },
     pointsValue: {
         marginTop: 6,
         fontSize: 34,
         color: COLORS.forest,
-        fontFamily: FONTS.title,
         fontWeight: '700',
     },
 
@@ -492,7 +484,6 @@ const styles = StyleSheet.create({
         marginTop: 18,
         fontSize: 22,
         color: COLORS.forest,
-        fontFamily: FONTS.title,
         fontWeight: '700',
     },
 
@@ -505,7 +496,6 @@ const styles = StyleSheet.create({
     snapHint: {
         color: COLORS.brown,
         fontSize: 12,
-        fontFamily: FONTS.body,
     },
 
     snapList: {
@@ -536,14 +526,12 @@ const styles = StyleSheet.create({
     snapshotTitle: {
         color: COLORS.bark,
         fontSize: 18,
-        fontFamily: FONTS.bodyBold,
         flex: 1,
         paddingRight: 8,
     },
     snapshotSubtitle: {
         color: COLORS.forest,
         fontSize: 16,
-        fontFamily: FONTS.bodyBold,
     },
     snapshotAccent: {
         marginTop: 10,
@@ -559,7 +547,6 @@ const styles = StyleSheet.create({
     cardBodyHeadline: {
         fontSize: 19,
         color: COLORS.forest,
-        fontFamily: FONTS.title,
         fontWeight: '700',
     },
     cardBodySubtext: {
@@ -567,7 +554,6 @@ const styles = StyleSheet.create({
         color: COLORS.brown,
         fontSize: 14,
         lineHeight: 20,
-        fontFamily: FONTS.body,
     },
 
     statsBlock: {
@@ -582,14 +568,12 @@ const styles = StyleSheet.create({
     statsBig: {
         fontSize: 28,
         color: COLORS.bark,
-        fontFamily: FONTS.title,
         fontWeight: '700',
     },
     statsLabel: {
         marginTop: 2,
         color: COLORS.brown,
         fontSize: 12,
-        fontFamily: FONTS.body,
     },
 
     summaryCard: {
@@ -604,13 +588,11 @@ const styles = StyleSheet.create({
         color: COLORS.moss,
         fontSize: 11,
         letterSpacing: 1.1,
-        fontFamily: FONTS.bodyBold,
     },
     summaryHeadline: {
         marginTop: 6,
         fontSize: 22,
         color: COLORS.forest,
-        fontFamily: FONTS.title,
         fontWeight: '700',
     },
     summaryText: {
@@ -618,7 +600,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         lineHeight: 21,
         color: COLORS.brown,
-        fontFamily: FONTS.body,
     },
 
     modalOverlay: {
@@ -641,7 +622,6 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 22,
         color: COLORS.forest,
-        fontFamily: FONTS.title,
         fontWeight: '700',
         marginBottom: 10,
     },
@@ -650,7 +630,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         lineHeight: 21,
         color: COLORS.brown,
-        fontFamily: FONTS.body,
         marginBottom: 12,
     },
 
@@ -666,7 +645,6 @@ const styles = StyleSheet.create({
     modalButtonText: {
         color: '#FFFFFF',
         fontSize: 14,
-        fontFamily: FONTS.bodyBold,
     },
 
     habitMiniBlock: {
@@ -686,7 +664,6 @@ const styles = StyleSheet.create({
     habitMiniName: {
     fontSize: 17,
     color: COLORS.bark,
-    fontFamily: FONTS.bodyBold,
     lineHeight: 22,
     },
     habitMiniRight: {
@@ -695,14 +672,12 @@ const styles = StyleSheet.create({
     habitMiniStreak: {
     fontSize: 22,
     color: COLORS.forest,
-    fontFamily: FONTS.title,
     fontWeight: '700',
     },
     habitMiniLabel: {
     marginTop: 2,
     color: COLORS.brown,
     fontSize: 12,
-    fontFamily: FONTS.body,
     },
 
     avatarCard: {
@@ -737,7 +712,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 26,
     color: COLORS.bark,
-    fontFamily: FONTS.title,
     fontWeight: '700',
     textAlign: 'center',
     },
