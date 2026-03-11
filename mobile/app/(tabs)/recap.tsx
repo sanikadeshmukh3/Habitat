@@ -470,7 +470,6 @@ const styles = StyleSheet.create({
     topIcon: {
         fontSize: 18,
         color: COLORS.forest,
-        fontFamily: FONTS.bodyBold,
     },
 
     rightSpacer: { width: 5 },
@@ -486,7 +485,6 @@ const styles = StyleSheet.create({
         fontSize: 24,
         color: COLORS.forest,
         maxWidth: '82%',
-        fontFamily: FONTS.title,
         fontWeight: '700',
         letterSpacing: 0.2,
     },
@@ -504,7 +502,6 @@ const styles = StyleSheet.create({
     helpText: {
         color: COLORS.brown,
         fontSize: 14,
-        fontFamily: FONTS.bodyBold,
     },
 
     subtitle: {
@@ -513,7 +510,6 @@ const styles = StyleSheet.create({
         color: COLORS.bark,
         fontSize: 15,
         lineHeight: 22,
-        fontFamily: FONTS.body,
     },
 
     weekSection: {
@@ -528,7 +524,6 @@ const styles = StyleSheet.create({
         color: COLORS.moss,
         fontSize: 12,
         letterSpacing: 1.2,
-        fontFamily: FONTS.bodyBold,
     },
     morePill: {
         paddingHorizontal: 12,
@@ -541,7 +536,6 @@ const styles = StyleSheet.create({
     moreText: {
         color: COLORS.brown,
         fontSize: 12,
-        fontFamily: FONTS.bodyBold,
     },
 
     weekCard: {
@@ -566,7 +560,6 @@ const styles = StyleSheet.create({
     dateNumber: {
         fontSize: 12,
         color: COLORS.brown,
-        fontFamily: FONTS.bodyBold,
     },
     dateNumberToday: {
         color: COLORS.forest,
@@ -597,7 +590,6 @@ const styles = StyleSheet.create({
     dayLabel: {
         fontSize: 12,
         color: COLORS.brown,
-        fontFamily: FONTS.bodyBold,
     },
     dayLabelToday: {
         color: COLORS.forest,
@@ -607,7 +599,6 @@ const styles = StyleSheet.create({
         marginTop: 18,
         fontSize: 22,
         color: COLORS.forest,
-        fontFamily: FONTS.title,
         fontWeight: '700',
     },
 
@@ -631,7 +622,6 @@ const styles = StyleSheet.create({
         fontSize: 11,
         letterSpacing: 1.1,
         textTransform: 'uppercase',
-        fontFamily: FONTS.bodyBold,
     },
     animalType: {
         marginTop: 4,
@@ -645,7 +635,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         lineHeight: 21,
         color: COLORS.brown,
-        fontFamily: FONTS.body,
     },
 
     snapHeaderRow: {
@@ -657,7 +646,6 @@ const styles = StyleSheet.create({
     snapHint: {
         color: COLORS.brown,
         fontSize: 12,
-        fontFamily: FONTS.body,
     },
 
     snapList: {
@@ -687,12 +675,10 @@ const styles = StyleSheet.create({
     snapshotTitle: {
         color: COLORS.bark,
         fontSize: 18,
-        fontFamily: FONTS.bodyBold,
     },
     snapshotSubtitle: {
         color: COLORS.forest,
         fontSize: 16,
-        fontFamily: FONTS.bodyBold,
     },
     snapshotAccent: {
         marginTop: 10,
@@ -709,7 +695,6 @@ const styles = StyleSheet.create({
     cardBodyHeadline: {
         fontSize: 19,
         color: COLORS.forest,
-        fontFamily: FONTS.title,
         fontWeight: '700',
     },
     cardBodySubtext: {
@@ -717,7 +702,6 @@ const styles = StyleSheet.create({
         color: COLORS.brown,
         fontSize: 14,
         lineHeight: 20,
-        fontFamily: FONTS.body,
     },
 
     chartWrap: {
@@ -770,14 +754,12 @@ const styles = StyleSheet.create({
     statsBig: {
         fontSize: 28,
         color: COLORS.bark,
-        fontFamily: FONTS.title,
         fontWeight: '700',
     },
     statsLabel: {
         marginTop: 2,
         color: COLORS.brown,
         fontSize: 12,
-        fontFamily: FONTS.body,
     },
 
     summaryCard: {
@@ -792,13 +774,11 @@ const styles = StyleSheet.create({
         color: COLORS.moss,
         fontSize: 11,
         letterSpacing: 1.1,
-        fontFamily: FONTS.bodyBold,
     },
     summaryHeadline: {
         marginTop: 6,
         fontSize: 22,
         color: COLORS.forest,
-        fontFamily: FONTS.title,
         fontWeight: '700',
     },
     summaryText: {
@@ -806,7 +786,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         lineHeight: 21,
         color: COLORS.brown,
-        fontFamily: FONTS.body,
     },
 
     modalOverlay: {
@@ -829,7 +808,6 @@ const styles = StyleSheet.create({
     modalTitle: {
     fontSize: 22,
     color: COLORS.forest,
-    fontFamily: FONTS.title,
     fontWeight: '700',
     marginBottom: 10,
     },
@@ -838,7 +816,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     color: COLORS.brown,
-    fontFamily: FONTS.body,
     marginBottom: 12,
     },
 
@@ -854,6 +831,5 @@ const styles = StyleSheet.create({
     modalButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontFamily: FONTS.bodyBold,
     },  
 });
