@@ -45,8 +45,8 @@ return (
 <View style={{ flex:1, padding: 40}}>
 <Text style={{fontSize: 24, marginBottom: 20, marginTop: 180, color: "green"}}>Habitat</Text>
 
-<TextInput placeholder="Email" value={email} onChangeText={setEmail} style={{borderWidth: 1, padding: 10, marginBottom: 10}}/>
-<TextInput placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} style={{borderWidth: 1, padding: 10, marginBottom: 20}} />
+<TextInput placeholder="Email" value={email} onChangeText={setEmail} style={{borderWidth: 1, padding: 10, marginBottom: 10}} autoCapitalize="none" autoCorrect={false}/>
+<TextInput placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} style={{borderWidth: 1, padding: 10, marginBottom: 20}} autoCapitalize="none" autoCorrect={false}/>
 
 <Button title="Login" onPress={handleLogin} />
 
