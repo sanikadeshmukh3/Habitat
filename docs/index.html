@@ -147,6 +147,16 @@
   </section>
 
   <section>
+    <h2>Try the Application</h2>
+    <p>Please install the following on your Android device:</p>
+    <a class="button" href="https://expo.dev/accounts/swethavanith/projects/mobile/builds/5c7802ca-1c13-42cc-9548-4efe504966b2">Download Habitat</a>
+    <p>
+      Otherwise, you may paste this link into your Android device's browser and tap "Install":
+      <span class="inline-code">https://expo.dev/accounts/swethavanith/projects/mobile/builds/5c7802ca-1c13-42cc-9548-4efe504966b2</span>
+    </p>
+  </section>
+
+  <section>
     <h2>Running the Project Locally</h2>
     <p>Start in the root directory of our project found in the repository.</p>
     
@@ -154,17 +164,11 @@
     <p>View the complete project repository on GitHub:</p>
     <a class="button" href="https://github.com/sanikadeshmukh3/Habitat">View GitHub Repository</a>
 
-    <div class="note">
-      <p><strong>Note:</strong>
-        The current code supports the Android emulator, but in order to run the app on iOS, you will need to have Xcode installed.
-        The ip address for the backend server will need to be updated accordingly.
-        To do so, open the <span class="inline-code">mobile/app/login.tsx</span> file and update the fetch URL to your computer's IP address.
-      </p>
+    <p>Run the following to clone the repository:</p>
 
-      <div class="credentials-box">
-        <p><strong>For iOS:</strong><span class="credentials">http://localhost:3000/login</span></p>
-        <p><strong>For Android:</strong><span class="credentials">http://10.0.2.2:3000/login</span></p>
-      </div>
+    <div class="code">
+      git clone https://github.com/sanikadeshmukh3/Habitat.git<br />
+      cd Habitat
     </div>
 
     <h3>1. Start the backend server</h3>
@@ -199,6 +203,10 @@
     <div class="credentials-box">
       <p><strong>Email:</strong><span class="credentials">test@test.com</span></p>
       <p><strong>Password:</strong><span class="credentials">password123</span></p>
+    </div>
+    
+    <div class="note">
+      <p><strong>Note:</strong> The database goes to sleep after a period of inactivity. When you attempt to log in, the database will wake up automatically. Please allow a moment for the database to wake up if you see no response.</p>
     </div>
   </section>
 
