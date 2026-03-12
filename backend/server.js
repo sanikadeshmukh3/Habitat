@@ -21,7 +21,7 @@ app.post("/login", async (req, res) => {
     }
     if (user.password !== password) {
       return res.status(401).json({
-        message: "Invalif password"
+        message: "Invalid password"
       });
     }
 
