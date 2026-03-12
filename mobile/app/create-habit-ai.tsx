@@ -1,18 +1,20 @@
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ImageBackground,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
-// ─── Palette (same as create-habit.tsx) ─────────────────────────────────────
+// Palette
 const C = {
   bg:           '#F7FAF5',
   card:         '#FFFFFF',
@@ -30,7 +32,7 @@ const C = {
   shadow:       'rgba(61, 59, 142, 0.08)',
 };
 
-// ─── Mock AI suggestions ─────────────────────────────────────────────────────
+// Mock AI suggestions
 const MOCK_SUGGESTIONS = [
   {
     id: '1',
@@ -77,8 +79,10 @@ const MOCK_SUGGESTIONS = [
 type Suggestion = typeof MOCK_SUGGESTIONS[0];
 type Stage = 'input' | 'loading' | 'results';
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// Component
 export default function CreateHabitAIScreen() {
+  const router = useRouter();
+
   const [goal, setGoal]               = useState('');
   const [stage, setStage]             = useState<Stage>('input');
   const [selected, setSelected]       = useState<Set<string>>(new Set());
@@ -112,12 +116,17 @@ export default function CreateHabitAIScreen() {
   const canAdd = selected.size > 0;
 
   return (
+    <ImageBackground
+      source={require('../assets/images/leaf.png')}
+      style={styles.background}
+      imageStyle={{ opacity: 0.08}}
+    >
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
 
-      {/* ── Header ─────────────────────────────────────────────────────── */}
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.push('/(tabs)/home')} activeOpacity={0.7}>
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
 
@@ -137,7 +146,7 @@ export default function CreateHabitAIScreen() {
         keyboardShouldPersistTaps="handled"
       >
 
-        {/* ── Goal Input ─────────────────────────────────────────────────── */}
+        {/* Goal Input */}
         <View style={styles.card}>
           {/* Yellow accent bar */}
           <View style={styles.accentBar} />
@@ -199,7 +208,7 @@ export default function CreateHabitAIScreen() {
           )}
         </View>
 
-        {/* ── Loading ────────────────────────────────────────────────────── */}
+        {/* Loading */}
         {stage === 'loading' && (
           <View style={styles.loadingCard}>
             <ActivityIndicator size="large" color={C.indigoMid} />
@@ -208,7 +217,7 @@ export default function CreateHabitAIScreen() {
           </View>
         )}
 
-        {/* ── Results ────────────────────────────────────────────────────── */}
+        {/* Results */}
         {stage === 'results' && (
           <>
             <View style={styles.resultsHeader}>
@@ -267,7 +276,7 @@ export default function CreateHabitAIScreen() {
             </TouchableOpacity>
 
             {/* Manual fallback */}
-            <TouchableOpacity style={styles.manualLink} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.manualLink} onPress={() => router.push('/create-habit')}activeOpacity={0.7}>
               <Text style={styles.manualLinkText}>
                 Prefer to create your own? → Add manually
               </Text>
@@ -278,14 +287,19 @@ export default function CreateHabitAIScreen() {
         <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
+    </ImageBackground>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// Styles
 const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+    backgroundColor: '#EAF6E8',
+  },
   safe: {
     flex: 1,
-    backgroundColor: C.bg,
+    backgroundColor: 'transparent',
   },
 
   // Header

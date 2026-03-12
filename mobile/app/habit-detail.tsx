@@ -1,16 +1,18 @@
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ImageBackground,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
-// ─── Palette ─────────────────────────────────────────────────────────────────
+// Palette
 const C = {
   bg:           '#F7FAF5',
   card:         '#FFFFFF',
@@ -29,7 +31,7 @@ const C = {
   redPale:      '#FFF0F0',
 };
 
-// ─── Mock habit data ──────────────────────────────────────────────────────────
+// Mock habit data
 const MOCK_HABIT = {
   name:      'Morning walk for 20 minutes',
   category:  'Fitness',
@@ -54,20 +56,27 @@ const MOCK_HABIT = {
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// Component
 export default function HabitDetailScreen() {
+  const router = useRouter();
+
   const habit = MOCK_HABIT;
   const completionRate = Math.round((habit.totalCompletions / habit.totalDays) * 100);
 
   const [checkedIn, setCheckedIn] = useState(false);
 
   return (
+    <ImageBackground
+      source={require('../assets/images/leaf.png')}
+      style={styles.background}
+      imageStyle={{ opacity: 0.08 }}
+    >
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
 
-      {/* ── Header ─────────────────────────────────────────────────────── */}
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.push('/(tabs)/home')} activeOpacity={0.7}>
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
 
@@ -83,7 +92,7 @@ export default function HabitDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
 
-        {/* ── Hero card ──────────────────────────────────────────────────── */}
+        {/* Hero card */}
         <View style={styles.heroCard}>
           {/* Category color bar */}
           <View style={styles.heroAccent} />
@@ -111,7 +120,7 @@ export default function HabitDetailScreen() {
           <Text style={styles.habitSince}>Tracking since {habit.createdAt}</Text>
         </View>
 
-        {/* ── Quick check-in ─────────────────────────────────────────────── */}
+        {/* Quick check-in */}
         <TouchableOpacity
           style={[styles.checkInBtn, checkedIn && styles.checkInBtnDone]}
           onPress={() => setCheckedIn(!checkedIn)}
@@ -123,7 +132,7 @@ export default function HabitDetailScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* ── Stats row ──────────────────────────────────────────────────── */}
+        {/* Stats row */}
         <View style={styles.statsRow}>
           <StatCard
             value={`${habit.streak}`}
@@ -143,7 +152,7 @@ export default function HabitDetailScreen() {
           />
         </View>
 
-        {/* ── Calendar dot grid ──────────────────────────────────────────── */}
+        {/* Calendar dot grid */}
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Last 5 Weeks</Text>
@@ -186,7 +195,7 @@ export default function HabitDetailScreen() {
           </View>
         </View>
 
-        {/* ── Progress bar ───────────────────────────────────────────────── */}
+        {/* Progress bar */}
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Overall Progress</Text>
@@ -202,7 +211,7 @@ export default function HabitDetailScreen() {
           </Text>
         </View>
 
-        {/* ── Danger zone ────────────────────────────────────────────────── */}
+        {/* Danger zone */}
         <TouchableOpacity style={styles.deleteBtn} activeOpacity={0.7}>
           <Text style={styles.deleteBtnText}>Delete Habit</Text>
         </TouchableOpacity>
@@ -210,10 +219,11 @@ export default function HabitDetailScreen() {
         <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
+    </ImageBackground>
   );
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// Sub-components
 function StatCard({
   value, label, sublabel, emoji, accent, accentPale,
 }: {
@@ -245,11 +255,15 @@ function LegendItem({ color, label }: { color: string; label: string }) {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// Styles
 const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+    backgroundColor: '#EAF6E8',
+  },
   safe: {
     flex: 1,
-    backgroundColor: C.bg,
+    backgroundColor: 'transparent',
   },
 
   // Header
