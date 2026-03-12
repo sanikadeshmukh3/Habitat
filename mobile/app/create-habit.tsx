@@ -1,36 +1,38 @@
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ImageBackground,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
-// ─── Palette ────────────────────────────────────────────────────────────────
+// Palette
 const C = {
-  bg:           '#F7FAF5',   // warm off-white with a hint of sage
+  bg:           '#F7FAF5',
   card:         '#FFFFFF',
-  sage:         '#7BAE7F',   // primary green
+  sage:         '#7BAE7F',
   sageMid:      '#A8C5A0',
   sagePale:     '#E3F0E1',
-  yellow:       '#F5E6A3',   // butter accent
+  yellow:       '#F5E6A3',
   yellowDeep:   '#E8C84A',
-  indigo:       '#3D3B8E',   // headings / active labels
+  indigo:       '#3D3B8E',
   indigoPale:   '#EEEDF8',
-  indigoMid:    '#6C63FF',   // interactive / icons
+  indigoMid:    '#6C63FF',
   textPrimary:  '#2B2D42',
   textSecondary:'#6B7280',
   border:       '#E4EDE2',
   shadow:       'rgba(61, 59, 142, 0.08)',
 };
 
-// ─── Data ────────────────────────────────────────────────────────────────────
+// Data
 const CATEGORIES = [
   { label: 'Fitness',       emoji: '🏃' },
   { label: 'Nutrition',     emoji: '🥗' },
@@ -40,8 +42,10 @@ const CATEGORIES = [
   { label: 'Other',         emoji: '✨' },
 ];
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// Component
 export default function CreateHabitScreen() {
+  const router = useRouter(); 
+
   const [habitName, setHabitName]       = useState('');
   const [selectedCategory, setCategory] = useState<string | null>(null);
   const [frequency, setFrequency]       = useState<'Daily' | 'Weekly'>('Daily');
@@ -50,18 +54,28 @@ export default function CreateHabitScreen() {
   const canSubmit = habitName.trim().length > 0 && selectedCategory !== null;
 
   return (
+    <ImageBackground
+      source={require('../assets/images/leaf.png')}
+      style={styles.background}
+      imageStyle= {{ opacity: 0.08 }}
+    >
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
 
-      {/* ── Header ─────────────────────────────────────────────────────── */}
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.push('/(tabs)/home')} activeOpacity={0.7}>
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
 
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>New Habit</Text>
           <Text style={styles.headerSub}>build something that sticks 🌱</Text>
+        </View>
+
+        {/* decorative leaf badge */}
+        <View style={styles.leafBadge}>
+          <Text style={styles.leafEmoji}>🍃</Text>
         </View>
       </View>
 
@@ -71,7 +85,7 @@ export default function CreateHabitScreen() {
         keyboardShouldPersistTaps="handled"
       >
 
-        {/* ── Habit Name ─────────────────────────────────────────────────── */}
+        {/* Habit Name */}
         <SectionCard>
           <SectionLabel text="What's your habit?" required />
           <View style={styles.inputWrapper}>
@@ -89,7 +103,7 @@ export default function CreateHabitScreen() {
           </View>
         </SectionCard>
 
-        {/* ── Category ───────────────────────────────────────────────────── */}
+        {/* Category */}
         <SectionCard>
           <SectionLabel text="Category" required />
           <View style={styles.pillGrid}>
@@ -112,7 +126,7 @@ export default function CreateHabitScreen() {
           </View>
         </SectionCard>
 
-        {/* ── Frequency ──────────────────────────────────────────────────── */}
+        {/* Frequency */}
         <SectionCard>
           <SectionLabel text="How often?" />
           <View style={styles.segmentedControl}>
@@ -131,7 +145,7 @@ export default function CreateHabitScreen() {
           </View>
         </SectionCard>
 
-        {/* ── Visibility ─────────────────────────────────────────────────── */}
+        {/* Visibility */}
         <SectionCard>
           <View style={styles.toggleRow}>
             <View style={styles.toggleText}>
@@ -157,17 +171,18 @@ export default function CreateHabitScreen() {
           </View>
         </SectionCard>
 
-        {/* ── Submit ─────────────────────────────────────────────────────── */}
+        {/* Submit */}
         <TouchableOpacity
           style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]}
           activeOpacity={canSubmit ? 0.85 : 1}
           disabled={!canSubmit}
         >
+          <Text style={styles.submitLeaf}>🍀</Text>
           <Text style={styles.submitLabel}>Add to Habitat</Text>
         </TouchableOpacity>
 
-        {/* ── AI nudge ───────────────────────────────────────────────────── */}
-        <TouchableOpacity style={styles.aiNudge} activeOpacity={0.75}>
+        {/* AI nudge */}
+        <TouchableOpacity style={styles.aiNudge} onPress={() => router.push('/create-habit-ai')} activeOpacity={0.75}>
           <View style={styles.aiNudgeInner}>
             <Text style={styles.aiNudgeIcon}>✦</Text>
             <View>
@@ -180,10 +195,11 @@ export default function CreateHabitScreen() {
         <View style={{ height: 32 }} />
       </ScrollView>
     </SafeAreaView>
+    </ImageBackground>
   );
 }
 
-// ─── Small helpers ────────────────────────────────────────────────────────────
+// Helpers
 function SectionCard({ children }: { children: React.ReactNode }) {
   return <View style={styles.card}>{children}</View>;
 }
@@ -205,11 +221,15 @@ function SectionLabel({
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// Styles
 const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+    backgroundColor: '#EAF6E8',
+  },
   safe: {
     flex: 1,
-    backgroundColor: C.bg,
+    backgroundColor: 'transparent',
   },
 
   // Header
