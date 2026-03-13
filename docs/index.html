@@ -148,25 +148,55 @@
 
   <section>
     <h2>Try the Application</h2>
+    <div class="note">
+      <p><strong>Note:</strong> The link to this mobile application is only available for 13 days. Please ensure you have it installed before it expires. Please contact the Habitat team if the link has expired.</p>
+    </div>
     <h3>Android</h3>
     <p>Please install the following on your Android device:</p>
     <a class="button" href="https://expo.dev/accounts/swethavanith/projects/mobile/builds/5c7802ca-1c13-42cc-9548-4efe504966b2">Download Habitat on Android</a>
     <p>
       Otherwise, you may paste this link into your Android device's browser and tap "Install":
       <span class="inline-code">https://expo.dev/accounts/swethavanith/projects/mobile/builds/5c7802ca-1c13-42cc-9548-4efe504966b2</span>
+    <br /><br />
+      <b>Steps:</b>
     </p>
+    <ol>
+      <li>Tap the link above and then tap "Download".</li>
+      <li>Download <span class="inline-code">.apk</span>.</li>
+      <li>Open Android emulator.</li>
+      <li>Drag the downloaded <span class="inline-code">.apk</span> file into the emulator.</li>
+      <li>The app will be installed and can be opened from the emulator.</li>
+    </ol>
 
     <h3>iOS</h3>
     <p>Please install the following on your iOS device:</p>
-    <a class="button" href="">Download Habitat on iOS</a>
+    <a class="button" href="https://expo.dev/accounts/swethavanith/projects/mobile/builds/bb1dee89-3103-4ff8-b639-7ecdf247b3cb">Download Habitat on iOS</a>
     <p>
       Otherwise, you may paste this link into your iOS device's browser and tap "Install":
-      <span class="inline-code">Coming Soon</span>
+      <span class="inline-code">https://expo.dev/accounts/swethavanith/projects/mobile/builds/bb1dee89-3103-4ff8-b639-7ecdf247b3cb</span>
+      <br /><br />
+      <b>Steps:</b>
     </p>
+    <ol>
+      <li>Tap the link above and then tap "Download".</li>
+      <li>Download <span class="inline-code">.app</span>.</li>
+      <li>Open iOS simulator.</li>
+      <li>Drag the downloaded <span class="inline-code">.app</span> file into the simulator.</li>
+      <li>The app will be installed and can be opened from the simulator.</li>
+    </ol>
   </section>
 
   <section>
     <h2>Running the Project Locally</h2>
+    <p>Before running the setup script, ensure the following are installed on your machine:</p>
+    <ul>
+      <li>Node.js (v18 or higher)</li>
+      <li>npm</li>
+      <li>Expo Go app (on your mobile device or through your choice of emulator)</li>
+    </ul>
+
+    To verify installation, run <span class="inline-code">node -v</span> and <span class="inline-code">npm -v</span> in your terminal.  If these commands return a version number, you are ready to proceed.
+
     <p>Start in the root directory of our project found in the repository.</p>
     
     <h3>Source Code</h3>
@@ -180,21 +210,11 @@
       cd Habitat
     </div>
 
-    <h3>1. Start the backend server</h3>
+    <h3>Start the backend server and mobile application</h3>
+    <p>Please make sure your emulator is already running.</p>
     <p>In one terminal window, please run the following commands:</p>
     <div class="code">
-      cd backend<br />
-      npm install<br />
-      npm run dev
-    </div>
-
-    <h3>2. Start the mobile application</h3>
-    <p>Please make sure your emulator is already running.</p>
-    <p>In a new terminal window, please run the following commands:</p>
-    <div class="code">
-      cd mobile<br />
-      npm install<br />
-      npx expo start
+      ./setup.sh
     </div>
 
     <p>
@@ -218,6 +238,12 @@
       <p><strong>Note:</strong> The database goes to sleep after a period of inactivity. When you attempt to log in, the database will wake up automatically. Please allow a moment for the database to wake up if you see no response.</p>
     </div>
   </section>
+
+  <p>More documentation:</p>
+  <ul>
+    <li><a href="https://github.com/sanikadeshmukh3/Habitat">GitHub Repository</a></li>
+    <li><a href="https://docs.google.com/document/d/1P7Hv2Str9L934z9-_zc_ERPSPxfNppzqK__mvngyPaQ/edit?usp=sharing">Instructions</a></li>
+  </ul>
 
   <footer>
     <p>Habitat – CSRocks Project</p>
