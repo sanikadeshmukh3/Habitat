@@ -12,7 +12,7 @@ export default function Login() {
     const handleLogin = async (): Promise<void> => {
         try {
           const response: Response = await fetch(
-            "https://habitat-qel9.onrender.com/login",  //use your computer's IP address
+            "http://localhost:3000/login",  //use your computer's IP address
             {
               method: "POST",
               headers: {
