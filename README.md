@@ -29,41 +29,36 @@ _Note: If you have already installed PostgreSQL but ``psql --version`` is not ve
 </br></br>
 If any of these are not verified, please install the necessary packages and verify again.
 
-Push changes first
-</br>
-Git add .
-</br>
-Git commit -m <message>
-</br>
-Git push
-
-To merge into main in terminal
-</br>
-Git checkout main
-</br>
-Git merge <your-branch-name> 
-</br>
+## Version Control Steps
+Push changes first:
+```
+git add .
+git commit -m <message>
+git push
+```
+To merge into the main branch in terminal:
+```
+git checkout main
+git merge <your-branch-name>
+```
 Fix merge conflicts if necessary
 </br>
-If you get a funny looking prompt that tells you to write a message just write a message and do Escape → “:q!” without quotes
+If you get a funny looking prompt that tells you to write a message just write a message and do Escape → ``:q!``
 
 
-To merge from main to your branch in terminal
-</br>
-(Starting in main branch)
-Git pull
-</br>
-Git checkout <your-branch-name>
-</br>
-Git merge main
-</br>
-Git push
-
+To merge from main to your branch in terminal:
+```
+# Starting in main branch
+git pull
+git checkout <your-branch-name>
+git merge main
+git push
+```
 
 </br>
-npx expo install expo-image-picker for my changes
+Remember to ``npx expo install expo-image-picker``
 
-
+## Steps for Migrating Prisma
 
 ```
 npx migrate prisma dev
@@ -72,6 +67,6 @@ npx prisma db seed
 # if this doesn't work
 npm install ts-node --save-dev
 ```
-Both of the following use port 3000: <\br>
-When running on android studio, use "10.0.2.2" as the ip address.
-For ios, use "localhost" as ip address.
+Both of the following use port 3000: </br>
+When running on android studio, use ``10.0.2.2`` as the ip address.
+For ios, use ``localhost`` as ip address.
