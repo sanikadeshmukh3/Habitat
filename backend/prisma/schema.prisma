@@ -14,3 +14,45 @@ model User {
   timezone String?
   creation DateTime @default(now())
 }
+
+model Habit {
+  id            String  @id @default(uuid())
+  userid        String 
+  user          User    @relation(fields: [userId], references: [id])
+
+  name          String
+  description   String?
+  habitCategory HabitCategory
+  visibility    Boolean @default(true)
+  currentStreak Int     @default(0)
+  priorityRank  Int?
+  frequency     HabitFrequency
+  active        Boolean @default(true)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  checkIns      HabitCheckIn[]
+}
+
+model HabitCheckIn {
+  id      String    @id @default(uuid())
+  date    DateTime  @default(now())
+  habitId String
+  habit   Habit     @relation(fields: [habitId], references: [id])
+}
+
+enum HabitFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum HabitCategory {
+  FITNESS
+  NUTRITION
+  PRODUCTIVITY
+  WELLNESS
+  SLEEP
+  OTHER
+}
