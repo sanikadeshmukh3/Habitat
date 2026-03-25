@@ -5,6 +5,8 @@ const prisma = new PrismaClient();
 const app = express();
 app.use(express.json());
 
+console.log(Object.keys(prisma));
+
 // Temporary fake login route
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
