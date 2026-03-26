@@ -32,14 +32,13 @@ export default function HomeScreen() {
   const router = useRouter();
 
   const [habits, setHabits] = useState<DashboardHabit[]>([]);
-  const userid = "123456789"; // hardcoded for now
-
+  const userid = "686dd28d-f82c-48c6-adf4-d2a169c469e4"; // hardcoded for now based on the userid from prisma studio
   // connection to backend for habits
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
         const response = await fetch (
-          "http://localhost:3000/dashboard/${userid}"
+          `http://localhost:3000/dashboard/${userid}`
         );
 
         const data = await response.json();
@@ -52,6 +51,8 @@ export default function HomeScreen() {
 
     fetchDashboard();
   }, []);
+
+
 
   // the toggle option when adding a habit
   const toggleMenu = () => {
