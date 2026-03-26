@@ -1,11 +1,12 @@
 const express = require("express");
 const { PrismaClient } = require("@prisma/client");
 
+const dashboardRoutes = require("./routes/dashboardRoutes");
+
 const prisma = new PrismaClient();
 const app = express();
 app.use(express.json());
 
-console.log(Object.keys(prisma));
 
 // Temporary fake login route
 app.post("/login", async (req, res) => {
@@ -29,7 +30,7 @@ app.post("/login", async (req, res) => {
 
     return res.json({
       message: "Login successful",
-      userId: user.userId
+      userId: user.id
     });
   } catch (error) {
     console.error(error);
@@ -40,6 +41,9 @@ app.post("/login", async (req, res) => {
 
 
 });
+
+// establishing routes for different screens
+app.use("/dashboard", dashboardRoutes);
 
 app.listen(3000, () => {
   console.log("Server running on port 3000");
