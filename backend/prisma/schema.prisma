@@ -41,6 +41,10 @@ model HabitCheckIn {
   date    DateTime @default(now())
   habitId String
   habit   Habit    @relation(fields: [habitId], references: [id])
+
+  completed Boolean
+  difficultyRating Int?
+  notes String?
 }
 
 enum HabitFrequency {
