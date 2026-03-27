@@ -1,5 +1,7 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
+import { useCreateHabit } from '../hooks/use-habits';
+import { Habit, HabitCategory, HabitFrequency } from '../types/habit';
 import {
   ImageBackground,
   Platform,
@@ -34,24 +36,46 @@ const C = {
 
 // Data
 const CATEGORIES = [
-  { label: 'Fitness',       emoji: '🏃' },
-  { label: 'Nutrition',     emoji: '🥗' },
-  { label: 'Sleep',         emoji: '😴' },
-  { label: 'Productivity',  emoji: '📚' },
-  { label: 'Wellness',      emoji: '🧘' },
-  { label: 'Other',         emoji: '✨' },
+  { label: 'FITNESS',       emoji: '🏃' },
+  { label: 'NUTRITION',     emoji: '🥗' },
+  { label: 'SLEEP',         emoji: '😴' },
+  { label: 'PRODUCTIVITY',  emoji: '📚' },
+  { label: 'WELLNESS',      emoji: '🧘' },
+  { label: 'OTHER',         emoji: '✨' },
 ];
 
 // Component
 export default function CreateHabitScreen() {
   const router = useRouter(); 
 
-  const [habitName, setHabitName]       = useState('');
-  const [selectedCategory, setCategory] = useState<string | null>(null);
-  const [frequency, setFrequency]       = useState<'Daily' | 'Weekly'>('Daily');
-  const [isPublic, setIsPublic]         = useState(false);
+  const [habit, setHabit] = useState<Habit>({
+    id: 0, //TODO: inject real id
+    userId: 0, //TODO: inject real userId from auth context
+    name: '',
+    description: '',
+    habitCategory: 'FITNESS',
+    frequency: 'DAILY',
+    visibility: false,
+    active: true,
+    currentStreak: 0,
+    priorityRank: undefined,
+    updatedAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+  });
 
-  const canSubmit = habitName.trim().length > 0 && selectedCategory !== null;
+  // const [habitName, setHabitName]       = useState('');
+  // const [selectedCategory, setCategory] = useState<HabitCategory>('Fitness');
+  // const [frequency, setFrequency]       = useState<HabitFrequency>('Daily');
+  // const [isPublic, setIsPublic]         = useState(false);
+
+  //helper functions for changing only part of a habit
+  const updateHabitField = (field: keyof Habit, value: any) => {
+    setHabit((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const { mutate: createHabit, isPending } = useCreateHabit(1); // TODO: replace with actual userId from auth context
+
+  const canSubmit = habit.name.trim().length > 0;
 
   return (
     <ImageBackground
@@ -93,13 +117,13 @@ export default function CreateHabitScreen() {
               style={styles.input}
               placeholder="e.g. Drink 8 glasses of water"
               placeholderTextColor={C.textSecondary}
-              value={habitName}
-              onChangeText={setHabitName}
+              value={habit.name}
+              onChangeText={(text) => updateHabitField('name', text)}
               maxLength={60}
               returnKeyType="done"
             />
             {/* character counter */}
-            <Text style={styles.charCount}>{habitName.length}/60</Text>
+            <Text style={styles.charCount}>{habit.name.length}/60</Text>
           </View>
         </SectionCard>
 
@@ -108,12 +132,12 @@ export default function CreateHabitScreen() {
           <SectionLabel text="Category" required />
           <View style={styles.pillGrid}>
             {CATEGORIES.map((cat) => {
-              const active = selectedCategory === cat.label;
+              const active = habit.habitCategory === cat.label;
               return (
                 <TouchableOpacity
                   key={cat.label}
                   style={[styles.pill, active && styles.pillActive]}
-                  onPress={() => setCategory(cat.label)}
+                  onPress={() => updateHabitField('habitCategory', cat.label as HabitCategory)}
                   activeOpacity={0.75}
                 >
                   <Text style={styles.pillEmoji}>{cat.emoji}</Text>
@@ -130,14 +154,14 @@ export default function CreateHabitScreen() {
         <SectionCard>
           <SectionLabel text="How often?" />
           <View style={styles.segmentedControl}>
-            {(['Daily', 'Weekly'] as const).map((opt) => (
+            {(['DAILY', 'WEEKLY'] as const).map((opt) => (
               <TouchableOpacity
                 key={opt}
-                style={[styles.segment, frequency === opt && styles.segmentActive]}
-                onPress={() => setFrequency(opt)}
+                style={[styles.segment, habit.frequency === opt as HabitFrequency && styles.segmentActive]}
+                onPress={() => updateHabitField('frequency', opt)}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.segmentLabel, frequency === opt && styles.segmentLabelActive]}>
+                <Text style={[styles.segmentLabel, habit.frequency === opt as HabitFrequency && styles.segmentLabelActive]}>
                   {opt}
                 </Text>
               </TouchableOpacity>
@@ -151,20 +175,20 @@ export default function CreateHabitScreen() {
             <View style={styles.toggleText}>
               <SectionLabel text="Visibility" noMargin />
               <Text style={styles.toggleSub}>
-                {isPublic
+                {habit.visibility
                   ? 'Friends can see this habit'
                   : 'Only you can see this habit'}
               </Text>
             </View>
             <View style={styles.toggleRight}>
-              <Text style={[styles.toggleBadge, isPublic ? styles.publicBadge : styles.privateBadge]}>
-                {isPublic ? 'Public' : 'Private'}
+              <Text style={[styles.toggleBadge, habit.visibility ? styles.publicBadge : styles.privateBadge]}>
+                {habit.visibility ? 'Public' : 'Private'}
               </Text>
               <Switch
-                value={isPublic}
-                onValueChange={setIsPublic}
+                value={habit.visibility}
+                onValueChange={(value) => updateHabitField('visibility', value)}
                 trackColor={{ false: C.border, true: C.sageMid }}
-                thumbColor={isPublic ? C.sage : '#f0f0f0'}
+                thumbColor={habit.visibility ? C.sage : '#f0f0f0'}
                 ios_backgroundColor={C.border}
               />
             </View>
@@ -173,7 +197,7 @@ export default function CreateHabitScreen() {
 
         {/* Submit */}
         <TouchableOpacity
-          style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]}
+          style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]} onPress={() => createHabit({ name: habit.name, habitCategory: habit.habitCategory, frequency: habit.frequency, active: habit.active, visibility: habit.visibility })}
           activeOpacity={canSubmit ? 0.85 : 1}
           disabled={!canSubmit}
         >

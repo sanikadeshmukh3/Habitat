@@ -1,11 +1,22 @@
 const express = require("express");
 const { PrismaClient } = require("@prisma/client");
+const { Pool } = require("pg");
+const habitRoutes = require("./routes/habit-routes");
 
 const dashboardRoutes = require("./routes/dashboardRoutes");
 
 const prisma = new PrismaClient();
 const app = express();
 app.use(express.json());
+app.use('/habits', habitRoutes);
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL || 'your-database-connection-string-here',
+});
+
+app.locals.db = pool;
+
+app.get('/test', (req, res) => res.json({ ok: true }));
 
 
 // Temporary fake login route
