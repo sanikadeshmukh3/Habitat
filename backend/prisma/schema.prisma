@@ -18,15 +18,15 @@ model User {
 
 model Habit {
   id     String @id @default(uuid())
-  userId String
+  userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id])
 
   name          String
   description   String?
-  habitCategory HabitCategory
+  habitCategory HabitCategory @map("habit_category")
   visibility    Boolean        @default(true)
-  currentStreak Int            @default(0)
-  priorityRank  Int?
+  currentStreak Int            @default(0) @map("current_streak")
+  priorityRank  Int?          @map("priority_rank")
   frequency     HabitFrequency
   active        Boolean        @default(true)
 
@@ -39,7 +39,7 @@ model Habit {
 model HabitCheckIn {
   id      String   @id @default(uuid())
   date    DateTime @default(now())
-  habitId String
+  habitId String   @map("habit_id")
   habit   Habit    @relation(fields: [habitId], references: [id])
 }
 
