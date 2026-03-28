@@ -32,11 +32,7 @@ async function main() {
       userId: user.id,
     },
   });
-
-  
 }
-
-
 
 main()
   .catch(console.error)
