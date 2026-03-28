@@ -10,17 +10,17 @@ export default function Login() {
   const [password, setPassword] = useState<string>("");
 
 
-  useEffect(() => {
-    const checkLogin = async () => {
-      const token = await AsyncStorage.getItem("token");
+  // useEffect(() => {
+  //   const checkLogin = async () => {
+  //     const token = await AsyncStorage.getItem("token");
   
-      if (token) {
-        router.replace("/(tabs)/home");
-      }
-    };
+  //     if (token) {
+  //       router.replace("/(tabs)/home");
+  //     }
+  //   };
   
-    checkLogin();
-  }, []);
+  //   checkLogin();
+  // }, []);
 
     
     const handleLogin = async (): Promise<void> => {
