@@ -8,9 +8,62 @@ datasource db {
 }
 
 model User {
-  userid   String   @id @default(uuid())
+  id       String   @id @default(uuid())
   email    String   @unique
   password String
+  firstName String
+  lastName String?
   timezone String?
   creation DateTime @default(now())
+  habit    Habit[]
+
+  isVerified Boolean @default(false)
+  verificationCode String?
+  codeExpires DateTime?
+}
+
+model Habit {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+
+  name          String
+  description   String?
+  habitCategory HabitCategory @map("habit_category")
+  visibility    Boolean        @default(true)
+  currentStreak Int            @default(0) @map("current_streak")
+  priorityRank  Int?          @map("priority_rank")
+  frequency     HabitFrequency
+  active        Boolean        @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  checkIns HabitCheckIn[]
+}
+
+model HabitCheckIn {
+  id      String   @id @default(uuid())
+  date    DateTime @default(now())
+  habitId String   @map("habit_id")
+  habit   Habit    @relation(fields: [habitId], references: [id])
+
+  completed Boolean
+  difficultyRating Int?
+  notes String?
+}
+
+enum HabitFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum HabitCategory {
+  FITNESS
+  NUTRITION
+  PRODUCTIVITY
+  WELLNESS
+  SLEEP
+  OTHER
 }

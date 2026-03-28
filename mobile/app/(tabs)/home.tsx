@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { Modal } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,22 +17,42 @@ import {
 // for now I am hardcoding the habits to get a glimpse of how it would look like
 // ALPHA RELEASE - no features
 
-type Habit = {
+// the API response model
+type DashboardHabit = {
   id: string;
-  title: string;
+  name: string;
+  streak: number;
   progress: number;
 };
 
-const habits: Habit[] = [
-  { id: "1", title: "Fitness Habit", progress: 0.4 },
-  { id: "2", title: "Nutrition Habit", progress: 0.7 },
-  { id: "3", title: "Procrastination Habit", progress: 0.2 },
-];
 
 export default function HomeScreen() {
   const [open, setOpen] = useState(false);
   const animation = useRef(new Animated.Value(0)).current;
   const router = useRouter();
+
+  const [habits, setHabits] = useState<DashboardHabit[]>([]);
+  const userid = "686dd28d-f82c-48c6-adf4-d2a169c469e4"; // hardcoded for now based on the userid from prisma studio
+  // connection to backend for habits
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const response = await fetch (
+          `http://10.75.196.102:3000/dashboard/${userid}`
+        );
+
+        const data = await response.json();
+
+        setHabits(data.habits);
+      } catch (error) {
+        console.error("Error fetching from database", error);
+      }
+    };
+
+    fetchDashboard();
+  }, []);
+
+
 
   // the toggle option when adding a habit
   const toggleMenu = () => {
@@ -121,7 +141,7 @@ export default function HomeScreen() {
                   }
                   style={styles.habitCard}
                 >
-                  <Text style={styles.habitTitle}>{item.title}</Text>
+                  <Text style={styles.habitTitle}>{item.name}</Text>
 
                   <View style={styles.progressBackground}>
                     <View
