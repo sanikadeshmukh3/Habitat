@@ -231,6 +231,123 @@ app.post("/verify", async (req, res) => {
 });
 
 
+app.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        message: "User not found",
+      });
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await prisma.user.update({
+      where: { email },
+      data: {
+        verificationCode: code,
+        codeExpires: new Date(Date.now() + 10 * 60 * 1000),
+      },
+    });
+
+    await transporter.sendMail({
+      from: "habitat.no.reply.signup@gmail.com",
+      to: email,
+      subject: "Reset your password",
+      text: `Your reset code is: ${code}`,
+    });
+
+    return res.json({
+      message: "Reset code sent",
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/reset-password", async (req, res) => {
+  try {
+    const { email, code, password } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    if (user.verificationCode !== code) {
+      return res.status(400).json({ message: "Invalid code" });
+    }
+
+    if (new Date() > user.codeExpires) {
+      return res.status(400).json({ message: "Code expired" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await prisma.user.update({
+      where: { email },
+      data: {
+        password: hashedPassword,
+        verificationCode: null,
+        codeExpires: null,
+      },
+    });
+
+    res.json({ message: "Password updated" });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/resend-code", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    const newCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await prisma.user.update({
+      where: { email },
+      data: {
+        verificationCode: newCode,
+        codeExpires: new Date(Date.now() + 10 * 60 * 1000),
+      },
+    });
+
+    await transporter.sendMail({
+      from: "habitat.no.reply.signup@gmail.com",
+      to: email,
+      subject: "New Verification Code",
+      text: `Your new code is: ${newCode}`,
+    });
+
+    return res.json({ message: "New code sent" });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
 app.get("/protected", authenticate, (req, res) => {
   res.json({
     message: "You accessed a protected route",
