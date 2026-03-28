@@ -17,7 +17,7 @@ import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 const INITIAL_USER = {
   email:     'user@example.com',
   publicTag: '@greenleaf_user',
-  password:  'password123',
+  password:  '••••••••',
   points:    112,
   badges: [
     { id: '1', label: '🌱 Seedling' },

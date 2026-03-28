@@ -61,7 +61,6 @@ Remember to ``npx expo install expo-image-picker``
 ## Steps for Migrating Prisma
 
 ```
-cd backend
 npx migrate prisma dev
 npx prisma generate
 npx prisma db seed
