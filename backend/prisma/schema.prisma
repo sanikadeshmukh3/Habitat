@@ -11,9 +11,15 @@ model User {
   id       String   @id @default(uuid())
   email    String   @unique
   password String
+  firstName String
+  lastName String?
   timezone String?
   creation DateTime @default(now())
   habit    Habit[]
+
+  isVerified Boolean @default(false)
+  verificationCode String?
+  codeExpires DateTime?
 }
 
 model Habit {

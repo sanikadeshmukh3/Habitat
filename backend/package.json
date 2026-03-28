@@ -18,15 +18,18 @@
   "description": "",
   "dependencies": {
     "@prisma/client": "^6.19.2",
+    "@react-native-async-storage/async-storage": "^3.0.1",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^8.0.3",
     "pg": "^8.20.0",
     "prisma": "^6.19.2"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.6",
     "@types/pg": "^8.20.0",
     "nodemon": "^3.1.14",

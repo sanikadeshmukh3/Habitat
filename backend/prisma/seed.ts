@@ -1,17 +1,20 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
 // changing seed.ts temporarily for testing purposes
 
 async function main() {
-  const user = await prisma.user.upsert({
-    where: { email : "test@test.com" },
-    update: {},
-    create: {
+  const hashedPassword = await bcrypt.hash("password123", 10);
+
+  await prisma.user.create({
+    data: {
       email: "test@test.com",
-      password: "password123"
-    }
+      password: hashedPassword,
+      firstName: "Test",
+      lastName: "User",
+    },
   });
 
   console.log("Seed user created");
