@@ -38,7 +38,7 @@ export default function HomeScreen() {
     const fetchDashboard = async () => {
       try {
         const response = await fetch (
-          `http://10.75.196.102:3000/dashboard/${userid}`
+          `http://localhost:3000/dashboard/${userid}`
         );
 
         const data = await response.json();
