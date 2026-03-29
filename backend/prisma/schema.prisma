@@ -20,6 +20,9 @@ model User {
   isVerified Boolean @default(false)
   verificationCode String?
   codeExpires DateTime?
+
+  friends User[] @relation("UserFriends")
+  friendsOf User[] @relation("UserFriends")
 }
 
 model Habit {

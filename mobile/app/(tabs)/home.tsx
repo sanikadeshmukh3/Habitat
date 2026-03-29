@@ -26,6 +26,11 @@ type DashboardHabit = {
   progress: number;
 };
 
+type Friend = {
+  id: string;
+  name: string;
+  progress: number;
+};
 
 export default function HomeScreen() {
   const [open, setOpen] = useState(false);
@@ -33,13 +38,14 @@ export default function HomeScreen() {
   const router = useRouter();
 
   const [habits, setHabits] = useState<DashboardHabit[]>([]);
+  const [friends, setFriends] = useState<Friend[]>([]);
   //const userid = "cc4746a6-9a27-4aae-9ce4-850662fb9492"; // hardcoded for now based on the userid from prisma studio
   // connection to backend for habits
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
         const token = await AsyncStorage.getItem("token"); // retrieving the token from the signed-in user
-        const response = await fetch ("http://localhost:3000/dashboard", { 
+        const response = await fetch("http://localhost:3000/dashboard", {
           method: "GET",
           headers: {
             "Content-type": "application/json",
@@ -49,6 +55,7 @@ export default function HomeScreen() {
         const data = await response.json();
 
         setHabits(data.habits);
+        setFriends(data.friends);
       } catch (error) {
         console.error("Error fetching from database", error);
       }
@@ -56,8 +63,6 @@ export default function HomeScreen() {
 
     fetchDashboard();
   }, []);
-
-
 
   // the toggle option when adding a habit
   const toggleMenu = () => {
@@ -202,49 +207,30 @@ export default function HomeScreen() {
             <View style={styles.sectionCard}>
               <Text style={styles.sectionTitle2}>Friends</Text>
 
-              <TouchableOpacity
-                style={styles.friendRow}
-                onPress={() =>
-                  router.push({
-                    pathname: "/friend",
-                    params: { name: "Friend 1", progress: "80" },
-                  })
-                }
-              >
-                <View style={styles.friendAvatar}>
-                  <Text style={styles.friendAvatarText}>F</Text>
-                </View>
-
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.friendName}>Friend 1</Text>
-
-                  <View style={styles.progressBackground}>
-                    <View style={[styles.progressFill, { width: "80%" }]} />
+              {friends?.map((friend) => (
+                <TouchableOpacity
+                  key={friend.id}
+                  style={styles.friendRow}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/friend",
+                      params: { name: friend.name, progress: Math.round(friend.progress * 100).toString(), },
+                    })
+                  }
+                >
+                  <View style={styles.friendAvatar}>
+                    <Text style={styles.friendAvatarText}>F</Text>
                   </View>
-                </View>
-              </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.friendRow}
-                onPress={() =>
-                  router.push({
-                    pathname: "/friend",
-                    params: { name: "Friend 2", progress: "70" },
-                  })
-                }
-              >
-                <View style={styles.friendAvatar}>
-                  <Text style={styles.friendAvatarText}>F</Text>
-                </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.friendName}>{friend.name}</Text>
 
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.friendName}>Friend 2</Text>
-
-                  <View style={styles.progressBackground}>
-                    <View style={[styles.progressFill, { width: "70%" }]} />
+                    <View style={styles.progressBackground}>
+                      <View style={[styles.progressFill, { width: `${friend.progress * 100}%`},]} />
+                    </View>
                   </View>
-                </View>
-              </TouchableOpacity>
+                </TouchableOpacity>
+              ))}
             </View>
           </ScrollView>
         </View>

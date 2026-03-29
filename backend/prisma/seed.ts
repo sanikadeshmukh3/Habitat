@@ -22,6 +22,46 @@ async function main() {
 
   console.log("Seed user created");
 
+  // the temp friends to be able to test this functionality out -- actual functionality in 1.0 release
+  const friend1 = await prisma.user.upsert({
+    where: {email: "friend1@test.com" },
+    update: {},
+    create: {
+      email: "friend1@test.com",
+      password: hashedPassword,
+      firstName: "Alice",
+      lastName: "Green",
+      isVerified: true,
+    },
+  });
+
+  const friend2 = await prisma.user.upsert({
+    where: {email: "friend2@test.com" },
+    update: {},
+    create: {
+      email: "friend2@test.com",
+      password: hashedPassword,
+      firstName: "Bobby",
+      lastName: "Blue",
+      isVerified: true,
+    },
+  });
+
+  // the actual testing
+  await prisma.user.update({
+    where: {id: user.id },
+    data: {
+      friends: {
+        connect: [
+          {id: friend1.id},
+          {id: friend2.id},
+        ],
+      },
+    },
+  });
+
+  console.log("Friends and user seeded...");
+
   // creating a temporary habit as well, we won't need this later on
   const habit = await prisma.habit.upsert({
     where: { id: "seeded-workout-habit",},
