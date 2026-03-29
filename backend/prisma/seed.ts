@@ -8,20 +8,26 @@ const prisma = new PrismaClient();
 async function main() {
   const hashedPassword = await bcrypt.hash("password123", 10);
 
-  await prisma.user.create({
-    data: {
+  const user = await prisma.user.upsert({
+    where: { email: "test@test.com"},
+    update: {},
+    create: {
       email: "test@test.com",
       password: hashedPassword,
       firstName: "Test",
       lastName: "User",
+      isVerified: true,
     },
   });
 
   console.log("Seed user created");
 
   // creating a temporary habit as well, we won't need this later on
-  const habit = await prisma.habit.create({
-    data: {
+  const habit = await prisma.habit.upsert({
+    where: { id: "seeded-workout-habit",},
+    update: {},
+    create: {
+      id: "seeded-workout-habit",
       name: "Workout",
       description: "Go to the gym 3 days a week",
       habitCategory: "FITNESS",

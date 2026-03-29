@@ -32,7 +32,7 @@ export default function HomeScreen() {
   const router = useRouter();
 
   const [habits, setHabits] = useState<DashboardHabit[]>([]);
-  const userid = "686dd28d-f82c-48c6-adf4-d2a169c469e4"; // hardcoded for now based on the userid from prisma studio
+  const userid = "cc4746a6-9a27-4aae-9ce4-850662fb9492"; // hardcoded for now based on the userid from prisma studio
   // connection to backend for habits
   useEffect(() => {
     const fetchDashboard = async () => {
