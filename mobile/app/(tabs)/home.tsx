@@ -13,6 +13,7 @@ import {
   Animated,
   ImageBackground,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // for now I am hardcoding the habits to get a glimpse of how it would look like
 // ALPHA RELEASE - no features
@@ -32,15 +33,19 @@ export default function HomeScreen() {
   const router = useRouter();
 
   const [habits, setHabits] = useState<DashboardHabit[]>([]);
-  const userid = "cc4746a6-9a27-4aae-9ce4-850662fb9492"; // hardcoded for now based on the userid from prisma studio
+  //const userid = "cc4746a6-9a27-4aae-9ce4-850662fb9492"; // hardcoded for now based on the userid from prisma studio
   // connection to backend for habits
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const response = await fetch (
-          `http://localhost:3000/dashboard/${userid}`
-        );
-
+        const token = await AsyncStorage.getItem("token"); // retrieving the token from the signed-in user
+        const response = await fetch ("http://localhost:3000/dashboard", { 
+          method: "GET",
+          headers: {
+            "Content-type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
         const data = await response.json();
 
         setHabits(data.habits);
