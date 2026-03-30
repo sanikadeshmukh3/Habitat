@@ -13,6 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import CheckInModal from '@/components/checkin-modal';
 
 // ── Fake habits – replace with real data/store ────────────────
 const HABITS = [
@@ -54,7 +55,7 @@ function completionRatio(
 // ── Types ─────────────────────────────────────────────────────
 type HabitEntry = {
   checked: boolean;
-  mood: 'happy' | 'sad' | null;
+  difficultyRating: number | null;
   notes: string;
 };
 // key: `${habitId}-${year}-${month}-${day}`
@@ -77,8 +78,8 @@ export default function CalendarScreen() {
   // Modal state
   const [modalVisible, setModalVisible] = useState(false);
   const [modalKey,     setModalKey]     = useState('');
-  const [draftMood,    setDraftMood]    = useState<'happy' | 'sad' | null>(null);
-  const [draftNotes,   setDraftNotes]   = useState('');
+  const [draftDifficultyRating, setDraftDifficultyRating] = useState<number | null>(null);
+  const [draftNotes, setDraftNotes] = useState('');
 
   // ── Navigation ──────────────────────────────────────────────
   const prevMonth = () => {
@@ -107,7 +108,7 @@ export default function CalendarScreen() {
     const key = `${habitId}-${year}-${month}-${day}`;
     const existing = entries[key];
     setModalKey(key);
-    setDraftMood(existing?.mood ?? null);
+    setDraftDifficultyRating(existing?.difficultyRating ?? null);
     setDraftNotes(existing?.notes ?? '');
     setModalVisible(true);
   };
@@ -115,7 +116,11 @@ export default function CalendarScreen() {
   const saveModal = () => {
     setEntries(prev => ({
       ...prev,
-      [modalKey]: { checked: true, mood: draftMood, notes: draftNotes },
+      [modalKey]: {
+        checked: true,
+        difficultyRating: draftDifficultyRating,
+        notes: draftNotes,
+      },
     }));
     setModalVisible(false);
   };
@@ -246,64 +251,27 @@ export default function CalendarScreen() {
       </ScrollView>
 
       {/* ── Mood entry modal ─────────────────────────────────── */}
-      <Modal
+      <CheckInModal
         visible={modalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.modalBackdrop}
-        >
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>How did it go?</Text>
+        initialDifficultyRating={draftDifficultyRating}
+        initialNotes={draftNotes}
+        onClose={() => setModalVisible(false)}
+        onSave={({ difficultyRating, notes }) => {
+          setDraftDifficultyRating(difficultyRating);
+          setDraftNotes(notes);
 
-            {/* Mood buttons */}
-            <View style={styles.moodRow}>
-              <TouchableOpacity
-                style={[styles.moodBtn, draftMood === 'happy' && styles.moodBtnActive]}
-                onPress={() => setDraftMood('happy')}
-              >
-                <Text style={styles.moodEmoji}>😊</Text>
-                <Text style={styles.moodLabel}>Happy</Text>
-              </TouchableOpacity>
+          setEntries(prev => ({
+            ...prev,
+            [modalKey]: {
+              checked: true,
+              difficultyRating,
+              notes,
+            },
+          }));
 
-              <TouchableOpacity
-                style={[styles.moodBtn, draftMood === 'sad' && styles.moodBtnActive]}
-                onPress={() => setDraftMood('sad')}
-              >
-                <Text style={styles.moodEmoji}>😢</Text>
-                <Text style={styles.moodLabel}>Sad</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Notes input */}
-            <TextInput
-              style={styles.notesInput}
-              placeholder="Add notes (optional)…"
-              placeholderTextColor={Colors.lightBrown}
-              multiline
-              value={draftNotes}
-              onChangeText={setDraftNotes}
-            />
-
-            {/* Modal actions */}
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.saveBtn} onPress={saveModal}>
-                <Text style={styles.saveBtnText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+          setModalVisible(false);
+        }}
+      />
 
     </ImageBackground>
   );
