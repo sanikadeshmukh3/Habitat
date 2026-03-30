@@ -14,10 +14,11 @@ import {
 } from 'react-native';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import CheckInModal from '@/components/checkin-modal';
+import { useUpsertCheckIn } from '@/hooks/use-checkin';
 
 // ── Fake habits – replace with real data/store ────────────────
 const HABITS = [
-  { id: '1', title: 'Fitness Habit'       },
+  { id: 'seeded-workout-habit', title: 'Fitness Habit'       },
   { id: '2', title: 'Nutrition Habit'     },
   { id: '3', title: 'Procrastination Habit' },
 ];
@@ -77,7 +78,10 @@ export default function CalendarScreen() {
 
   // Modal state
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalKey,     setModalKey]     = useState('');
+  const [modalTarget, setModalTarget] = useState<{
+    habitId: string;
+    day: number;
+  } | null>(null);
   const [draftDifficultyRating, setDraftDifficultyRating] = useState<number | null>(null);
   const [draftNotes, setDraftNotes] = useState('');
 
@@ -107,23 +111,30 @@ export default function CalendarScreen() {
   const openModal = (habitId: string, day: number) => {
     const key = `${habitId}-${year}-${month}-${day}`;
     const existing = entries[key];
-    setModalKey(key);
+
+    setModalTarget({ habitId, day });
     setDraftDifficultyRating(existing?.difficultyRating ?? null);
     setDraftNotes(existing?.notes ?? '');
     setModalVisible(true);
   };
 
   const saveModal = () => {
-    setEntries(prev => ({
-      ...prev,
-      [modalKey]: {
-        checked: true,
-        difficultyRating: draftDifficultyRating,
-        notes: draftNotes,
-      },
-    }));
+    if (!modalTarget) return;
+
+    saveCheckIn({
+      habitId: modalTarget.habitId,
+      date: new Date(year, month, modalTarget.day).toISOString(),
+      completed: true,
+      difficultyRating: draftDifficultyRating,
+      notes: draftNotes,
+    });
+
     setModalVisible(false);
+    setModalTarget(null);
   };
+
+  const userId = 1; // replace later with auth
+  const { mutate: saveCheckIn } = useUpsertCheckIn(year, month, userId);
 
   const entryForKey = (habitId: string, day: number) =>
     entries[`${habitId}-${year}-${month}-${day}`];
@@ -255,21 +266,23 @@ export default function CalendarScreen() {
         visible={modalVisible}
         initialDifficultyRating={draftDifficultyRating}
         initialNotes={draftNotes}
-        onClose={() => setModalVisible(false)}
+        onClose={() => {
+          setModalVisible(false);
+          setModalTarget(null);
+        }}
         onSave={({ difficultyRating, notes }) => {
-          setDraftDifficultyRating(difficultyRating);
-          setDraftNotes(notes);
+          if (!modalTarget) return;
 
-          setEntries(prev => ({
-            ...prev,
-            [modalKey]: {
-              checked: true,
-              difficultyRating,
-              notes,
-            },
-          }));
+          saveCheckIn({
+            habitId: modalTarget.habitId,
+            date: new Date(year, month, modalTarget.day).toISOString(),
+            completed: true,
+            difficultyRating,
+            notes,
+          });
 
           setModalVisible(false);
+          setModalTarget(null);
         }}
       />
 

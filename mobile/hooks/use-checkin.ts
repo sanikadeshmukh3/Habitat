@@ -9,11 +9,12 @@ import {
   UseQueryResult,
   UseMutationResult,
 } from '@tanstack/react-query';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios, { AxiosError } from 'axios';
 import { habitKeys } from './use-habits';
 
 export type CheckInPayload = {
-  habitId: number;
+  habitId: string;
   date: string;
   completed?: boolean;
   difficultyRating?: number | null;
@@ -21,8 +22,8 @@ export type CheckInPayload = {
 };
 
 export type HabitCheckIn = {
-  id: number;
-  habitId: number;
+  id: string;
+  habitId: string;
   date: string;
   completed: boolean;
   difficultyRating: number | null;
@@ -56,23 +57,46 @@ export const checkinKeys = {
     ['checkins', 'month', year, month] as const,
 } as const;
 
-function buildMonthKey(habitId: number, dateInput: string | Date): string {
+function buildMonthKey(habitId: string, dateInput: string | Date): string {
   const d = new Date(dateInput);
   return `${habitId}-${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+async function getAuthHeaders() {
+  const token = await AsyncStorage.getItem('token');
+
+  if (!token) {
+    throw new Error('No auth token found');
+  }
+
+  return {
+    Authorization: `Bearer ${token}`,
+  };
 }
 
 async function fetchCheckInsForMonth(
   year: number,
   month: number,
 ): Promise<MonthlyCheckInMap> {
+  const headers = await getAuthHeaders();
+
   const { data } = await api.get<{ data: MonthlyCheckInMap }>('/checkins', {
     params: { year, month },
+    headers,
   });
+
   return data.data;
 }
 
 async function upsertCheckIn(payload: CheckInPayload): Promise<HabitCheckIn> {
-  const { data } = await api.post<{ data: HabitCheckIn }>('/checkins', payload);
+  const headers = await getAuthHeaders();
+
+  const { data } = await api.post<{ data: HabitCheckIn }>(
+    '/checkins',
+    payload,
+    { headers }
+  );
+
   return data.data;
 }
 
@@ -156,11 +180,11 @@ export function useUpsertCheckIn(
         queryKey: checkinKeys.month(year, month),
       });
 
-      if (payload?.habitId) {
-        queryClient.invalidateQueries({
-          queryKey: habitKeys.detail(payload.habitId),
-        });
-      }
+    //   if (payload?.habitId) {
+    //     queryClient.invalidateQueries({
+    //       queryKey: habitKeys.detail(payload.habitId),
+    //     });
+    //   }
 
       if (userId) {
         queryClient.invalidateQueries({

@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import CheckInModal from '@/components/checkin-modal';
+import { useUpsertCheckIn } from '@/hooks/use-checkin';
 
 // Palette
 const C = {
@@ -62,6 +63,16 @@ export default function HabitDetailScreen() {
   const router = useRouter();
 
   const habit = MOCK_HABIT;
+
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+
+  const userId = 1; // replace later
+  const habitId = 'seeded-workout-habit'; // replace with real habit
+
+  const { mutate: saveCheckIn } = useUpsertCheckIn(year, month, userId);
+
   const completionRate = Math.round((habit.totalCompletions / habit.totalDays) * 100);
 
   const [checkedIn, setCheckedIn] = useState(false);
@@ -237,9 +248,14 @@ export default function HabitDetailScreen() {
         initialNotes={notes}
         onClose={() => setModalVisible(false)}
         onSave={({ difficultyRating, notes }) => {
-          setCheckedIn(true);
-          setDifficultyRating(difficultyRating);
-          setNotes(notes);
+          saveCheckIn({
+            habitId,
+            date: today.toISOString(),
+            completed: true,
+            difficultyRating,
+            notes,
+          });
+
           setModalVisible(false);
         }}
       />
