@@ -95,7 +95,7 @@ export default function CalendarScreen() {
     const fetchHabits = async () => {
       const token = await AsyncStorage.getItem("token");
   
-      const res = await fetch("http://10.75.196.102:3000/habits", {
+      const res = await fetch("http://localhost:3000/habits", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -113,7 +113,7 @@ export default function CalendarScreen() {
       const token = await AsyncStorage.getItem("token");
   
       const res = await fetch(
-        `http://10.75.196.102:3000/checkins?year=${year}&month=${month}`,
+        `http://localhost:3000/checkins?year=${year}&month=${month}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -187,7 +187,7 @@ export default function CalendarScreen() {
   //     const [habitId, y, m, d] = modalKey.split("-");
   //     const date = new Date(Number(y), Number(m), Number(d));
   
-  //     await fetch("http://10.75.196.102:3000/checkins", {
+  //     await fetch("http://localhost:3000/checkins", {
   //       method: "POST",
   //       headers: {
   //         "Content-Type": "application/json",
@@ -334,7 +334,7 @@ export default function CalendarScreen() {
       try {
         const token = await AsyncStorage.getItem("token");
   
-        // await fetch(`http://10.75.196.102:3000/checkins/${habit.id}`, {
+        // await fetch(`http://localhost:3000/checkins/${habit.id}`, {
         //   method: "PATCH",
         //   headers: {
         //     "Content-Type": "application/json",
@@ -368,7 +368,7 @@ export default function CalendarScreen() {
         try {
           const token = await AsyncStorage.getItem("token");
   
-          // await fetch(`http://10.75.196.102:3000/checkins`, {
+          // await fetch(`http://localhost:3000/checkins`, {
           //   method: "POST",
           //   headers: {
           //     "Content-Type": "application/json",
