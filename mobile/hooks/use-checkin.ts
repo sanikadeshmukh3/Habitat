@@ -43,7 +43,7 @@ type UpsertCheckInContext = {
   previousMonthData?: MonthlyCheckInMap;
 };
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:3000';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -188,7 +188,7 @@ export function useUpsertCheckIn(
 
       if (userId) {
         queryClient.invalidateQueries({
-          queryKey: habitKeys.list(userId),
+          queryKey: habitKeys.list(),
         });
       }
     },

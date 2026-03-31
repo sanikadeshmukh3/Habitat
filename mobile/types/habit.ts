@@ -19,7 +19,6 @@ export type HabitFrequency = 'DAILY' | 'WEEKLY';
  */
 export interface Habit {
   id:             string;
-  userId:         string;
   name:           string;
   description?:   string;
   habitCategory:  HabitCategory;
@@ -68,8 +67,8 @@ export interface UpdateHabitPayload {
  * Each row represents one completed instance of a habit on a given date.
  */
 export interface HabitCheckIn {
-  id:      number;
-  habitId: number;
+  id:      string;
+  habitId: string;
   date:    string; // ISO-8601 string
 }
 
@@ -78,7 +77,7 @@ export interface HabitCheckIn {
 export type CompletionValue = true | false | null; // completed | missed | future
 
 export interface HabitStats {
-  habitId:          number;
+  habitId:          string;
   currentStreak:    number; // sourced directly from the Habit row
   bestStreak:       number; // computed from checkIns
   totalCompletions: number;

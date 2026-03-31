@@ -49,8 +49,7 @@ export default function CreateHabitScreen() {
   const router = useRouter(); 
 
   const [habit, setHabit] = useState<Habit>({
-    id: 0, //TODO: inject real id
-    userId: 0, //TODO: inject real userId from auth context
+    id: '1', //TODO: inject real id
     name: '',
     description: '',
     habitCategory: 'FITNESS',
@@ -73,7 +72,7 @@ export default function CreateHabitScreen() {
     setHabit((prev) => ({ ...prev, [field]: value }));
   };
 
-  const { mutate: createHabit, isPending } = useCreateHabit(1); // TODO: replace with actual userId from auth context
+  const { mutate: createHabit, isPending } = useCreateHabit();
 
   const canSubmit = habit.name.trim().length > 0;
 

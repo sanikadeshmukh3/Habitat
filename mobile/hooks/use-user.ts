@@ -5,7 +5,7 @@ import {
   UseQueryResult,
   UseMutationResult,
 } from '@tanstack/react-query';
-import axios, { AxiosError } from 'axios';
+import { AxiosError } from 'axios';
 import {
   UserProfile,
   UserSettings,
@@ -14,30 +14,21 @@ import {
   DEFAULT_USER_SETTINGS,
 } from '../types/user';
 
-// ─── Axios instance ───────────────────────────────────────────────────────────
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: { 'Content-Type': 'application/json' },
-  withCredentials: true,
-});
+import api from '../lib/api';
 
 // ─── Query key factory ────────────────────────────────────────────────────────
 
 export const userKeys = {
   all:      ()             => ['users']                         as const,
-  profile:  (userId: string) => ['users', 'profile', userId]   as const,
-  settings: (userId: string) => ['users', 'settings', userId]  as const,
+  profile:  () => ['users', 'profile']   as const,
+  settings: () => ['users', 'settings']  as const,
 } as const;
 
 // ─── API functions ────────────────────────────────────────────────────────────
 
-async function fetchUserProfile(userId: string): Promise<UserProfile> {
-  const { data } = await api.get<{ data: UserProfile }>(`/users/${userId}`, {
-    params: { userId: '1' }, // remove once auth middleware injects the user
-  });
+async function fetchUserProfile(): Promise<UserProfile> {
+  const { data } = await api.get<{ data: UserProfile }>(`/users/me`);
+  console.log('User profile fetched:', data.data);
   // Ensure settings always has all keys even if the DB row is missing some
   return {
     ...data.data,
@@ -45,20 +36,15 @@ async function fetchUserProfile(userId: string): Promise<UserProfile> {
   };
 }
 
-async function fetchUserSettings(userId: string): Promise<UserSettings> {
-  const { data } = await api.get<{ data: UserSettings }>(`/users/${userId}/settings`, {
-    params: { userId: '1' }, // remove once auth middleware injects the user
-});
+async function fetchUserSettings(): Promise<UserSettings> {
+  const { data } = await api.get<{ data: UserSettings }>(`/users/me/settings`);
   return { ...DEFAULT_USER_SETTINGS, ...data.data };
 }
 
 async function patchUserProfile(
-  userId: string,
   payload: UpdateProfilePayload,
 ): Promise<UserProfile> {
-  const { data } = await api.patch<{ data: UserProfile }>(`/users/${userId}`, payload, {
-    params: { userId: '1' }, // remove once auth middleware injects the user
-  });
+  const { data } = await api.patch<{ data: UserProfile }>(`/users/me`, payload);
   return {
     ...data.data,
     settings: { ...DEFAULT_USER_SETTINGS, ...data.data.settings },
@@ -66,15 +52,11 @@ async function patchUserProfile(
 }
 
 async function patchUserSettings(
-  userId: string,
   payload: UpdateSettingsPayload,
 ): Promise<UserSettings> {
   const { data } = await api.patch<{ data: UserSettings }>(
-    `/users/${userId}/settings`,
+    `/users/me/settings`,
     payload,
-    {
-      params: { userId: '1' }, // remove once auth middleware injects the user
-    },
   );
   return { ...DEFAULT_USER_SETTINGS, ...data.data };
 }
@@ -93,12 +75,10 @@ async function patchUserSettings(
  * const photoUri = profile?.settings.photoUri;
  */
 export function useUserProfile(
-  userId: string,
 ): UseQueryResult<UserProfile, AxiosError> {
   return useQuery({
-    queryKey: userKeys.profile(userId),
-    queryFn:  () => fetchUserProfile(userId),
-    enabled:  !!userId,
+    queryKey: userKeys.profile(),
+    queryFn:  () => fetchUserProfile(),
     staleTime: 1000 * 60 * 5, // treat profile as fresh for 5 minutes
   });
 }
@@ -118,20 +98,18 @@ export function useUserProfile(
  * const theme = settings?.theme ?? 'light';
  */
 export function useUserSettings(
-  userId: string,
 ): UseQueryResult<UserSettings, AxiosError> {
   const queryClient = useQueryClient();
 
   return useQuery({
-    queryKey: userKeys.settings(userId),
-    queryFn:  () => fetchUserSettings(userId),
-    enabled:  !!userId,
+    queryKey: userKeys.settings(),
+    queryFn:  () => fetchUserSettings(),
     staleTime: 1000 * 60 * 5,
 
     // Seed from the profile cache so settings.tsx renders instantly when the
     // user navigates from a screen that already loaded the profile.
     placeholderData: () => {
-      const profile = queryClient.getQueryData<UserProfile>(userKeys.profile(userId));
+      const profile = queryClient.getQueryData<UserProfile>(userKeys.profile());
       return profile?.settings;
     },
   });
@@ -148,26 +126,25 @@ export function useUserSettings(
  * saveProfile({ email: 'new@email.com', publicTag: '@newhandle' });
  */
 export function useUpdateUserProfile(
-  userId: string,
 ): UseMutationResult<UserProfile, AxiosError, UpdateProfilePayload> {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: UpdateProfilePayload) => patchUserProfile(userId, payload),
+    mutationFn: (payload: UpdateProfilePayload) => patchUserProfile(payload),
 
     // ── Optimistic update ──────────────────────────────────────────────────
     onMutate: async (payload) => {
-      await queryClient.cancelQueries({ queryKey: userKeys.profile(userId) });
-      await queryClient.cancelQueries({ queryKey: userKeys.settings(userId) });
+      await queryClient.cancelQueries({ queryKey: userKeys.profile() });
+      await queryClient.cancelQueries({ queryKey: userKeys.settings() });
 
-      const prevProfile  = queryClient.getQueryData<UserProfile>(userKeys.profile(userId));
-      const prevSettings = queryClient.getQueryData<UserSettings>(userKeys.settings(userId));
+      const prevProfile  = queryClient.getQueryData<UserProfile>(userKeys.profile());
+      const prevSettings = queryClient.getQueryData<UserSettings>(userKeys.settings());
 
       // Extract settings-backed fields from the payload
       const { email, password, ...settingsFields } = payload;
 
       if (prevProfile) {
-        queryClient.setQueryData<UserProfile>(userKeys.profile(userId), {
+        queryClient.setQueryData<UserProfile>(userKeys.profile(), {
           ...prevProfile,
           ...(email ? { email } : {}),
           settings: { ...prevProfile.settings, ...settingsFields },
@@ -175,7 +152,7 @@ export function useUpdateUserProfile(
       }
 
       if (prevSettings && Object.keys(settingsFields).length > 0) {
-        queryClient.setQueryData<UserSettings>(userKeys.settings(userId), {
+        queryClient.setQueryData<UserSettings>(userKeys.settings(), {
           ...prevSettings,
           ...settingsFields,
         });
@@ -189,17 +166,17 @@ export function useUpdateUserProfile(
       console.error('[useUpdateUserProfile] failed:', error.message);
 
       if (context?.prevProfile) {
-        queryClient.setQueryData(userKeys.profile(userId), context.prevProfile);
+        queryClient.setQueryData(userKeys.profile(), context.prevProfile);
       }
       if (context?.prevSettings) {
-        queryClient.setQueryData(userKeys.settings(userId), context.prevSettings);
+        queryClient.setQueryData(userKeys.settings(), context.prevSettings);
       }
     },
 
     // ── Settle: revalidate from server ─────────────────────────────────────
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: userKeys.profile(userId) });
-      queryClient.invalidateQueries({ queryKey: userKeys.settings(userId) });
+      queryClient.invalidateQueries({ queryKey: userKeys.profile() });
+      queryClient.invalidateQueries({ queryKey: userKeys.settings() });
     },
   });
 }
@@ -220,28 +197,27 @@ export function useUpdateUserProfile(
  * saveSettings({ notifications: false });
  */
 export function useUpdateUserSettings(
-  userId: string,
 ): UseMutationResult<UserSettings, AxiosError, UpdateSettingsPayload> {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: UpdateSettingsPayload) => patchUserSettings(userId, payload),
+    mutationFn: (payload: UpdateSettingsPayload) => patchUserSettings(payload),
 
     // ── Optimistic update ──────────────────────────────────────────────────
     onMutate: async (payload) => {
-      await queryClient.cancelQueries({ queryKey: userKeys.settings(userId) });
-      await queryClient.cancelQueries({ queryKey: userKeys.profile(userId) });
+      await queryClient.cancelQueries({ queryKey: userKeys.settings() });
+      await queryClient.cancelQueries({ queryKey: userKeys.profile() });
 
-      const prevSettings = queryClient.getQueryData<UserSettings>(userKeys.settings(userId));
-      const prevProfile  = queryClient.getQueryData<UserProfile>(userKeys.profile(userId));
+      const prevSettings = queryClient.getQueryData<UserSettings>(userKeys.settings());
+      const prevProfile  = queryClient.getQueryData<UserProfile>(userKeys.profile());
 
       const optimisticSettings = { ...(prevSettings ?? DEFAULT_USER_SETTINGS), ...payload };
 
-      queryClient.setQueryData<UserSettings>(userKeys.settings(userId), optimisticSettings);
+      queryClient.setQueryData<UserSettings>(userKeys.settings(), optimisticSettings);
 
       // Mirror the change into the profile cache so profile.tsx stays consistent
       if (prevProfile) {
-        queryClient.setQueryData<UserProfile>(userKeys.profile(userId), {
+        queryClient.setQueryData<UserProfile>(userKeys.profile(), {
           ...prevProfile,
           settings: optimisticSettings,
         });
@@ -255,17 +231,17 @@ export function useUpdateUserSettings(
       console.error('[useUpdateUserSettings] failed:', error.message);
 
       if (context?.prevSettings) {
-        queryClient.setQueryData(userKeys.settings(userId), context.prevSettings);
+        queryClient.setQueryData(userKeys.settings(), context.prevSettings);
       }
       if (context?.prevProfile) {
-        queryClient.setQueryData(userKeys.profile(userId), context.prevProfile);
+        queryClient.setQueryData(userKeys.profile(), context.prevProfile);
       }
     },
 
     // ── Settle: revalidate from server ─────────────────────────────────────
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: userKeys.settings(userId) });
-      queryClient.invalidateQueries({ queryKey: userKeys.profile(userId) });
+      queryClient.invalidateQueries({ queryKey: userKeys.settings() });
+      queryClient.invalidateQueries({ queryKey: userKeys.profile() });
     },
   });
 }
