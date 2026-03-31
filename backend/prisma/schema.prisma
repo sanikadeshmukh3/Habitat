@@ -11,8 +11,8 @@ model User {
   id       String   @id @default(uuid())
   email    String   @unique
   password String
-  firstName String
-  lastName String?
+  firstName String @map("first_name")
+  lastName String? @map("last_name")
   timezone String?
   creation DateTime @default(now())
   settings Json     @default("{\"the guy\": {\"last name\": \"guy\", \"first name\": \"might\"}}")
@@ -23,7 +23,7 @@ model User {
   codeExpires DateTime? @map("code_expires")
 
   friends User[] @relation("UserFriends")
-  friendsOf User[] @relation("UserFriends") @map("friends_of")
+  friendsOf User[] @relation("UserFriends")
 
   @@map("user")
 }
@@ -52,7 +52,7 @@ model HabitCheckIn {
   date              DateTime @default(now())
   habitId           String   @map("habit_id")
   completed         Boolean
-  difficulty_rating Int?
+  difficultyRating Int? @map("difficulty_rating")
   notes             String?
   habit             Habit    @relation(fields: [habitId], references: [id])
 
