@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -13,15 +13,16 @@ import {
   Platform,
 } from 'react-native';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import CheckInModal from '@/components/checkin-modal';
 import { useUpsertCheckIn } from '@/hooks/use-checkin';
 
 // ── Fake habits – replace with real data/store ────────────────
-const HABITS = [
-  { id: 'seeded-workout-habit', title: 'Fitness Habit'       },
-  { id: '2', title: 'Nutrition Habit'     },
-  { id: '3', title: 'Procrastination Habit' },
-];
+// const HABITS = [
+//   { id: 'seeded-workout-habit', title: 'Fitness Habit'       },
+//   { id: '2', title: 'Nutrition Habit'     },
+//   { id: '3', title: 'Procrastination Habit' },
+// ];
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_NAMES = [
@@ -40,17 +41,18 @@ function getFirstDayOfWeek(year: number, month: number) {
 // Returns 0–1 representing a ratio of how many habits were checked on a given day.
 // Used to render the partial green fill inside each day cell.
 function completionRatio(
-  habitCount: number,
+  habits: any[] = [],
+  // habitCount: number,
   entries: EntryMap,
   year: number,
   month: number,
   day: number,
 ): number {
-  if (habitCount === 0) return 0;
-  const checked = HABITS.filter(
+  if (habits.length === 0) return 0;
+  const checked = habits.filter(
     h => entries[`${h.id}-${year}-${month}-${day}`]?.checked
   ).length;
-  return checked / habitCount;
+  return checked / habits.length;
 }
 
 // ── Types ─────────────────────────────────────────────────────
@@ -62,10 +64,13 @@ type HabitEntry = {
 // key: `${habitId}-${year}-${month}-${day}`
 type EntryMap = Record<string, HabitEntry>;
 
+
 export default function CalendarScreen() {
   const today = new Date();
   const [year,  setYear]  = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
+
+  const [habits, setHabits] = useState<any[]>([]);
 
   // Which day's habits are shown below the grid (defaults to today)
   const [selectedDay, setSelectedDay] = useState(today.getDate());
@@ -73,7 +78,7 @@ export default function CalendarScreen() {
   // Pixel height of a single day cell, measured via onLayout.
   const [cellHeight, setCellHeight] = useState(0);
 
-  // Stored mood entries
+  // Stored habit entries
   const [entries, setEntries] = useState<EntryMap>({});
 
   // Modal state
@@ -84,6 +89,64 @@ export default function CalendarScreen() {
   } | null>(null);
   const [draftDifficultyRating, setDraftDifficultyRating] = useState<number | null>(null);
   const [draftNotes, setDraftNotes] = useState('');
+
+
+  useEffect(() => {
+    const fetchHabits = async () => {
+      const token = await AsyncStorage.getItem("token");
+  
+      const res = await fetch("http://localhost:3000/habits", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      const data = await res.json();
+      setHabits(data.habits || []);
+    };
+  
+    fetchHabits();
+  }, []);
+
+  useEffect(() => {
+    const fetchCheckins = async () => {
+      const token = await AsyncStorage.getItem("token");
+  
+      const res = await fetch(
+        `http://localhost:3000/checkins?year=${year}&month=${month}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+  
+      const data = await res.json();
+  
+      const mapped: EntryMap = {};
+      (data.checkins || []).forEach((c: any) => {
+        const d = new Date(c.date);
+  
+        const key = `${c.habitId}-${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  
+        mapped[key] = {
+          checked: c.completed,
+          difficultyRating: c.difficultyRating ?? null,
+          notes: c.notes,
+        };
+      });
+      console.log("CHECKINS RESPONSE:", data);
+  
+      setEntries(mapped);
+    };
+  
+    fetchCheckins();
+  }, [year, month]);
+
+
+
+
+
 
   // ── Navigation ──────────────────────────────────────────────
   const prevMonth = () => {
@@ -118,20 +181,42 @@ export default function CalendarScreen() {
     setModalVisible(true);
   };
 
-  const saveModal = () => {
-    if (!modalTarget) return;
-
-    saveCheckIn({
-      habitId: modalTarget.habitId,
-      date: new Date(year, month, modalTarget.day).toISOString(),
-      completed: true,
-      difficultyRating: draftDifficultyRating,
-      notes: draftNotes,
-    });
-
-    setModalVisible(false);
-    setModalTarget(null);
-  };
+  // const saveModal = async () => {
+  //   try {
+  //     const token = await AsyncStorage.getItem("token");
+  //     const [habitId, y, m, d] = modalKey.split("-");
+  //     const date = new Date(Number(y), Number(m), Number(d));
+  
+  //     await fetch("http://localhost:3000/checkins", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //       body: JSON.stringify({
+  //         habitId,
+  //         date,
+  //         completed: true,
+  //         notes: draftNotes,
+  //         mood: draftMood,          
+  //         difficultyRating: null,
+  //       }),
+  //     });
+  
+  //     setEntries(prev => ({
+  //       ...prev,
+  //       [modalKey]: {
+  //         checked: true,
+  //         notes: draftNotes,
+  //         mood: draftMood,
+  //       },
+  //     }));
+  
+  //     setModalVisible(false);
+  //   } catch (err) {
+  //     console.error("Failed to save habit entry:", err);
+  //   }
+  // };
 
   const userId = 1; // replace later with auth
   const { mutate: saveCheckIn } = useUpsertCheckIn(year, month, userId);
@@ -187,7 +272,7 @@ export default function CalendarScreen() {
           {/* ── Day cells ─────────────────────────────────────── */}
           {cells.map((day, i) => {
             const ratio = day !== null
-              ? completionRatio(HABITS.length, entries, year, month, day)
+              ? completionRatio(habits, entries, year, month, day)
               : 0;
 
             const fillPx = cellHeight * ratio;
@@ -227,34 +312,104 @@ export default function CalendarScreen() {
           Habits – {MONTH_NAMES[month]} {selectedDay}
         </Text>
 
-        {HABITS.map(habit => {
+        {habits.map(habit => {
           const entry = entryForKey(habit.id, selectedDay);
           const checked = entry?.checked ?? false;
           return (
             <View key={habit.id} style={styles.habitRow}>
-              <Text style={styles.habitName}>{habit.title}</Text>
+              <Text style={styles.habitName}>{habit.name}</Text>
 
               {/* Check circle:
                   • Empty/white border  = not yet checked
                   • Solid green bubble + white ✓ = checked
                   Pressing it opens the mood/notes modal          */}
-              <TouchableOpacity
-                style={[styles.checkCircle, checked && styles.checkCircleDone]}
-                onPress={() => {
-                  if (checked) {
-                    // Uncheck: keep the entry but flip checked to false
-                    const key = `${habit.id}-${year}-${month}-${selectedDay}`;
-                    setEntries(prev => ({
-                      ...prev,
-                      [key]: { ...prev[key], checked: false },
-                    }));
-                  } else {
-                    openModal(habit.id, selectedDay);
-                  }
-                }}
-              >
-                {checked && <Text style={styles.checkMark}>✓</Text>}
-              </TouchableOpacity>
+<TouchableOpacity
+  style={[styles.checkCircle, checked && styles.checkCircleDone]}
+  onPress={async () => {
+    const key = `${habit.id}-${year}-${month}-${selectedDay}`;
+    const existing = entries[key];
+  
+    if (checked) {
+      // Uncheck
+      try {
+        const token = await AsyncStorage.getItem("token");
+  
+        // await fetch(`http://localhost:3000/checkins/${habit.id}`, {
+        //   method: "PATCH",
+        //   headers: {
+        //     "Content-Type": "application/json",
+        //     Authorization: `Bearer ${token}`,
+        //   },
+        //   body: JSON.stringify({
+        //     date: new Date(year, month, selectedDay),
+        //     completed: false,
+        //   }),
+        // });
+
+        saveCheckIn({
+          habitId: habit.id,
+          date: new Date(year, month, selectedDay).toISOString(),
+          completed: false,
+        });
+  
+        setEntries(prev => ({
+          ...prev,
+          [key]: {
+            ...(prev[key] || { difficultyRating: null, notes: '' }),
+            checked: false,
+          },
+        }));
+      } catch (err) {
+        console.error("Failed to uncheck habit:", err);
+      }
+    } else {
+      if (existing) {
+        // Re-check WITHOUT modal
+        try {
+          const token = await AsyncStorage.getItem("token");
+  
+          // await fetch(`http://localhost:3000/checkins`, {
+          //   method: "POST",
+          //   headers: {
+          //     "Content-Type": "application/json",
+          //     Authorization: `Bearer ${token}`,
+          //   },
+          //   body: JSON.stringify({
+          //     habitId: habit.id,
+          //     date: new Date(year, month, selectedDay),
+          //     completed: true,
+          //     notes: existing.notes,
+          //     mood: existing.mood,
+          //     difficultyRating: null,
+          //   }),
+          // });
+
+      saveCheckIn({
+      habitId: habit.id,
+      date: new Date(year, month, selectedDay).toISOString(),
+      completed: true,
+      difficultyRating: existing.difficultyRating,
+      notes: existing.notes,
+  });
+  
+          setEntries(prev => ({
+            ...prev,
+            [key]: {
+              ...existing,
+              checked: true,
+            },
+          }));
+        } catch (err) {
+          console.error("Failed to re-check habit:", err);
+        }
+      } else {
+        openModal(habit.id, selectedDay);
+      }
+    }
+  }}
+>
+  {checked && <Text style={styles.checkMark}>✓</Text>}
+</TouchableOpacity>
             </View>
           );
         })}
@@ -280,6 +435,16 @@ export default function CalendarScreen() {
             difficultyRating,
             notes,
           });
+          const key = `${modalTarget.habitId}-${year}-${month}-${modalTarget.day}`;
+
+    setEntries(prev => ({
+    ...prev,
+    [key]: {
+    checked: true,
+    difficultyRating,
+    notes,
+  },
+}));
 
           setModalVisible(false);
           setModalTarget(null);
