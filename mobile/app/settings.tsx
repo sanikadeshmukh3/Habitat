@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,131 +8,75 @@ import {
   Switch,
   ScrollView,
   ImageBackground,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { useUserSettings, useUpdateUserSettings } from '@/hooks/use-user';
+import type { AppTheme, UpdateSettingsPayload } from '@/types/user';
 
-// ── Tab definitions ──────────────────────────────────────────
-//  ADD NEW TABS HERE: just push another { id, label } object.
-//  Then add a matching `case` in renderContent() below.
-const TABS = [
-  { id: 'general',       label: '⚙️  General'      },
-  { id: 'accessibility', label: '♿  Accessibility' },
-  // { id: 'notifications', label: '🔔  Notifications' },  ← example
-];
+// ── LOADING STRATEGY ─────────────────────────────────────────────────────────
+//
+// Settings are loaded in two layers:
+//
+//  1. App startup  → your root layout (e.g. app/_layout.tsx) calls
+//     useUserSettings(userId) once, which fetches from the server and writes
+//     into the React Query cache.  That fetch is the only network request.
+//
+//  2. Settings screen opens  → useUserSettings reads from the in-memory
+//     React Query cache instantly (staleTime = 5 min), so the screen renders
+//     with zero loading time on subsequent opens.
+//
+// If you want settings to survive app restarts without a network hit, add the
+// @tanstack/query-async-storage-persister package and configure it in your
+// QueryClient setup.  The hooks here don't need to change.
 
 export default function SettingsScreen() {
-  const [activeTab, setActiveTab] = useState('general');
+  // ── Resolve userId ──────────────────────────────────────────────────────
+  // TODO: replace with your auth context once wired.
+  // e.g. const { user } = useAuth(); const userId = user.id;
+  const [userId, setUserId] = useState<string | null>('1');
 
-  // ── General settings state ────────────────────────────────
-  //  TO IMPLEMENT theme: pass `theme` into a ThemeContext and
-  //  use it to switch Colors.pageBg etc. across the app.
-  const [theme, setTheme] = useState<'light' | 'dark' | 'nature'>('light');
+  // useEffect(() => {
+  //   AsyncStorage.getItem('@userId').then(id => setUserId(id));
+  // }, []);
+  //commented out for now so testing works
 
-  // ── Accessibility settings state ──────────────────────────
-  //  TO IMPLEMENT highContrast: in theme.ts add a
-  //  `highContrastColors` export; switch Colors import based on
-  //  a global context value you set here.
-  const [highContrast, setHighContrast] = useState(false);
-  const [largeText,    setLargeText]    = useState(false); // bonus setting stub
+  // ── Remote data ─────────────────────────────────────────────────────────
+  const {
+    data:      settings,
+    isLoading: settingsLoading,
+  } = useUserSettings(userId ?? '1');
 
-  const goBack = () => router.push("./(tabs)/home");
+  const { mutate: updateSettings, isPending: isSaving } = useUpdateUserSettings(userId ?? '1');
 
-  // ── Content renderer ─────────────────────────────────────
-  //  ADD NEW SETTING PANELS HERE by adding cases.
-  const renderContent = () => {
-    switch (activeTab) {
+  // ── Derived values with safe defaults while loading ──────────────────────
+  const theme         = settings?.theme         ?? 'light';
+  const habitStacking = settings?.habitStacking ?? false;
+  const notifications = settings?.notifications ?? false;
 
-      // ── General ────────────────────────────────────────────
-      case 'general':
-        return (
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <Text style={styles.panelTitle}>General</Text>
+  // ── Save a single settings key immediately on change ────────────────────
+  // This is the standard pattern for settings screens — no Save button needed
+  // because each toggle/chip represents a discrete, self-contained preference.
+  const saveSetting = (patch: UpdateSettingsPayload) => {
+    if (!userId) return;
+    updateSettings(patch, {
+      onError: (err) => {
+        const msg = (err as any)?.response?.data?.error ?? 'Could not save setting.';
+        Alert.alert('Save failed', msg);
+      },
+    });
+  };
 
-            <Text style={styles.sectionLabel}>App Theme</Text>
-            <Text style={styles.hint}>
-              Theme switching is scaffolded – connect to a ThemeContext to activate.
-            </Text>
+  const goBack = () => router.push('./(tabs)/home');
 
-            {/* Theme selector chips */}
-            <View style={styles.chipRow}>
-              {(['light', 'dark', 'nature'] as const).map(t => (
-                <TouchableOpacity
-                  key={t}
-                  style={[styles.themeChip, theme === t && styles.themeChipActive]}
-                  onPress={() => {
-                    setTheme(t);
-                    // TODO: dispatch to ThemeContext
-                    console.log('Theme selected:', t);
-                  }}
-                >
-                  <Text style={[styles.themeChipText, theme === t && styles.themeChipTextActive]}>
-                    {t === 'light' ? '☀️ Light' : t === 'dark' ? '🌙 Dark' : '🌿 Nature'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* ── Stub: add more General settings below this line ── */}
-          </ScrollView>
-        );
-
-      // ── Accessibility ──────────────────────────────────────
-      case 'accessibility':
-        return (
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <Text style={styles.panelTitle}>Accessibility</Text>
-
-            {/* High contrast toggle */}
-            <View style={styles.settingRow}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingName}>High Contrast</Text>
-                <Text style={styles.hint}>
-                  Increases text/background contrast.{'\n'}
-                  TODO: swap Colors import via a ContrastContext.
-                </Text>
-              </View>
-              <Switch
-                value={highContrast}
-                onValueChange={v => {
-                  setHighContrast(v);
-                  // TODO: dispatch to ContrastContext
-                  console.log('High contrast:', v);
-                }}
-                trackColor={{ false: Colors.lightGreen, true: Colors.primaryGreen }}
-                thumbColor={highContrast ? Colors.white : Colors.lightBrown}
-              />
-            </View>
-
-            <View style={styles.divider} />
-
-            {/* Large text toggle (stub) */}
-            <View style={styles.settingRow}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingName}>Large Text</Text>
-                <Text style={styles.hint}>
-                  Increases base font size across the app.{'\n'}
-                  TODO: multiply FontSize constants via context.
-                </Text>
-              </View>
-              <Switch
-                value={largeText}
-                onValueChange={v => {
-                  setLargeText(v);
-                  // TODO: dispatch to FontSizeContext
-                  console.log('Large text:', v);
-                }}
-                trackColor={{ false: Colors.lightGreen, true: Colors.primaryGreen }}
-                thumbColor={largeText ? Colors.white : Colors.lightBrown}
-              />
-            </View>
-
-            {/* ── Stub: add more Accessibility settings below ── */}
-          </ScrollView>
-        );
-
-      default:
-        return <Text style={styles.hint}>Select a tab.</Text>;
-    }
+  const handleReplayTutorial = () => {
+    // TODO: reset your onboarding flag in AsyncStorage, then navigate to the
+    //       tutorial screen.
+    // e.g. await AsyncStorage.setItem('@tutorialSeen', 'false');
+    //      router.replace('./tutorial');
+    Alert.alert('Tutorial', 'Replaying tutorial...');
   };
 
   return (
@@ -141,43 +85,126 @@ export default function SettingsScreen() {
       style={styles.bg}
       imageStyle={{ opacity: 0.06 }}
     >
+      {/* ── Header ────────────────────────────────────────────── */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={goBack}>
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
+        <Text style={styles.headerTitle}>App Settings</Text>
+
+        {/* Saving indicator — visible whenever any setting is being persisted */}
+        <View style={styles.savingBadge}>
+          {isSaving ? (
+            <>
+              <ActivityIndicator size="small" color={Colors.primaryGreen} />
+              <Text style={styles.savingText}>Saving…</Text>
+            </>
+          ) : (
+            // Empty box keeps the header height stable
+            <Text style={styles.savedText}>{settings ? '✓ Saved' : ''}</Text>
+          )}
+        </View>
       </View>
 
-      {/* ── Main layout: sidebar LEFT + content RIGHT ─────────
-          REPOSITION: change `screenRow` flexDirection          */}
-      <View style={styles.screenRow}>
+      {/* ── Settings list ───────────────────────────────────────── */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {settingsLoading && !settings ? (
+          // Only show the full-screen spinner on the very first load.
+          // On subsequent opens the cache fills instantly so this never shows.
+          <View style={styles.loadingRow}>
+            <ActivityIndicator size="large" color={Colors.primaryGreen} />
+          </View>
+        ) : (
+          <>
+            {/* ── Section: Appearance ─────────────────────────── */}
+            <Text style={styles.sectionLabel}>Appearance</Text>
+            <View style={styles.card}>
+              <Text style={styles.settingName}>App Theme</Text>
+              <View style={styles.chipRow}>
+                {(['light', 'dark', 'nature'] as const).map(t => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[styles.themeChip, theme === t && styles.themeChipActive]}
+                    onPress={() => saveSetting({ theme: t })}
+                    // Disable taps while any save is in-flight to prevent
+                    // conflicting patches hitting the server simultaneously.
+                    disabled={isSaving}
+                  >
+                    <Text style={[styles.themeChipText, theme === t && styles.themeChipTextActive]}>
+                      {t === 'light' ? '☀️ Light' : t === 'dark' ? '🌙 Dark' : '🌿 Nature'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
 
-        {/* Sidebar */}
-        <View style={styles.sidebar}>
-          {TABS.map(tab => (
-            <TouchableOpacity
-              key={tab.id}
-              style={[styles.tabBtn, activeTab === tab.id && styles.tabBtnActive]}
-              onPress={() => setActiveTab(tab.id)}
-            >
-              <Text style={[styles.tabLabel, activeTab === tab.id && styles.tabLabelActive]}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+            {/* ── Section: Habits ─────────────────────────────── */}
+            <Text style={styles.sectionLabel}>Habits</Text>
+            <View style={styles.card}>
+              <View style={styles.settingRow}>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingName}>Habit Stacking</Text>
+                  <Text style={styles.hint}>
+                    Link habits together so completing one automatically prompts the next.
+                  </Text>
+                </View>
+                <Switch
+                  value={habitStacking}
+                  onValueChange={v => saveSetting({ habitStacking: v })}
+                  trackColor={{ false: Colors.lightGreen, true: Colors.primaryGreen }}
+                  thumbColor={habitStacking ? Colors.white : Colors.lightBrown}
+                  disabled={isSaving}
+                />
+              </View>
+            </View>
 
-        {/* Content panel */}
-        <View style={styles.contentPanel}>
-          {renderContent()}
-        </View>
+            {/* ── Section: General ────────────────────────────── */}
+            <Text style={styles.sectionLabel}>General</Text>
+            <View style={styles.card}>
 
-      </View>
+              {/* Notifications */}
+              <View style={styles.settingRow}>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingName}>Notifications</Text>
+                  <Text style={styles.hint}>
+                    Receive reminders and updates for your habits.
+                  </Text>
+                </View>
+                <Switch
+                  value={notifications}
+                  onValueChange={v => saveSetting({ notifications: v })}
+                  trackColor={{ false: Colors.lightGreen, true: Colors.primaryGreen }}
+                  thumbColor={notifications ? Colors.white : Colors.lightBrown}
+                  disabled={isSaving}
+                />
+              </View>
+
+              <View style={styles.divider} />
+
+              {/* Replay Tutorial */}
+              <View style={styles.settingRow}>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingName}>Replay Tutorial</Text>
+                  <Text style={styles.hint}>Walk through the app introduction again.</Text>
+                </View>
+                <TouchableOpacity style={styles.actionBtn} onPress={handleReplayTutorial}>
+                  <Text style={styles.actionBtnText}>Replay</Text>
+                </TouchableOpacity>
+              </View>
+
+            </View>
+          </>
+        )}
+      </ScrollView>
     </ImageBackground>
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────
+// ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   bg: {
     flex: 1,
@@ -208,69 +235,93 @@ const styles = StyleSheet.create({
     fontSize: FontSize.lg,
     fontWeight: '700',
     color: Colors.darkBrown,
-  },
-
-  // ── Two-column layout ──
-  screenRow: {
     flex: 1,
-    flexDirection: 'row',  // ← change to 'column' to stack vertically
   },
-  sidebar: {
-    width: 130,            // ← adjust width of the tab strip
-    backgroundColor: Colors.cardBg,
-    borderRightWidth: 1,
-    borderRightColor: Colors.border,
+  savingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minWidth: 64,
+    justifyContent: 'flex-end',
   },
-  tabBtn: {
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.sm,
-    borderLeftWidth: 3,
-    borderLeftColor: 'transparent',
-  },
-  tabBtnActive: {
-    backgroundColor: Colors.paleGreen,
-    borderLeftColor: Colors.primaryGreen,
-  },
-  tabLabel: {
-    fontSize: FontSize.sm,
-    color: Colors.lightBrown,
+  savingText: {
+    fontSize: FontSize.xs,
+    color: Colors.primaryGreen,
     fontWeight: '500',
   },
-  tabLabelActive: {
-    color: Colors.primaryGreen,
-    fontWeight: '700',
+  savedText: {
+    fontSize: FontSize.xs,
+    color: Colors.midGreen,
+    fontWeight: '500',
   },
-  contentPanel: {
+  loadingRow: {
+    marginTop: Spacing.xl,
+    alignItems: 'center',
+  },
+  scroll: {
     flex: 1,
+  },
+  scrollContent: {
     padding: Spacing.md,
+    paddingBottom: Spacing.lg * 2,
   },
 
-  // ── Content elements ──
-  panelTitle: {
-    fontSize: FontSize.xl,
-    fontWeight: '700',
-    color: Colors.darkBrown,
-    marginBottom: Spacing.md,
-  },
+  // ── Section label ──
   sectionLabel: {
     fontSize: FontSize.sm,
     fontWeight: '600',
     color: Colors.medBrown,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
+    marginTop: Spacing.md,
     marginBottom: Spacing.xs,
+    marginLeft: Spacing.xs,
+  },
+
+  // ── Card ──
+  card: {
+    backgroundColor: Colors.cardBg,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+
+  // ── Row layout ──
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.sm,
+  },
+  settingInfo: {
+    flex: 1,
+    marginRight: Spacing.sm,
+  },
+  settingName: {
+    fontSize: FontSize.md,
+    fontWeight: '600',
+    color: Colors.darkBrown,
+    marginBottom: 2,
   },
   hint: {
     fontSize: FontSize.xs,
     color: Colors.lightBrown,
-    marginBottom: Spacing.sm,
     lineHeight: 17,
   },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.border,
+  },
+
+  // ── Theme chips ──
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.xs,
-    marginTop: Spacing.xs,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   themeChip: {
     paddingVertical: Spacing.xs + 2,
@@ -292,25 +343,19 @@ const styles = StyleSheet.create({
   themeChipTextActive: {
     color: Colors.white,
   },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing.sm,
+
+  // ── Action button ──
+  actionBtn: {
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    backgroundColor: Colors.paleGreen,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.midGreen,
   },
-  settingInfo: {
-    flex: 1,
-    marginRight: Spacing.sm,
-  },
-  settingName: {
-    fontSize: FontSize.md,
+  actionBtnText: {
+    color: Colors.primaryGreen,
     fontWeight: '600',
-    color: Colors.darkBrown,
-    marginBottom: 2,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.border,
-    marginVertical: Spacing.xs,
+    fontSize: FontSize.sm,
   },
 });

@@ -26,7 +26,6 @@ function isValidFrequency(v) {
 async function getHabits(req, res, next) {
   try {
     // TODO: replace with your auth middleware value once auth is wired up
-    // e.g. const userId = req.user.id;
     const userId = req.user?.id ?? req.query.userId;
     if (!userId) {
       res.status(401).json({ error: 'Unauthorized' });
@@ -187,6 +186,7 @@ async function createHabit(req, res, next) {
         frequency:     body.frequency,
         visibility:    body.visibility  ?? true,  // default public
         active:        body.active      ?? true,  // default active
+        updatedAt:    new Date(),
         // currentStreak defaults to 0 via the Prisma schema @default(0)
         ...(body.priorityRank != null && { priorityRank: Number(body.priorityRank) }),
       },
@@ -264,6 +264,7 @@ async function updateHabit(req, res, next) {
       // Allow null to clear the rank
       data.priorityRank = body.priorityRank === null ? null : Number(body.priorityRank);
     }
+    data.updatedAt = new Date();
 
     if (Object.keys(data).length === 0) {
       res.status(400).json({ error: 'No fields provided to update' });

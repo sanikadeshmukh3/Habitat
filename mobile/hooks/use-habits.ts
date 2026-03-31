@@ -54,7 +54,7 @@ export const habitKeys = {
 
 async function fetchHabits(userId: number): Promise<Habit[]> {
   const { data } = await api.get<{ data: Habit[] }>('/habits', {
-    params: { userId }, // remove once auth middleware injects the user
+    params: { userId: 1 }, // remove once auth middleware injects the user
   });
   return data.data;
 }

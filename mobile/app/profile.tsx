@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,77 +10,155 @@ import {
   TextInput,
   Image,
   ImageBackground,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { useUserProfile, useUpdateUserProfile } from '../hooks/use-user';
 
-// ── Fake user data – replace with real auth/store later ──────
-const INITIAL_USER = {
-  email:     'user@example.com',
-  publicTag: '@greenleaf_user',
-  password:  'password123',
-  points:    112,
-  badges: [
-    { id: '1', label: '🌱 Seedling' },
-    { id: '2', label: '🔥 7-Day Streak' },
-    { id: '3', label: '🏆 Top Sharer' },
-  ],
-};
+// ── Placeholder badges/points ─────────────────────────────────────────────────
+// TODO: replace with a real hook once you add a points/badges system to your schema.
+const PLACEHOLDER_BADGES = [
+  { id: '1', label: '🌱 Seedling' },
+  { id: '2', label: '🔥 7-Day Streak' },
+  { id: '3', label: '🏆 Top Sharer' },
+];
+const PLACEHOLDER_POINTS = 112;
 
 export default function ProfileScreen() {
-  // ── State ────────────────────────────────────────────────
-  const [isPublic, setIsPublic]         = useState(true);
+  // ── Resolve userId ────────────────────────────────────────────────────────
+  // TODO: replace AsyncStorage lookup with your auth context once it is wired.
+  // e.g.  const { user } = useAuth();  const userId = user.id;
+  const [userId, setUserId] = useState<string | null>('1');
+
+  // useEffect(() => {
+  //   AsyncStorage.getItem('@userId').then(id => setUserId(id));
+  // }, []);
+  // commented for now because async storage giving null
+
+  // ── Remote data ───────────────────────────────────────────────────────────
+  const {
+    data:      profile,
+    isLoading: profileLoading,
+    isError:   profileError,
+  } = useUserProfile(userId ?? '1'); //TODO: do whatever here to inject userId
+
+  const { mutate: saveProfile, isPending: isSaving } = useUpdateUserProfile(userId ?? '1');
+
+  // ── Derived display values (fall back to empty while loading) ─────────────
+  const email     = profile?.email            ?? '';
+  const publicTag = profile?.settings.publicTag ?? '';
+  const isPublic  = profile?.settings.isPublic  ?? true;
+  const photoUri  = profile?.settings.photoUri  ?? null;
+
+  // ── UI-only state ─────────────────────────────────────────────────────────
   const [showPassword, setShowPassword] = useState(false);
+  const [isEditing,    setIsEditing]    = useState(false);
 
-  // Edit mode: when true, fields become TextInputs
-  // LOCATION OF EDIT LOGIC: the `isEditing` flag and the
-  // `draft*` states below control the whole edit flow.
-  const [isEditing, setIsEditing]       = useState(false);
-  const [email,     setEmail]           = useState(INITIAL_USER.email);
-  const [publicTag, setPublicTag]       = useState(INITIAL_USER.publicTag);
-  const [password,  setPassword]        = useState(INITIAL_USER.password);
-
-  // Draft values while editing – only committed on Save
-  const [draftEmail,  setDraftEmail]    = useState(email);
-  const [draftTag,    setDraftTag]      = useState(publicTag);
-  const [draftPass,   setDraftPass]     = useState(password);
+  // Draft values — initialised from server data when the user opens the editor
+  const [draftEmail,    setDraftEmail]    = useState('');
+  const [draftTag,      setDraftTag]      = useState('');
+  const [draftPass,     setDraftPass]     = useState('');
+  const [draftPhotoUri, setDraftPhotoUri] = useState<string | null>(null);
 
   const startEdit = () => {
     setDraftEmail(email);
     setDraftTag(publicTag);
-    setDraftPass(password);
+    setDraftPass('');           // never pre-fill password for security
+    setDraftPhotoUri(photoUri);
     setIsEditing(true);
   };
 
+  // ── Save: write all edited fields to the DB in a single PATCH ────────────
   const saveEdit = () => {
-    setEmail(draftEmail);
-    setPublicTag(draftTag);
-    setPassword(draftPass);
-    setIsEditing(false);
-    // TODO: persist to your API/store here
+    if (!userId) return;
+
+    // Build the payload with only changed fields so we don't overwrite
+    // unchanged data unnecessarily.
+    const payload: Parameters<typeof saveProfile>[0] = {};
+
+    if (draftEmail.trim()   && draftEmail.trim() !== email)     payload.email     = draftEmail.trim();
+    if (draftTag.trim()     && draftTag.trim()   !== publicTag)  payload.publicTag = draftTag.trim();
+    if (draftPass.length >= 8)                                   payload.password  = draftPass;
+    if (draftPhotoUri !== photoUri)                              payload.photoUri  = draftPhotoUri;
+
+    // Nothing actually changed — skip the network call
+    if (Object.keys(payload).length === 0) {
+      setIsEditing(false);
+      return;
+    }
+
+    saveProfile(payload, {
+      onSuccess: () => setIsEditing(false),
+      onError:   (err) => {
+        const msg = (err as any)?.response?.data?.error ?? 'Could not save changes.';
+        Alert.alert('Save failed', msg);
+      },
+    });
   };
 
   const cancelEdit = () => setIsEditing(false);
 
-  // ── Photo state ────────────────────
-  // `photoUri` holds the raw picked image URI.
-  // To persist across launches: save photoUri to AsyncStorage in saveEdit().
-  const [photoUri,    setPhotoUri]    = useState<string | null>(null);
+  // ── Privacy toggle — saves immediately (single-tap action like a setting) ─
+  const handlePrivacyToggle = (value: boolean) => {
+    if (!userId) return;
+    saveProfile({ isPublic: value });
+  };
 
-  // Opens the device photo library.
+  // ── Photo picker ──────────────────────────────────────────────────────────
+  // Stores the local URI as a draft.  On save() it is submitted along with the
+  // other changed fields.
+  //
+  // ⚠️  PRODUCTION NOTE — see advice at the bottom of this file for how to
+  //     upload the image to cloud storage before persisting a URL to the DB.
   const pickPhoto = async () => {
     try {
       const { launchImageLibraryAsync, requestMediaLibraryPermissionsAsync } =
         await import('expo-image-picker');
       const { status } = await requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') { alert('Photo library permission required'); return; }
-      const result = await launchImageLibraryAsync({ mediaTypes: 'images', quality: 1 });
-      if (!result.canceled) setPhotoUri(result.assets[0].uri);
+      if (status !== 'granted') { Alert.alert('Permission required', 'Photo library access is needed.'); return; }
+      const result = await launchImageLibraryAsync({ mediaTypes: 'images', quality: 0.8 });
+      if (!result.canceled) setDraftPhotoUri(result.assets[0].uri);
     } catch (e) {
       console.error('Image pick error:', e);
     }
   };
 
-  const goBack = () => router.push("./(tabs)/home");
+  // ── Log out ───────────────────────────────────────────────────────────────
+  const handleLogOut = async () => {
+    // TODO: clear your auth token / session before navigating
+    // e.g. await AsyncStorage.multiRemove(['@userId', '@authToken']);
+    //      or call your auth context's signOut() method.
+    router.replace('./login');
+  };
+
+  const goBack = () => router.push('./(tabs)/home');
+
+  // ── Resolve which photo URI to display ───────────────────────────────────
+  // While editing show the draft (so the user sees their newly picked photo
+  // before they save).  Otherwise show the persisted value.
+  const displayPhotoUri = isEditing ? draftPhotoUri : photoUri;
+
+  // ── Loading / error states ────────────────────────────────────────────────
+  if (!userId || profileLoading) {
+    return (
+      <View style={styles.centred}>
+        <ActivityIndicator size="large" color={Colors.primaryGreen} />
+      </View>
+    );
+  }
+
+  if (profileError) {
+    return (
+      <View style={styles.centred}>
+        <Text style={styles.errorText}>Could not load profile. Please try again.</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={goBack}>
+          <Text style={styles.backBtnText}>← Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <ImageBackground
@@ -90,33 +168,23 @@ export default function ProfileScreen() {
     >
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
 
-        {/* ── Back button ─────────────────────────────────────
-            LOCATION: change `backBtn` style to reposition     */}
+        {/* ── Back button ─────────────────────────────────────── */}
         <TouchableOpacity style={styles.backBtn} onPress={goBack}>
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
 
-        {/* ── Top row: avatar+info LEFT | privacy toggle RIGHT
-            LOCATION: `topRow` flex row, adjust justify/align  */}
+        {/* ── Top row: avatar+info LEFT | privacy toggle RIGHT ── */}
         <View style={styles.topRow}>
 
-          {/* Left block – avatar circle + email / tag / password */}
           <View style={styles.infoBlock}>
-            {/* ── Avatar
-                View mode: shows photo (clipped to circle) or initial letter.
-                Edit mode: same, plus a camera button underneath to pick a photo.
-                After picking, the cropper modal (below) lets the user pan */}
+            {/* Avatar */}
             <View style={styles.avatarWrapper}>
               <View style={styles.avatarCircle}>
-                {photoUri ? (
-                  <Image
-                    source={{ uri: photoUri }}
-                    style={styles.avatarImage}
-                    resizeMode="cover"
-                  />
+                {displayPhotoUri ? (
+                  <Image source={{ uri: displayPhotoUri }} style={styles.avatarImage} resizeMode="cover" />
                 ) : (
                   <Text style={styles.avatarInitial}>
-                    {email[0].toUpperCase()}
+                    {email[0]?.toUpperCase() ?? '?'}
                   </Text>
                 )}
               </View>
@@ -153,40 +221,53 @@ export default function ProfileScreen() {
                   autoCapitalize="none"
                 />
               ) : (
-                <Text style={styles.infoValue}>{publicTag}</Text>
+                <Text style={styles.infoValue}>{publicTag || '—'}</Text>
               )}
 
               {/* PASSWORD */}
               <Text style={styles.infoLabel}>Password</Text>
               {isEditing ? (
-                <TextInput
-                  style={styles.editInput}
-                  value={draftPass}
-                  onChangeText={setDraftPass}
-                  secureTextEntry={!showPassword}
-                />
+                <>
+                  <TextInput
+                    style={styles.editInput}
+                    value={draftPass}
+                    onChangeText={setDraftPass}
+                    secureTextEntry={!showPassword}
+                    placeholder="New password (8+ chars)"
+                    placeholderTextColor={Colors.lightBrown}
+                  />
+                  <TouchableOpacity onPress={() => setShowPassword(p => !p)}>
+                    <Text style={styles.revealLink}>
+                      {showPassword ? 'hide' : 'show'} password
+                    </Text>
+                  </TouchableOpacity>
+                </>
               ) : (
                 <TouchableOpacity onPress={() => setShowPassword(p => !p)}>
                   <Text style={styles.infoValue}>
-                    {showPassword ? password : '••••••••'}
-                    {'  '}
+                    ••••••••{'  '}
                     <Text style={styles.revealLink}>
-                      {showPassword ? 'hide' : 'show'}
+                      {/* password is never returned by the API, so we never show it */}
+                      change
                     </Text>
                   </Text>
                 </TouchableOpacity>
               )}
 
-              {/* Edit / Save / Cancel buttons
-                  LOCATION: lives here inside infoText, below the fields.
-                  Move this block elsewhere in the JSX to reposition.  */}
+              {/* Edit / Save / Cancel */}
               <View style={styles.editBtnRow}>
                 {isEditing ? (
                   <>
-                    <TouchableOpacity style={styles.saveBtn} onPress={saveEdit}>
-                      <Text style={styles.saveBtnText}>Save</Text>
+                    <TouchableOpacity
+                      style={[styles.saveBtn, isSaving && styles.saveBtnDisabled]}
+                      onPress={saveEdit}
+                      disabled={isSaving}
+                    >
+                      {isSaving
+                        ? <ActivityIndicator size="small" color={Colors.white} />
+                        : <Text style={styles.saveBtnText}>Save</Text>}
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.cancelBtn} onPress={cancelEdit}>
+                    <TouchableOpacity style={styles.cancelBtn} onPress={cancelEdit} disabled={isSaving}>
                       <Text style={styles.cancelBtnText}>Cancel</Text>
                     </TouchableOpacity>
                   </>
@@ -200,31 +281,30 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {/* Right block – public / private toggle
-              LOCATION: `privacyBlock` style, or move the whole
-              View outside `topRow` to change layout            */}
+          {/* Privacy toggle — saves immediately */}
           <View style={styles.privacyBlock}>
             <Text style={styles.privacyLabel}>
               {isPublic ? '🌐 Public' : '🔒 Private'}
             </Text>
             <Switch
               value={isPublic}
-              onValueChange={setIsPublic}
+              onValueChange={handlePrivacyToggle}
               trackColor={{ false: Colors.lightBrown, true: Colors.midGreen }}
               thumbColor={isPublic ? Colors.primaryGreen : Colors.lightBrown}
             />
           </View>
         </View>
 
-        {/* ── Stats row: points + badges ── */}
+        {/* ── Stats row: points + badges ─────────────────────── */}
+        {/* TODO: replace PLACEHOLDER_* with a real useUserStats(userId) hook */}
         <View style={styles.statsRow}>
           <View style={styles.pointsCard}>
             <Text style={styles.cardTitle}>Points</Text>
-            <Text style={styles.pointsValue}>{INITIAL_USER.points}</Text>
+            <Text style={styles.pointsValue}>{PLACEHOLDER_POINTS}</Text>
           </View>
           <View style={styles.badgesCard}>
             <Text style={styles.cardTitle}>Badges</Text>
-            {INITIAL_USER.badges.map(b => (
+            {PLACEHOLDER_BADGES.map(b => (
               <View key={b.id} style={styles.badgeChip}>
                 <Text style={styles.badgeText}>{b.label}</Text>
               </View>
@@ -232,16 +312,34 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* ── Log Out ──────────────────────────────────────────── */}
+        <TouchableOpacity style={styles.logOutBtn} onPress={handleLogOut}>
+          <Text style={styles.logOutBtnText}>Log Out</Text>
+        </TouchableOpacity>
+
       </ScrollView>
     </ImageBackground>
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────
+// ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   bg: {
     flex: 1,
     backgroundColor: Colors.pageBg,
+  },
+  centred: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.pageBg,
+    gap: Spacing.md,
+  },
+  errorText: {
+    color: Colors.lightBrown,
+    fontSize: FontSize.sm,
+    textAlign: 'center',
+    paddingHorizontal: Spacing.lg,
   },
   container: {
     paddingTop: Spacing.lg * 2,
@@ -282,6 +380,10 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: Spacing.sm,
   },
+  avatarWrapper: {
+    alignItems: 'center',
+    marginRight: Spacing.sm,
+  },
   avatarCircle: {
     width: 64,
     height: 64,
@@ -289,19 +391,17 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryGreen,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: Spacing.sm,
     overflow: 'hidden',
   },
-  // Wrapper holds the circle + the camera button underneath
-  avatarWrapper: {
-    alignItems: 'center',
-    marginRight: Spacing.sm,
-  },
-  // The photo fills the circle; translateX/Y shifts it per cropOffset
   avatarImage: {
     width: 64,
     height: 64,
     borderRadius: Radius.full,
+  },
+  avatarInitial: {
+    color: Colors.white,
+    fontSize: FontSize.xl,
+    fontWeight: '700',
   },
   cameraBtn: {
     marginTop: 4,
@@ -312,50 +412,6 @@ const styles = StyleSheet.create({
   },
   cameraBtnText: {
     fontSize: 14,
-  },
-  // ── Cropper (shown inline above the fields after picking a photo) ──
-  // LOCATION: sits inside infoBlock, above infoText.
-  // To make it a full-screen overlay instead, move it outside topRow
-  // and add position:'absolute', top:0, left:0, right:0, bottom:0.
-  cropperModal: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    backgroundColor: Colors.cardBg,
-    borderRadius: Radius.md,
-    padding: Spacing.sm,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.midGreen,
-  },
-  cropperHint: {
-    fontSize: FontSize.xs,
-    color: Colors.lightBrown,
-    marginBottom: Spacing.xs,
-  },
-  // The circular mask window – overflow:hidden clips the dragged image
-  cropWindow: {
-    width: 120,
-    height: 120,
-    borderRadius: Radius.full,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: Colors.primaryGreen,
-    marginBottom: Spacing.sm,
-  },
-  // Larger than the window so there's room to pan
-  dragImage: {
-    width: 280,
-    height: 280,
-    marginLeft: -80,   // center the image inside the window initially
-    marginTop: -80,
-  },
-  avatarInitial: {
-    color: Colors.white,
-    fontSize: FontSize.xl,
-    fontWeight: '700',
   },
   infoText: {
     flex: 1,
@@ -376,9 +432,8 @@ const styles = StyleSheet.create({
     color: Colors.midGreen,
     fontSize: FontSize.xs,
     textDecorationLine: 'underline',
+    marginTop: 2,
   },
-
-    // ── Edit mode styles ──
   editInput: {
     borderWidth: 1,
     borderColor: Colors.midGreen,
@@ -413,6 +468,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     backgroundColor: Colors.primaryGreen,
     borderRadius: Radius.sm,
+    minWidth: 52,
+    alignItems: 'center',
+  },
+  saveBtnDisabled: {
+    opacity: 0.6,
   },
   saveBtnText: {
     color: Colors.white,
@@ -432,7 +492,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
   },
 
-  // ── Privacy toggle (right side of top row) ──
+  // ── Privacy toggle ──
   privacyBlock: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -450,6 +510,7 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   pointsCard: {
     flex: 1,
@@ -492,5 +553,20 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.primaryGreen,
     fontWeight: '600',
+  },
+
+  // ── Log out ──
+  logOutBtn: {
+    marginTop: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.md,
+    borderWidth: 1.5,
+    borderColor: '#d9534f',
+    alignItems: 'center',
+  },
+  logOutBtnText: {
+    color: '#d9534f',
+    fontWeight: '700',
+    fontSize: FontSize.md,
   },
 });
