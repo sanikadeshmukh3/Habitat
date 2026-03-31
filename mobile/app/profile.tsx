@@ -27,24 +27,15 @@ const PLACEHOLDER_BADGES = [
 const PLACEHOLDER_POINTS = 112;
 
 export default function ProfileScreen() {
-  // ── Resolve userId ────────────────────────────────────────────────────────
-  // TODO: replace AsyncStorage lookup with your auth context once it is wired.
-  // e.g.  const { user } = useAuth();  const userId = user.id;
-  const [userId, setUserId] = useState<string | null>('1');
-
-  // useEffect(() => {
-  //   AsyncStorage.getItem('@userId').then(id => setUserId(id));
-  // }, []);
-  // commented for now because async storage giving null
 
   // ── Remote data ───────────────────────────────────────────────────────────
   const {
     data:      profile,
     isLoading: profileLoading,
     isError:   profileError,
-  } = useUserProfile(userId ?? '1'); //TODO: do whatever here to inject userId
+  } = useUserProfile();
 
-  const { mutate: saveProfile, isPending: isSaving } = useUpdateUserProfile(userId ?? '1');
+  const { mutate: saveProfile, isPending: isSaving } = useUpdateUserProfile();
 
   // ── Derived display values (fall back to empty while loading) ─────────────
   const email     = profile?.email            ?? '';
@@ -72,8 +63,6 @@ export default function ProfileScreen() {
 
   // ── Save: write all edited fields to the DB in a single PATCH ────────────
   const saveEdit = () => {
-    if (!userId) return;
-
     // Build the payload with only changed fields so we don't overwrite
     // unchanged data unnecessarily.
     const payload: Parameters<typeof saveProfile>[0] = {};
@@ -102,7 +91,6 @@ export default function ProfileScreen() {
 
   // ── Privacy toggle — saves immediately (single-tap action like a setting) ─
   const handlePrivacyToggle = (value: boolean) => {
-    if (!userId) return;
     saveProfile({ isPublic: value });
   };
 
@@ -141,13 +129,6 @@ export default function ProfileScreen() {
   const displayPhotoUri = isEditing ? draftPhotoUri : photoUri;
 
   // ── Loading / error states ────────────────────────────────────────────────
-  if (!userId || profileLoading) {
-    return (
-      <View style={styles.centred}>
-        <ActivityIndicator size="large" color={Colors.primaryGreen} />
-      </View>
-    );
-  }
 
   if (profileError) {
     return (

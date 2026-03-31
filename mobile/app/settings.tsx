@@ -33,23 +33,14 @@ import type { AppTheme, UpdateSettingsPayload } from '@/types/user';
 // QueryClient setup.  The hooks here don't need to change.
 
 export default function SettingsScreen() {
-  // ── Resolve userId ──────────────────────────────────────────────────────
-  // TODO: replace with your auth context once wired.
-  // e.g. const { user } = useAuth(); const userId = user.id;
-  const [userId, setUserId] = useState<string | null>('1');
-
-  // useEffect(() => {
-  //   AsyncStorage.getItem('@userId').then(id => setUserId(id));
-  // }, []);
-  //commented out for now so testing works
 
   // ── Remote data ─────────────────────────────────────────────────────────
   const {
     data:      settings,
     isLoading: settingsLoading,
-  } = useUserSettings(userId ?? '1');
+  } = useUserSettings();
 
-  const { mutate: updateSettings, isPending: isSaving } = useUpdateUserSettings(userId ?? '1');
+  const { mutate: updateSettings, isPending: isSaving } = useUpdateUserSettings();
 
   // ── Derived values with safe defaults while loading ──────────────────────
   const theme         = settings?.theme         ?? 'light';
@@ -60,7 +51,6 @@ export default function SettingsScreen() {
   // This is the standard pattern for settings screens — no Save button needed
   // because each toggle/chip represents a discrete, self-contained preference.
   const saveSetting = (patch: UpdateSettingsPayload) => {
-    if (!userId) return;
     updateSettings(patch, {
       onError: (err) => {
         const msg = (err as any)?.response?.data?.error ?? 'Could not save setting.';

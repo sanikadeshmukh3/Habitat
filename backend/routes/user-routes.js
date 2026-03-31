@@ -5,15 +5,16 @@ const {
   getUserSettings,
   updateUserSettings,
 } = require('../controllers/user-controller');
+const authenticateToken = require("../middleware/authenticateToken");
 
 const router = Router();
 
 // ── Profile ────────────────────────────────────────────────────────────────────
-router.get  ('/:id',          getUserProfile);
-router.patch('/:id',          updateUserProfile);
+router.get  ('/me', authenticateToken,          getUserProfile);
+router.patch('/me', authenticateToken,          updateUserProfile);
 
 // ── Settings (sub-resource so the settings screen can fetch independently) ─────
-router.get  ('/:id/settings', getUserSettings);
-router.patch('/:id/settings', updateUserSettings);
+router.get  ('/me/settings', authenticateToken, getUserSettings);
+router.patch('/me/settings', authenticateToken, updateUserSettings);
 
 module.exports = router;

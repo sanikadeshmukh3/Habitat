@@ -26,11 +26,7 @@ function isValidFrequency(v) {
 async function getHabits(req, res, next) {
   try {
     // TODO: replace with your auth middleware value once auth is wired up
-    const userId = req.user?.id ?? req.query.userId;
-    if (!userId) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
+    const userId = req.user.userId;
 
     const habits = await prisma.habit.findMany({
       where:   { userId },
@@ -153,13 +149,9 @@ async function getHabitById(req, res, next) {
 async function createHabit(req, res, next) {
   console.log('Create Habit - Request received');
   try {
-    const userId = req.user?.id ?? req.query.userId;
+    const userId = req.user.userId;
     console.log('BODY:', req.body);
     console.log('USER ID:', userId);
-    if (!userId) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
 
     const body = req.body;
 
@@ -205,16 +197,11 @@ async function createHabit(req, res, next) {
  */
 async function updateHabit(req, res, next) {
   try {
-    const userId = req.user?.id;
+    const userId = req.user.userId;
     const { id }  = req.params;
 
-    if (!userId) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
-
     // Confirm the habit exists and belongs to this user before updating
-    const existing = await prisma.habit.findUnique({ where: { id } });
+    const existing = await prisma.habit.findUnique({ where: { id, userId } });
     if (!existing) {
       res.status(404).json({ error: 'Habit not found' });
       return;
@@ -273,7 +260,7 @@ async function updateHabit(req, res, next) {
 
     // Prisma automatically sets updatedAt because of @updatedAt in the schema
     const habit = await prisma.habit.update({
-      where: { id },
+      where: { id, userId },
       data,
     });
 

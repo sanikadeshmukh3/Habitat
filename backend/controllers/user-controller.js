@@ -46,11 +46,7 @@ const DEFAULT_SETTINGS = {
 // ─── Ownership guard ──────────────────────────────────────────────────────────
 // Reusable helper — confirm the requesting user owns the target user record.
 function isOwner(req, targetId) {
-  // Once auth middleware is wired, req.user.id will be set.
-  // Fall back to a query param during development only.
-  const requesterId = req.user?.id ?? req.query.userId; // default to '1' for testing; remove once auth is wired up
-  console.log(`Ownership check: requesterId=${requesterId}, targetId=${targetId}`);
-  return requesterId && requesterId === targetId;
+  return req.user.userId === targetId;
 }
 
 // ─── Controller functions ─────────────────────────────────────────────────────
@@ -61,16 +57,12 @@ function isOwner(req, targetId) {
  */
 async function getUserProfile(req, res, next) {
   try {
-    console.log('getUserProfile called with params:', req.params, 'and query:', req.query);
-    const { id } = req.params;
-
-    if (!isOwner(req, id)) {
-      res.status(403).json({ error: 'Forbidden' });
-      return;
-    }
+    console.log('Get User Profile - Request received');
+    const userId = req.user.userId;
+    console.log('Get User Profile - Request received for user ID:', userId);
 
     const user = await prisma.user.findUnique({
-      where: { id },
+      where: { id: userId },
       select: {
         id:       true,
         email:    true,
@@ -110,12 +102,7 @@ async function getUserProfile(req, res, next) {
  */
 async function updateUserProfile(req, res, next) {
   try {
-    const { id } = req.params;
-
-    if (!isOwner(req, id)) {
-      res.status(403).json({ error: 'Forbidden' });
-      return;
-    }
+    const userId = req.user.userId;
 
     const body = req.body;
     const userUpdate = {};          // Goes into the user table row
@@ -169,7 +156,7 @@ async function updateUserProfile(req, res, next) {
     // ── If settings changed, deep-merge with existing JSONB ────────────────
     if (hasSettingsChanges) {
       const current = await prisma.user.findUnique({
-        where:  { id },
+        where:  { id: userId },
         select: { settings: true },
       });
       userUpdate.settings = {
@@ -180,7 +167,7 @@ async function updateUserProfile(req, res, next) {
     }
 
     const updated = await prisma.user.update({
-      where: { id },
+      where: { id: userId },
       data:  userUpdate,
       select: {
         id:       true,
@@ -214,15 +201,10 @@ async function updateUserProfile(req, res, next) {
  */
 async function getUserSettings(req, res, next) {
   try {
-    const { id } = req.params;
-
-    if (!isOwner(req, id)) {
-      res.status(403).json({ error: 'Forbidden' });
-      return;
-    }
+    const userId = req.user.userId;
 
     const user = await prisma.user.findUnique({
-      where:  { id },
+      where:  { id: userId },
       select: { settings: true },
     });
 
@@ -252,12 +234,7 @@ async function getUserSettings(req, res, next) {
  */
 async function updateUserSettings(req, res, next) {
   try {
-    const { id } = req.params;
-
-    if (!isOwner(req, id)) {
-      res.status(403).json({ error: 'Forbidden' });
-      return;
-    }
+    const userId = req.user.userId;
 
     const body = req.body;
     const incoming = {};
@@ -288,7 +265,7 @@ async function updateUserSettings(req, res, next) {
 
     // Fetch current settings to merge
     const current = await prisma.user.findUnique({
-      where:  { id },
+      where:  { id: userId },
       select: { settings: true },
     });
 
@@ -304,7 +281,7 @@ async function updateUserSettings(req, res, next) {
     };
 
     await prisma.user.update({
-      where: { id },
+      where: { id: userId },
       data:  { settings: merged },
     });
 

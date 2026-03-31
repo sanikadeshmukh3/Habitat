@@ -68,7 +68,6 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
  * `password` is never included in API responses.
  */
 export interface UserProfile {
-  id:       string;
   email:    string;
   timezone: string | null;
   creation: string;           // ISO-8601 date string from JSON serialisation
