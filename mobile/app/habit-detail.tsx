@@ -143,7 +143,19 @@ export default function HabitDetailScreen() {
         <TouchableOpacity
           style={[styles.checkInBtn, checkedIn && styles.checkInBtnDone]}
           onPress={() => {
-            setModalVisible(true);
+            if (checkedIn) {
+              saveCheckIn({
+                habitId,
+                date: new Date(year, month, today.getDate(), 12).toISOString(),
+                completed: false,
+                difficultyRating: monthCheckIns[todayKey]?.difficultyRating ?? null,
+                notes: monthCheckIns[todayKey]?.notes ?? '',
+              });
+            } else {
+              setDifficultyRating(monthCheckIns[todayKey]?.difficultyRating ?? null);
+              setNotes(monthCheckIns[todayKey]?.notes ?? '');
+              setModalVisible(true);
+            }
           }}
           activeOpacity={0.85}
         >
@@ -248,7 +260,7 @@ export default function HabitDetailScreen() {
         onSave={({ difficultyRating, notes }) => {
           saveCheckIn({
             habitId,
-            date: today.toISOString(),
+            date: new Date(year, month, today.getDate(), 12).toISOString(),
             completed: true,
             difficultyRating,
             notes,
