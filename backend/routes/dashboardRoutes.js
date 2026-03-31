@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
+const authenticateToken = require("../middleware/authenticateToken");
+const dashboardController = require("../controllers/dashboardController");
 
-const { getDashboard } = require("../controllers/dashboardController");
-
-router.get("/:userId", getDashboard);
+router.get("/", authenticateToken, dashboardController.getDashboard); // no need for the manual userID
 
 module.exports = router;

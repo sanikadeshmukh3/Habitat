@@ -1,65 +1,106 @@
-import { View, TouchableOpacity, Button, TextInput, Text, ImageBackground} from "react-native";
-import { useState } from "react";
-
-
+import { View, TouchableOpacity, Button, TextInput, Text, ImageBackground, ActivityIndicator} from "react-native";
+import { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 
 export default function Login() {
-    const [email, setEmail] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+
+
+  // useEffect(() => {
+  //   const checkLogin = async () => {
+  //     const token = await AsyncStorage.getItem("token");
+  
+  //     if (token) {
+  //       router.replace("/(tabs)/home");
+  //     }
+  //   };
+  
+  //   checkLogin();
+  // }, []);
 
     
     const handleLogin = async (): Promise<void> => {
+      if (loading) return;
+      setLoading(true);
         try {
           const response: Response = await fetch(
-            "http://10.0.2.2:3000/login",  //use your computer's IP address
+            "http://localhost:3000/login",  //use your computer's IP address
             {
               method: "POST",
-              headers: {
-                "Content-Type": "application/json",
+              headers: {  "Content-Type": "application/json",
               },
-              body: JSON.stringify({ email, password }),
+              body: JSON.stringify({ email: email.trim(), password }),
             }
           );
       
-          const data: { message: string; userId?: string } =
-            await response.json();
+          const data: { message: string; token?: string } =  await response.json();
       
-          console.log(data);
+          // console.log(data);
       
-          if (response.ok) {
+          if (response.ok && data.token) {
+            await AsyncStorage.setItem("token", data.token);
             router.push("/(tabs)/home");
           } else {
-            alert(data.message);
+            alert(data.message || "Login failed");
           }
         } catch (error) {
           console.error("Network error:", error);
+          alert("Network error");
+        } finally {
+          setLoading(false);
         }
       };
       
       
       
 
-return (
-<ImageBackground source={require("../assets/images/background.png")} style={{flex:1, padding:40}}> 
-<View style={{ flex:1, padding: 40}}>
-<Text style={{fontSize: 24, marginBottom: 20, marginTop: 180, color: "green"}}>Habitat</Text>
-
-<TextInput placeholder="Email" value={email} onChangeText={setEmail} style={{borderWidth: 1, padding: 10, marginBottom: 10}} autoCapitalize="none" autoCorrect={false}/>
-<TextInput placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} style={{borderWidth: 1, padding: 10, marginBottom: 20}} autoCapitalize="none" autoCorrect={false}/>
-
-<Button title="Login" onPress={handleLogin} />
-
-<TouchableOpacity style={{ marginTop: 20}} onPress={() => router.push("./signup")}>
-    <Text>Create Account</Text>
-</TouchableOpacity>
+      return (
+        <ImageBackground source={require("../assets/images/background.png")} style={{ flex: 1, padding: 40 }}>
+          <View style={{ flex: 1, padding: 40 }}>
+            <Text style={{ fontSize: 24, marginBottom: 20, marginTop: 180, color: "green" }}>Habitat</Text>
     
-<TouchableOpacity style={{ marginTop: 10}} onPress={() => router.push("./forgot-password")}>
-    <Text>Forgot Password?</Text>
-</TouchableOpacity>
+            <TextInput
+              placeholder="Email"
+              value={email}
+              onChangeText={setEmail}
+              style={{ borderWidth: 1, padding: 10, marginBottom: 10 }}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <TextInput
+              placeholder="Password"
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+              style={{ borderWidth: 1, padding: 10, marginBottom: 20 }}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
     
-</View>
-</ImageBackground>
-);
-}
-// #b5e48c
+            <TouchableOpacity
+              onPress={handleLogin}
+              disabled={loading} 
+              style={{  backgroundColor: loading ? "#95d5b2" : "#2d6a4f",  paddingVertical: 14,  borderRadius: 10,  alignItems: "center",
+              }}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>Login</Text>
+              )}
+            </TouchableOpacity>
+    
+            <TouchableOpacity style={{ marginTop: 20 }} onPress={() => router.push("/signup")}>
+              <Text>Create Account</Text>
+            </TouchableOpacity>
+    
+            <TouchableOpacity style={{ marginTop: 10 }} onPress={() => router.push("/forgot-password")}>
+              <Text>Forgot Password?</Text>
+            </TouchableOpacity>
+          </View>
+        </ImageBackground>
+      );
+    }

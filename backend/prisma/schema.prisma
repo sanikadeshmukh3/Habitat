@@ -11,10 +11,19 @@ model User {
   id       String   @id @default(uuid())
   email    String   @unique
   password String
+  firstName String
+  lastName String?
   timezone String?
   creation DateTime @default(now())
   settings Json     @default("{\"the guy\": {\"last name\": \"guy\", \"first name\": \"might\"}}")
   habit    Habit[]
+
+  isVerified Boolean @default(false) @map("is_verified")
+  verificationCode String? @map("verification_code")
+  codeExpires DateTime? @map("code_expires")
+
+  friends User[] @relation("UserFriends")
+  friendsOf User[] @relation("UserFriends") @map("friends_of")
 
   @@map("user")
 }

@@ -32,7 +32,9 @@ import {
 // In Expo, put API_BASE_URL in your .env and access it via expo-constants or
 // react-native-dotenv.
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:3000';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+
+console.log(API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,

@@ -1,28 +1,158 @@
+import { useState } from "react";
 import { router } from "expo-router";
-import { View, TouchableOpacity, Button, TextInput, Text} from "react-native";
+import { View, TextInput,  Text,  TouchableOpacity,  ActivityIndicator} from "react-native";
 
 export default function Signup() {
-    
-    const handleSignup = () => {
-        console.log("Signing up.");
-    };
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-return (
-<View style={{ flex:1, padding: 40, backgroundColor: "#74c69d"}}>
-<Text style={{fontSize: 24, marginBottom: 20, marginTop: 180, color: "#EAF6E8"}}>Habitat</Text>
+  const handleSignup = async () => {
+    const trimmedEmail = email.trim();
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
 
-<TextInput placeholder="First Name" style={{borderWidth: 1, padding: 10, marginBottom: 10}} autoCorrect={false}/>
-<TextInput placeholder="Last Name" style={{borderWidth: 1, padding: 10, marginBottom: 10}}  autoCorrect={false}/>
-<TextInput placeholder="Email" style={{borderWidth: 1, padding: 10, marginBottom: 10}} autoCapitalize="none" autoCorrect={false}/>
-<TextInput placeholder="Password" secureTextEntry style={{borderWidth: 1, padding: 10, marginBottom: 10}} autoCapitalize="none" autoCorrect={false} />
-<TextInput placeholder="Re enter Password" secureTextEntry style={{borderWidth: 1, padding: 10, marginBottom: 20}} />
+    if (!trimmedEmail || !password || !trimmedFirstName || !trimmedLastName) {
+      alert("All fields are required");
+      return;
+    }
 
-<Button title="Sign up" onPress={handleSignup} />
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      alert("Invalid email format");
+      return;
+    }
 
-<TouchableOpacity style={{ marginTop: 20}} onPress={() => router.push("/login")}>
-    <Text style={{color: "#EAF6E8"}}>Back</Text>
-</TouchableOpacity>
+    if (password !== confirmPassword) {
+      alert("Passwords do not match");
+      return;
+    }
 
-</View>
-);
+    try {
+      const response = await fetch("http://localhost:3000/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: trimmedEmail,
+          password,
+          firstName: trimmedFirstName,
+          lastName: trimmedLastName,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        router.push({
+          pathname: "/verify",
+          params: { email: trimmedEmail },
+        });
+      } else {
+        alert(data.message || "Signup failed");
+      }
+    } catch (error) {
+      console.error("Signup error:", error);
+      alert("Network error");
+    }
+  };
+
+  const handlePress = async () => {
+    if (loading) return;
+    setLoading(true);
+    await handleSignup();
+    setLoading(false);
+  };
+
+  return (
+    <View style={{ flex: 1, padding: 40, backgroundColor: "#74c69d" }}>
+
+      <TouchableOpacity
+        onPress={() => router.back()}
+        style={{ position: "absolute", top: 60, left: 20, paddingVertical: 6, paddingHorizontal: 10, backgroundColor: "#EAF6E8", borderRadius: 8,
+        }}
+      >
+        <Text style={{ color: "#2d6a4f", fontWeight: "600" }}>← Back</Text>
+      </TouchableOpacity>
+
+      <Text
+        style={{fontSize: 24, marginBottom: 30, marginTop: 180, color: "#EAF6E8", fontWeight: "bold",
+        }}
+      >
+        Sign Up
+      </Text>
+
+      <TextInput
+        placeholder="First Name"
+        placeholderTextColor="#ccc"
+        value={firstName}
+        onChangeText={setFirstName}
+        style={{ borderWidth: 1, borderColor: "#EAF6E8",padding: 12, marginBottom: 10,borderRadius: 8, color: "#fff",
+        }}
+        autoCorrect={false}
+      />
+
+      <TextInput
+        placeholder="Last Name"
+        placeholderTextColor="#ccc"
+        value={lastName}
+        onChangeText={setLastName}
+        style={{ borderWidth: 1, borderColor: "#EAF6E8", padding: 12, marginBottom: 10, borderRadius: 8, color: "#fff",
+        }}
+        autoCorrect={false}
+      />
+
+      <TextInput
+        placeholder="Email"
+        placeholderTextColor="#ccc"
+        value={email}
+        onChangeText={setEmail}
+        style={{ borderWidth: 1, borderColor: "#EAF6E8", padding: 12, marginBottom: 10, borderRadius: 8, color: "#fff",
+        }}
+        autoCapitalize="none"
+        autoCorrect={false}
+      />
+
+      <TextInput
+        placeholder="Password"
+        placeholderTextColor="#ccc"
+        secureTextEntry
+        value={password}
+        onChangeText={setPassword}
+        style={{ borderWidth: 1, borderColor: "#EAF6E8", padding: 12, marginBottom: 10, borderRadius: 8, color: "#fff",
+        }}
+        autoCapitalize="none"
+        autoCorrect={false}
+      />
+
+      <TextInput
+        placeholder="Confirm Password"
+        placeholderTextColor="#ccc"
+        secureTextEntry
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        style={{ borderWidth: 1, borderColor: "#EAF6E8",padding: 12, marginBottom: 25,borderRadius: 8, color: "#fff",
+        }}
+        autoCapitalize="none"
+        autoCorrect={false}
+      />
+
+      <TouchableOpacity
+        onPress={handlePress}
+        disabled={loading}
+        style={{ backgroundColor: loading ? "#95d5b2" : "#2d6a4f",paddingVertical: 14, borderRadius: 10, alignItems: "center",
+        }}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>
+            Sign Up
+          </Text>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
 }

@@ -2,19 +2,37 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
 exports.getDashboardData = async (userId) => {
-    const habits = await prisma.habit.findMany({
+    /*const habits = await prisma.habit.findMany({
         where: { userId, active: true},
-    });
+    });*/
 
     // insert the friends section here
-
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+            habit: {
+                where: {active: true},
+            },
+            friends: {
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                },
+            },
+        },
+    });
     return {
-        habits: habits.map(h => ({
+        habits: user.habit.map(h => ({
             id: h.id,
             name: h.name,
             streak: h.currentStreak,
             progress: 0.6,
-        }))
-        // add friends to the return statement too
+        })),
+        friends: user.friends.map(f => ({
+            id: f.id,
+            name: `${f.firstName} ${f.lastName}`,
+            progress: 0.75,
+        })),
     };
 };
