@@ -115,7 +115,7 @@ export function useCheckInsForMonth(
 export function useUpsertCheckIn(
   year: number,
   month: number,
-  userId: number,
+  userId: string,
 ): UseMutationResult<HabitCheckIn, AxiosError, CheckInPayload, UpsertCheckInContext> {
   const queryClient = useQueryClient();
 
@@ -180,11 +180,11 @@ export function useUpsertCheckIn(
         queryKey: checkinKeys.month(year, month),
       });
 
-    //   if (payload?.habitId) {
-    //     queryClient.invalidateQueries({
-    //       queryKey: habitKeys.detail(payload.habitId),
-    //     });
-    //   }
+      if (payload?.habitId) {
+        queryClient.invalidateQueries({
+          queryKey: habitKeys.detail(payload.habitId),
+        });
+      }
 
       if (userId) {
         queryClient.invalidateQueries({

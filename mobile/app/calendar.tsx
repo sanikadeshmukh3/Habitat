@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from '@/lib/api';
 import CheckInModal from '@/components/checkin-modal';
 import { useUpsertCheckIn } from '@/hooks/use-checkin';
 
@@ -50,14 +51,14 @@ function completionRatio(
 ): number {
   if (habits.length === 0) return 0;
   const checked = habits.filter(
-    h => entries[`${h.id}-${year}-${month}-${day}`]?.checked
+    h => entries[`${h.id}-${year}-${month}-${day}`]?.completed
   ).length;
   return checked / habits.length;
 }
 
 // ── Types ─────────────────────────────────────────────────────
 type HabitEntry = {
-  checked: boolean;
+  completed: boolean;
   difficultyRating: number | null;
   notes: string;
 };
@@ -93,16 +94,12 @@ export default function CalendarScreen() {
 
   useEffect(() => {
     const fetchHabits = async () => {
-      const token = await AsyncStorage.getItem("token");
-  
-      const res = await fetch("http://localhost:3000/habits", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-  
-      const data = await res.json();
-      setHabits(data.habits || []);
+      try {
+        const { data } = await api.get("/habits");
+        setHabits(data.habits || data.data || []);
+      } catch (err) {
+        console.error("Failed to fetch habits:", err);
+      }
     };
   
     fetchHabits();
@@ -110,34 +107,22 @@ export default function CalendarScreen() {
 
   useEffect(() => {
     const fetchCheckins = async () => {
-      const token = await AsyncStorage.getItem("token");
-  
-      const res = await fetch(
-        `http://localhost:3000/checkins?year=${year}&month=${month}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-  
-      const data = await res.json();
-  
-      const mapped: EntryMap = {};
-      (data.checkins || []).forEach((c: any) => {
-        const d = new Date(c.date);
-  
-        const key = `${c.habitId}-${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-  
-        mapped[key] = {
-          checked: c.completed,
-          difficultyRating: c.difficultyRating ?? null,
-          notes: c.notes,
-        };
-      });
-      console.log("CHECKINS RESPONSE:", data);
-  
-      setEntries(mapped);
+      try {
+        const { data } = await api.get("/checkins", {
+          params: { year, month },
+        });
+
+        const mapped: EntryMap =
+          data?.data && !Array.isArray(data.data)
+            ? data.data
+            : data?.checkins && !Array.isArray(data.checkins)
+            ? data.checkins
+            : {};
+
+        setEntries(mapped);
+      } catch (err) {
+        console.error("Failed to fetch checkins:", err);
+      }
     };
   
     fetchCheckins();
@@ -218,7 +203,7 @@ export default function CalendarScreen() {
   //   }
   // };
 
-  const userId = 1; // replace later with auth
+  const userId = 'a6d400e7-4f91-4575-b562-ccd8e2aeb0e2'; // replace later with auth
   const { mutate: saveCheckIn } = useUpsertCheckIn(year, month, userId);
 
   const entryForKey = (habitId: string, day: number) =>
@@ -314,7 +299,7 @@ export default function CalendarScreen() {
 
         {habits.map(habit => {
           const entry = entryForKey(habit.id, selectedDay);
-          const checked = entry?.checked ?? false;
+          const checked = entry?.completed ?? false;
           return (
             <View key={habit.id} style={styles.habitRow}>
               <Text style={styles.habitName}>{habit.name}</Text>
@@ -323,93 +308,35 @@ export default function CalendarScreen() {
                   • Empty/white border  = not yet checked
                   • Solid green bubble + white ✓ = checked
                   Pressing it opens the mood/notes modal          */}
-<TouchableOpacity
-  style={[styles.checkCircle, checked && styles.checkCircleDone]}
-  onPress={async () => {
-    const key = `${habit.id}-${year}-${month}-${selectedDay}`;
-    const existing = entries[key];
-  
-    if (checked) {
-      // Uncheck
-      try {
-        const token = await AsyncStorage.getItem("token");
-  
-        // await fetch(`http://localhost:3000/checkins/${habit.id}`, {
-        //   method: "PATCH",
-        //   headers: {
-        //     "Content-Type": "application/json",
-        //     Authorization: `Bearer ${token}`,
-        //   },
-        //   body: JSON.stringify({
-        //     date: new Date(year, month, selectedDay),
-        //     completed: false,
-        //   }),
-        // });
+              <TouchableOpacity
+                style={[styles.checkCircle, checked && styles.checkCircleDone]}
+                onPress={() => {
+                  const key = `${habit.id}-${year}-${month}-${selectedDay}`;
+                  const existing = entries[key];
 
-        saveCheckIn({
-          habitId: habit.id,
-          date: new Date(year, month, selectedDay).toISOString(),
-          completed: false,
-        });
-  
-        setEntries(prev => ({
-          ...prev,
-          [key]: {
-            ...(prev[key] || { difficultyRating: null, notes: '' }),
-            checked: false,
-          },
-        }));
-      } catch (err) {
-        console.error("Failed to uncheck habit:", err);
-      }
-    } else {
-      if (existing) {
-        // Re-check WITHOUT modal
-        try {
-          const token = await AsyncStorage.getItem("token");
-  
-          // await fetch(`http://localhost:3000/checkins`, {
-          //   method: "POST",
-          //   headers: {
-          //     "Content-Type": "application/json",
-          //     Authorization: `Bearer ${token}`,
-          //   },
-          //   body: JSON.stringify({
-          //     habitId: habit.id,
-          //     date: new Date(year, month, selectedDay),
-          //     completed: true,
-          //     notes: existing.notes,
-          //     mood: existing.mood,
-          //     difficultyRating: null,
-          //   }),
-          // });
+                  if (checked) {
+                    saveCheckIn({
+                      habitId: habit.id,
+                      date: new Date(year, month, selectedDay, 12).toISOString(),
+                      completed: false,
+                      difficultyRating: entry?.difficultyRating ?? null,
+                      notes: entry?.notes ?? "",
+                    });
 
-      saveCheckIn({
-      habitId: habit.id,
-      date: new Date(year, month, selectedDay).toISOString(),
-      completed: true,
-      difficultyRating: existing.difficultyRating,
-      notes: existing.notes,
-  });
-  
-          setEntries(prev => ({
-            ...prev,
-            [key]: {
-              ...existing,
-              checked: true,
-            },
-          }));
-        } catch (err) {
-          console.error("Failed to re-check habit:", err);
-        }
-      } else {
-        openModal(habit.id, selectedDay);
-      }
-    }
-  }}
->
-  {checked && <Text style={styles.checkMark}>✓</Text>}
-</TouchableOpacity>
+                    setEntries(prev => ({
+                      ...prev,
+                      [key]: {
+                        ...(prev[key] || { difficultyRating: null, notes: "" }),
+                        completed: false,
+                      },
+                    }));
+                  } else {
+                    openModal(habit.id, selectedDay);
+                  }
+                }}
+              >
+                {checked && <Text style={styles.checkMark}>✓</Text>}
+              </TouchableOpacity>
             </View>
           );
         })}
@@ -430,7 +357,7 @@ export default function CalendarScreen() {
 
           saveCheckIn({
             habitId: modalTarget.habitId,
-            date: new Date(year, month, modalTarget.day).toISOString(),
+            date: new Date(year, month, modalTarget.day, 12).toISOString(),
             completed: true,
             difficultyRating,
             notes,
@@ -440,7 +367,7 @@ export default function CalendarScreen() {
     setEntries(prev => ({
     ...prev,
     [key]: {
-    checked: true,
+    completed: true,
     difficultyRating,
     notes,
   },
