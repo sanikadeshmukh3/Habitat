@@ -18,8 +18,8 @@ export type HabitFrequency = 'DAILY' | 'WEEKLY';
  * IDs are UUIDs (strings) throughout — Prisma generates them via @default(uuid()).
  */
 export interface Habit {
-  id:             number;
-  userId:         number;
+  id:             string;
+  userId:         string;
   name:           string;
   description?:   string;
   habitCategory:  HabitCategory;

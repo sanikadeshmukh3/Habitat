@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import CheckInModal from '@/components/checkin-modal';
-import { useUpsertCheckIn } from '@/hooks/use-checkin';
+import { useCheckInsForMonth, useUpsertCheckIn } from '@/hooks/use-checkin';
 
 // ── Fake habits – replace with real data/store ────────────────
 const HABITS = [
@@ -41,21 +41,30 @@ function getFirstDayOfWeek(year: number, month: number) {
 // Used to render the partial green fill inside each day cell.
 function completionRatio(
   habitCount: number,
-  entries: EntryMap,
+  entries: Record<
+    string,
+    {
+      completed: boolean;
+      difficultyRating: number | null;
+      notes: string | null;
+    }
+  >,
   year: number,
   month: number,
   day: number,
 ): number {
   if (habitCount === 0) return 0;
+
   const checked = HABITS.filter(
-    h => entries[`${h.id}-${year}-${month}-${day}`]?.checked
+    (h) => entries[`${h.id}-${year}-${month}-${day}`]?.completed
   ).length;
+
   return checked / habitCount;
 }
 
 // ── Types ─────────────────────────────────────────────────────
 type HabitEntry = {
-  checked: boolean;
+  completed: boolean;
   difficultyRating: number | null;
   notes: string;
 };
@@ -74,7 +83,7 @@ export default function CalendarScreen() {
   const [cellHeight, setCellHeight] = useState(0);
 
   // Stored mood entries
-  const [entries, setEntries] = useState<EntryMap>({});
+  const { data: entries = {} } = useCheckInsForMonth(year, month);
 
   // Modal state
   const [modalVisible, setModalVisible] = useState(false);
@@ -118,22 +127,7 @@ export default function CalendarScreen() {
     setModalVisible(true);
   };
 
-  const saveModal = () => {
-    if (!modalTarget) return;
-
-    saveCheckIn({
-      habitId: modalTarget.habitId,
-      date: new Date(year, month, modalTarget.day).toISOString(),
-      completed: true,
-      difficultyRating: draftDifficultyRating,
-      notes: draftNotes,
-    });
-
-    setModalVisible(false);
-    setModalTarget(null);
-  };
-
-  const userId = 1; // replace later with auth
+  const userId = 'a6d400e7-4f91-4575-b562-ccd8e2aeb0e2'; // replace later with auth
   const { mutate: saveCheckIn } = useUpsertCheckIn(year, month, userId);
 
   const entryForKey = (habitId: string, day: number) =>
@@ -229,7 +223,7 @@ export default function CalendarScreen() {
 
         {HABITS.map(habit => {
           const entry = entryForKey(habit.id, selectedDay);
-          const checked = entry?.checked ?? false;
+          const checked = entry?.completed ?? false;
           return (
             <View key={habit.id} style={styles.habitRow}>
               <Text style={styles.habitName}>{habit.title}</Text>
@@ -242,12 +236,13 @@ export default function CalendarScreen() {
                 style={[styles.checkCircle, checked && styles.checkCircleDone]}
                 onPress={() => {
                   if (checked) {
-                    // Uncheck: keep the entry but flip checked to false
-                    const key = `${habit.id}-${year}-${month}-${selectedDay}`;
-                    setEntries(prev => ({
-                      ...prev,
-                      [key]: { ...prev[key], checked: false },
-                    }));
+                    saveCheckIn({
+                      habitId: habit.id,
+                      date: new Date(year, month, selectedDay).toISOString(),
+                      completed: false,
+                      difficultyRating: entry?.difficultyRating ?? null,
+                      notes: entry?.notes ?? '',
+                    });
                   } else {
                     openModal(habit.id, selectedDay);
                   }

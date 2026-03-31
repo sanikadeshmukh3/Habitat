@@ -48,20 +48,20 @@ const api = axios.create({
 export const habitKeys = {
   all:    ()          => ['habits']                 as const,
   lists:  ()          => ['habits', 'list']         as const,
-  list:   (userId: number) => ['habits', 'list', userId] as const,
-  detail: (id: number)    => ['habits', 'detail', id]   as const,
+  list:   (userId: string) => ['habits', 'list', userId] as const,
+  detail: (id: string)    => ['habits', 'detail', id]   as const,
 } as const;
 
 // ─── API functions ────────────────────────────────────────────────────────────
 
-async function fetchHabits(userId: number): Promise<Habit[]> {
+async function fetchHabits(userId: string): Promise<Habit[]> {
   const { data } = await api.get<{ data: Habit[] }>('/habits', {
     params: { userId: 1 }, // remove once auth middleware injects the user
   });
   return data.data;
 }
 
-async function fetchHabitDetail(habitId: number): Promise<HabitDetail> {
+async function fetchHabitDetail(habitId: string): Promise<HabitDetail> {
   const { data } = await api.get<{ data: HabitDetail }>(`/habits/${habitId}`);
   return data.data;
 }
@@ -75,7 +75,7 @@ async function createHabit(payload: CreateHabitPayload): Promise<Habit> {
 }
 
 async function updateHabit(
-  habitId: number,
+  habitId: string,
   payload: UpdateHabitPayload,
 ): Promise<Habit> {
   const { data } = await api.patch<{ data: Habit }>(`/habits/${habitId}`, payload);
@@ -91,7 +91,7 @@ async function updateHabit(
  * @example
  * const { data: habits, isLoading, error } = useHabits(currentUserId);
  */
-export function useHabits(userId: number): UseQueryResult<Habit[], AxiosError> {
+export function useHabits(userId: string): UseQueryResult<Habit[], AxiosError> {
   return useQuery({
     queryKey: habitKeys.list(userId),
     queryFn:  () => fetchHabits(userId),
@@ -110,8 +110,8 @@ export function useHabits(userId: number): UseQueryResult<Habit[], AxiosError> {
  * const { data: habit, isLoading } = useHabitDetail(habitId, currentUserId);
  */
 export function useHabitDetail(
-  habitId: number,
-  userId: number,
+  habitId: string,
+  userId: string,
 ): UseQueryResult<HabitDetail, AxiosError> {
   const queryClient = useQueryClient();
 
@@ -142,7 +142,7 @@ export function useHabitDetail(
  * const { mutate: createHabit, isPending } = useCreateHabit(currentUserId);
  * createHabit({ name: 'Drink water', category: 'Fitness', frequency: 'Daily', isPublic: false });
  */
-export function useCreateHabit(userId: number): UseMutationResult<
+export function useCreateHabit(userId: string): UseMutationResult<
   Habit,
   AxiosError,
   CreateHabitPayload
@@ -184,8 +184,8 @@ export function useCreateHabit(userId: number): UseMutationResult<
  * updateHabit({ isPublic: true });
  */
 export function useUpdateHabit(
-  habitId: number,
-  userId: number,
+  habitId: string,
+  userId: string,
 ): UseMutationResult<Habit, AxiosError, UpdateHabitPayload> {
   const queryClient = useQueryClient();
 

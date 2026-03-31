@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 import CheckInModal from '@/components/checkin-modal';
-import { useUpsertCheckIn } from '@/hooks/use-checkin';
+import { useUpsertCheckIn, useCheckInsForMonth } from '@/hooks/use-checkin';
 
 // Palette
 const C = {
@@ -64,18 +64,22 @@ export default function HabitDetailScreen() {
 
   const habit = MOCK_HABIT;
 
+  const userId = 'a6d400e7-4f91-4575-b562-ccd8e2aeb0e2'; // replace later
+  const habitId = 'seeded-workout-habit'; // replace with real habit
+
   const today = new Date();
   const year = today.getFullYear();
   const month = today.getMonth();
 
-  const userId = 1; // replace later
-  const habitId = 'seeded-workout-habit'; // replace with real habit
+  const { data: monthCheckIns = {} } = useCheckInsForMonth(year, month);
+
+  const todayKey = `${habitId}-${year}-${month}-${today.getDate()}`;
+  const checkedIn = monthCheckIns[todayKey]?.completed ?? false;
 
   const { mutate: saveCheckIn } = useUpsertCheckIn(year, month, userId);
 
   const completionRate = Math.round((habit.totalCompletions / habit.totalDays) * 100);
 
-  const [checkedIn, setCheckedIn] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [difficultyRating, setDifficultyRating] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
@@ -139,13 +143,7 @@ export default function HabitDetailScreen() {
         <TouchableOpacity
           style={[styles.checkInBtn, checkedIn && styles.checkInBtnDone]}
           onPress={() => {
-            if (checkedIn) {
-              setCheckedIn(false);
-              setDifficultyRating(null);
-              setNotes('');
-            } else {
-              setModalVisible(true);
-            }
+            setModalVisible(true);
           }}
           activeOpacity={0.85}
         >

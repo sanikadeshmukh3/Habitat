@@ -76,6 +76,7 @@ async function main() {
       currentStreak: 1,
       active: true,
       userId: user.id,
+      updatedAt: new Date(),
     },
   });
 }
