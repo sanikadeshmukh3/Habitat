@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from '@/lib/api';
 import CheckInModal from '@/components/checkin-modal';
 import { useUpsertCheckIn } from '@/hooks/use-checkin';
 
@@ -93,16 +94,12 @@ export default function CalendarScreen() {
 
   useEffect(() => {
     const fetchHabits = async () => {
-      const token = await AsyncStorage.getItem("token");
-  
-      const res = await fetch("http://localhost:3000/habits", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-  
-      const data = await res.json();
-      setHabits(data.habits || []);
+      try {
+        const { data } = await api.get("/habits");
+        setHabits(data.habits || data.data || []);
+      } catch (err) {
+        console.error("Failed to fetch habits:", err);
+      }
     };
   
     fetchHabits();
@@ -110,34 +107,22 @@ export default function CalendarScreen() {
 
   useEffect(() => {
     const fetchCheckins = async () => {
-      const token = await AsyncStorage.getItem("token");
-  
-      const res = await fetch(
-        `http://localhost:3000/checkins?year=${year}&month=${month}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-  
-      const data = await res.json();
-  
-      const mapped: EntryMap = {};
-      (data.checkins || []).forEach((c: any) => {
-        const d = new Date(c.date);
-  
-        const key = `${c.habitId}-${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-  
-        mapped[key] = {
-          completed: c.completed,
-          difficultyRating: c.difficultyRating ?? null,
-          notes: c.notes ?? '',
-        };
-      });
-      console.log("CHECKINS RESPONSE:", data);
-  
-      setEntries(mapped);
+      try {
+        const { data } = await api.get("/checkins", {
+          params: { year, month },
+        });
+
+        const mapped: EntryMap =
+          data?.data && !Array.isArray(data.data)
+            ? data.data
+            : data?.checkins && !Array.isArray(data.checkins)
+            ? data.checkins
+            : {};
+
+        setEntries(mapped);
+      } catch (err) {
+        console.error("Failed to fetch checkins:", err);
+      }
     };
   
     fetchCheckins();
@@ -332,7 +317,7 @@ export default function CalendarScreen() {
                   if (checked) {
                     saveCheckIn({
                       habitId: habit.id,
-                      date: new Date(year, month, selectedDay).toISOString(),
+                      date: new Date(year, month, selectedDay, 12).toISOString(),
                       completed: false,
                       difficultyRating: entry?.difficultyRating ?? null,
                       notes: entry?.notes ?? "",
@@ -343,22 +328,6 @@ export default function CalendarScreen() {
                       [key]: {
                         ...(prev[key] || { difficultyRating: null, notes: "" }),
                         completed: false,
-                      },
-                    }));
-                  } else if (existing) {
-                    saveCheckIn({
-                      habitId: habit.id,
-                      date: new Date(year, month, selectedDay).toISOString(),
-                      completed: true,
-                      difficultyRating: existing.difficultyRating,
-                      notes: existing.notes,
-                    });
-
-                    setEntries(prev => ({
-                      ...prev,
-                      [key]: {
-                        ...existing,
-                        completed: true,
                       },
                     }));
                   } else {
@@ -388,7 +357,7 @@ export default function CalendarScreen() {
 
           saveCheckIn({
             habitId: modalTarget.habitId,
-            date: new Date(year, month, modalTarget.day).toISOString(),
+            date: new Date(year, month, modalTarget.day, 12).toISOString(),
             completed: true,
             difficultyRating,
             notes,
