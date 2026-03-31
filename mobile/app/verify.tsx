@@ -13,7 +13,7 @@ export default function Verify() {
     }
 
     try {
-      const response = await fetch("http://localhost:3000/verify", {
+      const response = await fetch("http://10.75.196.102:3000/verify", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

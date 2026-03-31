@@ -34,7 +34,7 @@ import { View, TextInput, Text, TouchableOpacity, ActivityIndicator, } from "rea
       }
   
       try {
-        const response = await fetch("http://localhost:3000/reset-password", {
+        const response = await fetch("http://10.75.196.102:3000/reset-password", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -73,7 +73,7 @@ import { View, TextInput, Text, TouchableOpacity, ActivityIndicator, } from "rea
       setResendLoading(true);
   
       try {
-        const response = await fetch("http://localhost:3000/resend-code", {
+        const response = await fetch("http://10.75.196.102:3000/resend-code", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

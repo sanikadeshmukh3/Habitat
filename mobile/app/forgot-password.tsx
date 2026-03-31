@@ -15,7 +15,7 @@ import { View, TextInput, Text, TouchableOpacity, ActivityIndicator} from "react
       }
   
       try {
-        const response = await fetch("http://localhost:3000/forgot-password", {
+        const response = await fetch("http://10.75.196.102:3000/forgot-password", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

@@ -27,7 +27,7 @@ export default function Login() {
       setLoading(true);
         try {
           const response: Response = await fetch(
-            "http://localhost:3000/login",  //use your computer's IP address
+            "http://10.75.196.102:3000/login",  //use your computer's IP address
             {
               method: "POST",
               headers: {  "Content-Type": "application/json",
