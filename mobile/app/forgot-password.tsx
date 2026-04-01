@@ -1,6 +1,7 @@
 import { View, TextInput, Text, TouchableOpacity, ActivityIndicator} from "react-native";
   import { router } from "expo-router";
   import { useState } from "react";
+import api from "@/lib/api";
   
   export default function ForgotPassword() {
     const [email, setEmail] = useState("");
@@ -15,19 +16,13 @@ import { View, TextInput, Text, TouchableOpacity, ActivityIndicator} from "react
       }
   
       try {
-        const response = await fetch("http://localhost:3000/forgot-password", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email: trimmedEmail }),
+        const { data, status } = await api.post("/forgot-password", {
+          email: trimmedEmail,
         });
-  
-        const data = await response.json();
-  
-        if (response.ok) {
+      
+        if (status === 200) {
           alert("Code sent to your email");
-  
+      
           router.push({
             pathname: "/reset-password",
             params: { email: trimmedEmail },
@@ -35,9 +30,9 @@ import { View, TextInput, Text, TouchableOpacity, ActivityIndicator} from "react
         } else {
           alert(data.message || "Error");
         }
-      } catch (error) {
-        console.error(error);
-        alert("Network error");
+      } catch (error: any) {
+        console.error("Forgot password error:", error);
+        alert(error?.response?.data?.message || "Network error");
       }
     };
   

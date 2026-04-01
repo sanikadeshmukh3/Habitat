@@ -2,6 +2,7 @@ import { View, TouchableOpacity, Button, TextInput, Text, ImageBackground, Activ
 import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
+import api from '@/lib/api';
 
 export default function Login() {
   const [email, setEmail] = useState<string>("");
@@ -22,39 +23,31 @@ export default function Login() {
   // }, []);
 
     
-    const handleLogin = async (): Promise<void> => {
-      if (loading) return;
-      setLoading(true);
-        try {
-          const response: Response = await fetch(
-            "http://localhost:3000/login",  //use your computer's IP address
-            {
-              method: "POST",
-              headers: {  "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ email: email.trim(), password }),
-            }
-          );
-      
-          const data: { message: string; token?: string } =  await response.json();
-      
-          // console.log(data);
-      
-          if (response.ok && data.token) {
-            await AsyncStorage.setItem("token", data.token);
-            router.push("/(tabs)/home");
-          } else {
-            alert(data.message || "Login failed");
-          }
-        } catch (error) {
-          console.error("Network error:", error);
-          alert("Network error");
-        } finally {
-          setLoading(false);
-        }
-      };
-      
-      
+  const handleLogin = async (): Promise<void> => {
+    if (loading) return;
+    setLoading(true);
+  
+    try {
+      // POST login using your centralized API instance
+      const { data } = await api.post("/login", {
+        email: email.trim(),
+        password,
+      });
+  
+      // `data` should contain { message, token? }
+      if (data.token) {
+        await AsyncStorage.setItem("token", data.token);
+        router.push("/(tabs)/home");
+      } else {
+        alert(data.message || "Login failed");
+      }
+    } catch (error: any) {
+      console.error("Login error:", error);
+      alert(error?.response?.data?.message || "Network or server error");
+    } finally {
+      setLoading(false);
+    }
+  };
       
 
       return (

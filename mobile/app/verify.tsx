@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { View, Text, TextInput, Button } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import api from "@/lib/api";
 
 export default function Verify() {
   const { email } = useLocalSearchParams();
@@ -13,28 +14,20 @@ export default function Verify() {
     }
 
     try {
-      const response = await fetch("http://localhost:3000/verify", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          code,
-        }),
+      const { data, status } = await api.post("/verify", {
+        email,
+        code,
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
+    
+      if (status === 200) {
         alert("Email verified!");
         router.push("/login");
       } else {
-        alert(data.message);
+        alert(data.message || "Verification failed");
       }
-    } catch (error) {
-      console.error(error);
-      alert("Network error");
+    } catch (error: any) {
+      console.error("Verification error:", error);
+      alert(error?.response?.data?.message || "Network error");
     }
   };
 

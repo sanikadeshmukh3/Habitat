@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { router } from "expo-router";
 import { View, TextInput,  Text,  TouchableOpacity,  ActivityIndicator} from "react-native";
+import api from "@/lib/api";
 
 export default function Signup() {
   const [email, setEmail] = useState("");
@@ -32,20 +33,14 @@ export default function Signup() {
     }
 
     try {
-      const response = await fetch("http://localhost:3000/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: trimmedEmail,
-          password,
-          firstName: trimmedFirstName,
-          lastName: trimmedLastName,
-        }),
+      const { data, status } = await api.post("/signup", {
+        email: trimmedEmail,
+        password,
+        firstName: trimmedFirstName,
+        lastName: trimmedLastName,
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
+    
+      if (status === 200) {
         router.push({
           pathname: "/verify",
           params: { email: trimmedEmail },
@@ -53,9 +48,9 @@ export default function Signup() {
       } else {
         alert(data.message || "Signup failed");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Signup error:", error);
-      alert("Network error");
+      alert(error?.response?.data?.message || "Network error");
     }
   };
 

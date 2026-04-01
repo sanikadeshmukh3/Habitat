@@ -1,6 +1,7 @@
 import { View, TextInput, Text, TouchableOpacity, ActivityIndicator, } from "react-native";
   import { useState, useEffect } from "react";
   import { useLocalSearchParams, router } from "expo-router";
+import api from "@/lib/api";
   
   export default function ResetPassword() {
     const { email } = useLocalSearchParams<{ email: string }>();
@@ -34,29 +35,22 @@ import { View, TextInput, Text, TouchableOpacity, ActivityIndicator, } from "rea
       }
   
       try {
-        const response = await fetch("http://localhost:3000/reset-password", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email,
-            code,
-            password,
-          }),
+        // Use the centralized API instance
+        const { data, status } = await api.post("/reset-password", {
+          email,
+          code,
+          password,
         });
-  
-        const data = await response.json();
-  
-        if (response.ok) {
+      
+        if (status === 200) {
           alert("Password reset successful");
           router.replace("/login");
         } else {
           alert(data.message || "Reset failed");
         }
-      } catch (error) {
-        console.error(error);
-        alert("Network error");
+      } catch (error: any) {
+        console.error("Password reset error:", error);
+        alert(error?.response?.data?.message || "Network error");
       }
     };
   
@@ -73,28 +67,17 @@ import { View, TextInput, Text, TouchableOpacity, ActivityIndicator, } from "rea
       setResendLoading(true);
   
       try {
-        const response = await fetch("http://localhost:3000/resend-code", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email }),
-        });
-
-        const text = await response.text();
-        console.log("RAW RESPONSE:", text);
-  
-        const data = JSON.parse(text);
-  
-        if (response.ok) {
+        const { data, status } = await api.post("/resend-code", { email });
+      
+        if (status === 200) {
           alert("New code sent");
-          setTimer(30); 
+          setTimer(30); // reset timer
         } else {
-          alert(data.message);
+          alert(data.message || "Failed to resend code");
         }
-      } catch (error) {
-        console.error(error);
-        alert("Network error");
+      } catch (error: any) {
+        console.error("Resend code error:", error);
+        alert(error?.response?.data?.message || "Network error");
       }
   
       setResendLoading(false);

@@ -11,12 +11,19 @@ import {
   ImageBackground,
   KeyboardAvoidingView,
   Platform,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from '@/lib/api';
 import CheckInModal from '@/components/checkin-modal';
 import { useUpsertCheckIn } from '@/hooks/use-checkin';
+
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 // ── Fake habits – replace with real data/store ────────────────
 // const HABITS = [
@@ -72,6 +79,8 @@ export default function CalendarScreen() {
   const [month, setMonth] = useState(today.getMonth());
 
   const [habits, setHabits] = useState<any[]>([]);
+  // Tracks which habits have their notes dropdown open
+const [expandedHabits, setExpandedHabits] = useState<Record<string, boolean>>({});
 
   // Which day's habits are shown below the grid (defaults to today)
   const [selectedDay, setSelectedDay] = useState(today.getDate());
@@ -297,49 +306,80 @@ export default function CalendarScreen() {
           Habits – {MONTH_NAMES[month]} {selectedDay}
         </Text>
 
-        {habits.map(habit => {
-          const entry = entryForKey(habit.id, selectedDay);
-          const checked = entry?.completed ?? false;
-          return (
-            <View key={habit.id} style={styles.habitRow}>
-              <Text style={styles.habitName}>{habit.name}</Text>
+  {habits.map(habit => {
+  const entry = entryForKey(habit.id, selectedDay);
+  const checked = entry?.completed ?? false;
+  const notesExist = !!entry?.notes?.trim();
+  const isExpanded = expandedHabits[habit.id] ?? false;
 
-              {/* Check circle:
+  return (
+    <View key={habit.id} style={styles.habitContainer}>
+      <View style={styles.habitRow}>
+        <Text style={styles.habitName}>{habit.name}</Text>
+
+                      {/* Check circle:
                   • Empty/white border  = not yet checked
                   • Solid green bubble + white ✓ = checked
                   Pressing it opens the mood/notes modal          */}
-              <TouchableOpacity
-                style={[styles.checkCircle, checked && styles.checkCircleDone]}
-                onPress={() => {
-                  const key = `${habit.id}-${year}-${month}-${selectedDay}`;
-                  const existing = entries[key];
 
-                  if (checked) {
-                    saveCheckIn({
-                      habitId: habit.id,
-                      date: new Date(year, month, selectedDay, 12).toISOString(),
-                      completed: false,
-                      difficultyRating: entry?.difficultyRating ?? null,
-                      notes: entry?.notes ?? "",
-                    });
+        <TouchableOpacity
+          style={[styles.checkCircle, checked && styles.checkCircleDone]}
+          onPress={() => {
+            const key = `${habit.id}-${year}-${month}-${selectedDay}`;
+            const existing = entries[key];
 
-                    setEntries(prev => ({
-                      ...prev,
-                      [key]: {
-                        ...(prev[key] || { difficultyRating: null, notes: "" }),
-                        completed: false,
-                      },
-                    }));
-                  } else {
-                    openModal(habit.id, selectedDay);
-                  }
-                }}
-              >
-                {checked && <Text style={styles.checkMark}>✓</Text>}
-              </TouchableOpacity>
-            </View>
-          );
-        })}
+            if (checked) {
+              saveCheckIn({
+                habitId: habit.id,
+                date: new Date(year, month, selectedDay, 12).toISOString(),
+                completed: false,
+                difficultyRating: entry?.difficultyRating ?? null,
+                notes: entry?.notes ?? "",
+              });
+
+              setEntries(prev => ({
+                ...prev,
+                [key]: {
+                  ...(prev[key] || { difficultyRating: null, notes: "" }),
+                  completed: false,
+                },
+              }));
+            } else {
+              openModal(habit.id, selectedDay);
+            }
+          }}
+        >
+          {checked && <Text style={styles.checkMark}>✓</Text>}
+        </TouchableOpacity>
+
+        {/* Expand notes toggle */}
+        {notesExist && (
+          <TouchableOpacity
+            onPress={() => {
+              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+              setExpandedHabits(prev => ({
+                ...prev,
+                [habit.id]: !prev[habit.id],
+              }));
+            }}
+            style={{ marginLeft: 12 }}
+          >
+            <Text style={{ fontSize: 14, color: Colors.primaryGreen }}>
+              {isExpanded ? 'Hide notes' : 'Show notes'}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Notes dropdown */}
+      {isExpanded && notesExist && (
+        <View style={styles.notesDropdown}>
+          <Text style={styles.notesText}>{entry?.notes}</Text>
+        </View>
+      )}
+    </View>
+  );
+})}
 
       </ScrollView>
 
@@ -627,5 +667,22 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontWeight: '700',
     fontSize: FontSize.sm,
+  },
+
+  habitContainer: {
+    marginBottom: Spacing.sm,
+  },
+  notesDropdown: {
+    backgroundColor: Colors.inputBg,
+    borderRadius: Radius.sm,
+    padding: Spacing.sm,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  notesText: {
+    fontSize: FontSize.sm,
+    color: Colors.darkBrown,
+    lineHeight: 18,
   },
 });
