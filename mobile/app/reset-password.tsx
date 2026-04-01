@@ -42,7 +42,7 @@ import api from "@/lib/api";
           password,
         });
       
-        if (status === 200) {
+        if (status >= 200 && status < 300) {
           alert("Password reset successful");
           router.replace("/login");
         } else {
@@ -69,7 +69,7 @@ import api from "@/lib/api";
       try {
         const { data, status } = await api.post("/resend-code", { email });
       
-        if (status === 200) {
+        if (status >= 200 && status < 300) {
           alert("New code sent");
           setTimer(30); // reset timer
         } else {

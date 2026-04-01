@@ -150,6 +150,13 @@ if (!emailRegex.test(email)) {
     });
 
     if (existingUser) {
+
+      if (!user.isVerified) {
+        return res.status(403).json({
+          message: "Please verify your email first.",
+        });
+      }
+
       return res.status(400).json({
         message: "User already exists",
       });
@@ -215,6 +222,7 @@ app.post("/verify", async (req, res) => {
     if (new Date() > user.codeExpires) {
       return res.status(400).json({
         message: "Code expired",
+        expired: true,
       });
     }
 
