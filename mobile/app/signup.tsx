@@ -40,7 +40,7 @@ export default function Signup() {
         lastName: trimmedLastName,
       });
     
-      if (status === 200) {
+      if (status >= 200 && status < 300) {
         router.push({
           pathname: "/verify",
           params: { email: trimmedEmail },
@@ -51,6 +51,7 @@ export default function Signup() {
     } catch (error: any) {
       console.error("Signup error:", error);
       alert(error?.response?.data?.message || "Network error");
+      
     }
   };
 
