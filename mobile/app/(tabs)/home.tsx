@@ -45,7 +45,7 @@ export default function HomeScreen() {
     const fetchDashboard = async () => {
       try {
         const token = await AsyncStorage.getItem("token"); // retrieving the token from the signed-in user
-        const response = await fetch ("http://localhost:3000/dashboard", { 
+        const response = await fetch (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000', { 
           method: "GET",
           headers: {
             "Content-type": "application/json",

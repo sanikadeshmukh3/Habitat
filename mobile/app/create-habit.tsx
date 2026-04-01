@@ -4,6 +4,7 @@ import { useCreateHabit } from '../hooks/use-habits';
 import { Habit, HabitCategory, HabitFrequency } from '../types/habit';
 import {
   ImageBackground,
+  Modal,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -72,9 +73,28 @@ export default function CreateHabitScreen() {
     setHabit((prev) => ({ ...prev, [field]: value }));
   };
 
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const { mutate: createHabit, isPending } = useCreateHabit();
 
   const canSubmit = habit.name.trim().length > 0;
+
+  const EMPTY_HABIT: Habit = {
+    id: '1',
+    name: '',
+    description: '',
+    habitCategory: 'FITNESS',
+    frequency: 'DAILY',
+    visibility: false,
+    active: true,
+    currentStreak: 0,
+    priorityRank: undefined,
+    updatedAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+  };
+
+  const resetForm = () => setHabit({ ...EMPTY_HABIT, updatedAt: new Date().toISOString(), createdAt: new Date().toISOString() });
 
   return (
     <ImageBackground
@@ -117,7 +137,7 @@ export default function CreateHabitScreen() {
               placeholder="e.g. Drink 8 glasses of water"
               placeholderTextColor={C.textSecondary}
               value={habit.name}
-              onChangeText={(text) => updateHabitField('name', text)}
+              onChangeText={(text) => { updateHabitField('name', text); setSubmitError(null); }}
               maxLength={60}
               returnKeyType="done"
             />
@@ -196,13 +216,42 @@ export default function CreateHabitScreen() {
 
         {/* Submit */}
         <TouchableOpacity
-          style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]} onPress={() => createHabit({ name: habit.name, habitCategory: habit.habitCategory, frequency: habit.frequency, active: habit.active, visibility: habit.visibility })}
-          activeOpacity={canSubmit ? 0.85 : 1}
-          disabled={!canSubmit}
+          style={[styles.submitBtn, (!canSubmit || isPending) && styles.submitBtnDisabled]}
+          onPress={() => {
+            setSubmitError(null);
+            createHabit(
+              { name: habit.name, habitCategory: habit.habitCategory, frequency: habit.frequency, active: habit.active, visibility: habit.visibility },
+              {
+                onSuccess: () => setShowSuccess(true),
+                onError: (err: any) => {
+                  const msg = err?.response?.data?.error ?? 'Something went wrong. Please try again.';
+                  setSubmitError(msg);
+                },
+              },
+            );
+          }}
+          activeOpacity={canSubmit && !isPending ? 0.85 : 1}
+          disabled={!canSubmit || isPending}
         >
-          <Text style={styles.submitLeaf}>🍀</Text>
-          <Text style={styles.submitLabel}>Add to Habitat</Text>
+          {isPending ? (
+            <>
+              <Text style={styles.submitLeaf}>⏳</Text>
+              <Text style={styles.submitLabel}>Saving…</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.submitLeaf}>🍀</Text>
+              <Text style={styles.submitLabel}>Add to Habitat</Text>
+            </>
+          )}
         </TouchableOpacity>
+
+        {/* Inline error banner (duplicate name, network error, etc.) */}
+        {submitError && (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText}>⚠️  {submitError}</Text>
+          </View>
+        )}
 
         {/* AI nudge */}
         <TouchableOpacity style={styles.aiNudge} onPress={() => router.push('/create-habit-ai')} activeOpacity={0.75}>
@@ -217,6 +266,40 @@ export default function CreateHabitScreen() {
 
         <View style={{ height: 32 }} />
       </ScrollView>
+      {/* ── Success Modal ─────────────────────────────────────── */}
+      <Modal
+        visible={showSuccess}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSuccess(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            {/* Decorative top strip */}
+            <View style={styles.modalStrip} />
+
+            <Text style={styles.modalEmoji}>🌿</Text>
+            <Text style={styles.modalTitle}>Habit Added!</Text>
+            <Text style={styles.modalSub}>Your new habit is ready to go.{'\n'}Keep it up — every streak starts here.</Text>
+
+            <TouchableOpacity
+              style={styles.modalPrimaryBtn}
+              activeOpacity={0.85}
+              onPress={() => { setShowSuccess(false); resetForm(); }}
+            >
+              <Text style={styles.modalPrimaryLabel}>＋  Create Another Habit</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.modalSecondaryBtn}
+              activeOpacity={0.75}
+              onPress={() => { setShowSuccess(false); router.push('/(tabs)/home'); }}
+            >
+              <Text style={styles.modalSecondaryLabel}>Return to Dashboard</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
     </ImageBackground>
   );
@@ -502,6 +585,23 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
+  // Error banner
+  errorBanner: {
+    marginTop: 10,
+    backgroundColor: '#FFF0F0',
+    borderWidth: 1.5,
+    borderColor: '#F5C2C2',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  errorBannerText: {
+    fontSize: 13,
+    color: '#C0392B',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+
   // AI nudge
   aiNudge: {
     marginTop: 14,
@@ -529,5 +629,84 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: C.textSecondary,
     marginTop: 1,
+  },
+
+  // ── Success Modal ──────────────────────────────────────────────────────────
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(43, 45, 66, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 28,
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: C.card,
+    borderRadius: 28,
+    alignItems: 'center',
+    overflow: 'hidden',
+    shadowColor: C.indigo,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.22,
+    shadowRadius: 24,
+    elevation: 12,
+    paddingBottom: 28,
+  },
+  modalStrip: {
+    width: '100%',
+    height: 6,
+    backgroundColor: C.sage,
+    marginBottom: 24,
+  },
+  modalEmoji: {
+    fontSize: 48,
+    marginBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: C.indigo,
+    letterSpacing: -0.4,
+    marginBottom: 8,
+  },
+  modalSub: {
+    fontSize: 14,
+    color: C.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 20,
+    marginBottom: 28,
+  },
+  modalPrimaryBtn: {
+    width: '85%',
+    backgroundColor: C.indigo,
+    borderRadius: 16,
+    paddingVertical: 15,
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: C.indigo,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  modalPrimaryLabel: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  modalSecondaryBtn: {
+    width: '85%',
+    borderWidth: 1.5,
+    borderColor: C.border,
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  modalSecondaryLabel: {
+    color: C.textSecondary,
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

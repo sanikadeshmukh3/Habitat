@@ -168,6 +168,20 @@ async function createHabit(req, res, next) {
       return;
     }
 
+    // ── Duplicate check ────────────────────────────────────────────────────
+    // Prevent the same user from creating two habits with the same name
+    // (case-insensitive so "drink water" and "Drink Water" are treated as equal).
+    const duplicate = await prisma.habit.findFirst({
+      where: {
+        userId,
+        name: { equals: body.name.trim(), mode: 'insensitive' },
+      },
+    });
+    if (duplicate) {
+      res.status(409).json({ error: 'You already have a habit with that name' });
+      return;
+    }
+
     const habit = await prisma.habit.create({
       data: {
         userId,
