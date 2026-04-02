@@ -15,10 +15,14 @@ import {
   UIManager,
 } from 'react-native';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from '@/lib/api';
 import CheckInModal from '@/components/checkin-modal';
-import { useUpsertCheckIn } from '@/hooks/use-checkin';
+import {
+  useCheckInsForMonth,
+  useUpsertCheckIn,
+  buildMonthKey,
+  MonthlyCheckInMap,
+} from '@/hooks/use-checkin';
 
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -50,33 +54,30 @@ function getFirstDayOfWeek(year: number, month: number) {
 // Used to render the partial green fill inside each day cell.
 function completionRatio(
   habits: any[] = [],
-  // habitCount: number,
-  entries: EntryMap,
+  entries: MonthlyCheckInMap,
   year: number,
   month: number,
   day: number,
 ): number {
   if (habits.length === 0) return 0;
-  const checked = habits.filter(
-    h => entries[`${h.id}-${year}-${month}-${day}`]?.completed
-  ).length;
+
+  const date = new Date(year, month, day, 12);
+
+  const checked = habits.filter((h) => {
+    const key = buildMonthKey(h.id, date);
+    return entries[key]?.completed;
+  }).length;
+
   return checked / habits.length;
 }
-
-// ── Types ─────────────────────────────────────────────────────
-type HabitEntry = {
-  completed: boolean;
-  difficultyRating: number | null;
-  notes: string;
-};
-// key: `${habitId}-${year}-${month}-${day}`
-type EntryMap = Record<string, HabitEntry>;
 
 
 export default function CalendarScreen() {
   const today = new Date();
   const [year,  setYear]  = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
+
+  const { data: entries = {} } = useCheckInsForMonth(year, month);
 
   const [habits, setHabits] = useState<any[]>([]);
   // Tracks which habits have their notes dropdown open
@@ -88,8 +89,6 @@ const [expandedHabits, setExpandedHabits] = useState<Record<string, boolean>>({}
   // Pixel height of a single day cell, measured via onLayout.
   const [cellHeight, setCellHeight] = useState(0);
 
-  // Stored habit entries
-  const [entries, setEntries] = useState<EntryMap>({});
 
   // Modal state
   const [modalVisible, setModalVisible] = useState(false);
@@ -113,32 +112,6 @@ const [expandedHabits, setExpandedHabits] = useState<Record<string, boolean>>({}
   
     fetchHabits();
   }, []);
-
-  useEffect(() => {
-    const fetchCheckins = async () => {
-      try {
-        const { data } = await api.get("/checkins", {
-          params: { year, month },
-        });
-
-        const mapped: EntryMap =
-          data?.data && !Array.isArray(data.data)
-            ? data.data
-            : data?.checkins && !Array.isArray(data.checkins)
-            ? data.checkins
-            : {};
-
-        setEntries(mapped);
-      } catch (err) {
-        console.error("Failed to fetch checkins:", err);
-      }
-    };
-  
-    fetchCheckins();
-  }, [year, month]);
-
-
-
 
 
 
@@ -166,7 +139,7 @@ const [expandedHabits, setExpandedHabits] = useState<Record<string, boolean>>({}
 
   // ── Modal helpers ───────────────────────────────────────────
   const openModal = (habitId: string, day: number) => {
-    const key = `${habitId}-${year}-${month}-${day}`;
+    const key = buildMonthKey(habitId, new Date(year, month, day, 12));
     const existing = entries[key];
 
     setModalTarget({ habitId, day });
@@ -212,11 +185,10 @@ const [expandedHabits, setExpandedHabits] = useState<Record<string, boolean>>({}
   //   }
   // };
 
-  const userId = 'a6d400e7-4f91-4575-b562-ccd8e2aeb0e2'; // replace later with auth
-  const { mutate: saveCheckIn } = useUpsertCheckIn(year, month, userId);
+  const { mutate: saveCheckIn } = useUpsertCheckIn(year, month);
 
   const entryForKey = (habitId: string, day: number) =>
-    entries[`${habitId}-${year}-${month}-${day}`];
+    entries[buildMonthKey(habitId, new Date(year, month, day, 12))];
 
   const goBack = () => router.push("./(tabs)/home");
 
@@ -325,25 +297,14 @@ const [expandedHabits, setExpandedHabits] = useState<Record<string, boolean>>({}
         <TouchableOpacity
           style={[styles.checkCircle, checked && styles.checkCircleDone]}
           onPress={() => {
-            const key = `${habit.id}-${year}-${month}-${selectedDay}`;
-            const existing = entries[key];
-
             if (checked) {
               saveCheckIn({
                 habitId: habit.id,
                 date: new Date(year, month, selectedDay, 12).toISOString(),
                 completed: false,
                 difficultyRating: entry?.difficultyRating ?? null,
-                notes: entry?.notes ?? "",
+                notes: entry?.notes ?? '',
               });
-
-              setEntries(prev => ({
-                ...prev,
-                [key]: {
-                  ...(prev[key] || { difficultyRating: null, notes: "" }),
-                  completed: false,
-                },
-              }));
             } else {
               openModal(habit.id, selectedDay);
             }
@@ -402,16 +363,6 @@ const [expandedHabits, setExpandedHabits] = useState<Record<string, boolean>>({}
             difficultyRating,
             notes,
           });
-          const key = `${modalTarget.habitId}-${year}-${month}-${modalTarget.day}`;
-
-    setEntries(prev => ({
-    ...prev,
-    [key]: {
-    completed: true,
-    difficultyRating,
-    notes,
-  },
-}));
 
           setModalVisible(false);
           setModalTarget(null);

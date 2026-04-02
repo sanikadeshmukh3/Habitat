@@ -1,13 +1,15 @@
 /**
- * mobile/hooks/use-checkin.ts
+ * use-checkin.ts
  *
- * This file manages ALL check-in related logic using React Query.
+ * This file centralizes all check-in related data logic using React Query.
+ * It provides:
+ *  - Query hook for fetching monthly check-ins
+ *  - Mutation hook for creating/updating check-ins (upsert)
+ *  - Shared key builder to ensure consistency across the app
  *
- * Responsibilities:
- * - Fetch check-ins for a given month
- * - Create/update (upsert) check-ins
- * - Handle optimistic UI updates
- * - Keep UI in sync with backend via cache invalidation
+ * Design Goal:
+ * Ensure a single source of truth for check-in state so that multiple screens
+ * (e.g., calendar and habit detail) stay synchronized automatically.
  */
 
 import {
@@ -21,20 +23,14 @@ import { AxiosError } from 'axios';
 import api from '@/lib/api';
 import { habitKeys } from './use-habits';
 
-/**
- * Payload sent to backend when creating/updating a check-in
- */
 export type CheckInPayload = {
-  habitId: string;                  // ID of the habit being checked in
-  date: string;                     // ISO date string (YYYY-MM-DD)
-  completed?: boolean;              // Whether the habit was completed (default true)
-  difficultyRating?: number | null; // Optional difficulty rating
-  notes?: string;                   // Optional user notes
+  habitId: string;
+  date: string;
+  completed?: boolean;
+  difficultyRating?: number | null;
+  notes?: string;
 };
 
-/**
- * Structure of a check-in returned from the backend
- */
 export type HabitCheckIn = {
   id: string;
   habitId: string;
@@ -44,15 +40,6 @@ export type HabitCheckIn = {
   notes: string | null;
 };
 
-/**
- * Shape of monthly check-in data stored in React Query cache
- *
- * Key format:
- *   "habitId-YYYY-MM-DD"
- *
- * Value:
- *   Check-in metadata for that specific day
- */
 export type MonthlyCheckInMap = Record<
   string,
   {
@@ -62,34 +49,34 @@ export type MonthlyCheckInMap = Record<
   }
 >;
 
-/**
- * Context used for optimistic updates
- * Allows rollback if mutation fails
- */
 type UpsertCheckInContext = {
   previousMonthData?: MonthlyCheckInMap;
 };
 
 /**
- * React Query key factory for check-ins
- * Helps organize cache keys consistently
+ * React Query keys for check-in related data.
+ *
+ * We namespace queries by "month" so that:
+ * - All check-ins for a given month are cached together
+ * - Updates invalidate only the relevant portion of the cache
  */
 export const checkinKeys = {
   all: () => ['checkins'] as const,
-
-  // Key for fetching a specific month’s data
   month: (year: number, month: number) =>
     ['checkins', 'month', year, month] as const,
 } as const;
 
 /**
- * Builds a unique key for a check-in entry
- * Used for storing/retrieving data from cache
+ * Builds a consistent key for a habit check-in on a specific date.
  *
- * Example output:
- *   "habit123-2026-04-25"
+ * Format: habitId-YYYY-MM-DD
+ *
+ * Why this matters:
+ * - Ensures all components reference the same check-in entry
+ * - Prevents mismatches caused by inconsistent date formatting
+ * - Handles both Date objects and ISO strings
  */
-function buildMonthKey(habitId: string, dateInput: string | Date): string {
+export function buildMonthKey(habitId: string, dateInput: string | Date): string {
   if (typeof dateInput === 'string') {
     return `${habitId}-${dateInput}`;
   }
@@ -102,22 +89,24 @@ function buildMonthKey(habitId: string, dateInput: string | Date): string {
 }
 
 /**
- * Fetch all check-ins for a given month from backend
+ * Fetches all check-ins for a given month from the backend.
+ *
+ * Returns a map keyed by "habitId-YYYY-MM-DD".
+ *
+ * This structure allows O(1) lookup for any habit/day combination
+ * in both the calendar and habit detail screens.
  */
 async function fetchCheckInsForMonth(
   year: number,
   month: number,
 ): Promise<MonthlyCheckInMap> {
   const { data } = await api.get<{ data: MonthlyCheckInMap }>('/checkins', {
-    params: { year, month }, // Query params sent to backend
+    params: { year, month },
   });
 
   return data.data;
 }
 
-/**
- * Create or update (upsert) a check-in in backend
- */
 async function upsertCheckIn(payload: CheckInPayload): Promise<HabitCheckIn> {
   const { data } = await api.post<{ data: HabitCheckIn }>(
     '/checkins',
@@ -128,12 +117,14 @@ async function upsertCheckIn(payload: CheckInPayload): Promise<HabitCheckIn> {
 }
 
 /**
- * Hook: Fetch check-ins for a specific month
+ * React Query hook for retrieving monthly check-ins.
  *
- * Uses React Query for:
- * - caching
- * - background refetching
- * - automatic updates
+ * Features:
+ * - Caches results per (year, month)
+ * - Automatically refetches when invalidated
+ * - Provides shared data across components
+ *
+ * This is the primary source of truth for check-in state.
  */
 export function useCheckInsForMonth(
   year: number,
@@ -141,47 +132,35 @@ export function useCheckInsForMonth(
 ): UseQueryResult<MonthlyCheckInMap, AxiosError> {
   return useQuery({
     queryKey: checkinKeys.month(year, month),
-
-    // Fetch function
     queryFn: () => fetchCheckInsForMonth(year, month),
-
-    // Only run query if inputs are valid
     enabled: Number.isFinite(year) && Number.isFinite(month),
-
-    // Cache freshness (1 minute)
     staleTime: 1000 * 60,
   });
 }
 
 /**
- * Hook: Create/update a check-in
+ * Mutation hook for creating or updating a check-in.
  *
- * Features:
- * - Optimistic UI updates
- * - Error rollback
- * - Cache syncing
+ * Uses an "upsert" approach:
+ * - If a check-in exists → update it
+ * - If not → create a new one
+ *
+ * Includes optimistic updates to provide instant UI feedback.
  */
 export function useUpsertCheckIn(
   year: number,
   month: number,
-  userId: string,
 ): UseMutationResult<HabitCheckIn, AxiosError, CheckInPayload, UpsertCheckInContext> {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (payload: CheckInPayload) => upsertCheckIn(payload),
 
-    /**
-     * OPTIMISTIC UPDATE
-     * Runs BEFORE the API request
-     */
     onMutate: async (payload) => {
-      // Cancel any outgoing queries to avoid overwriting optimistic update
       await queryClient.cancelQueries({
         queryKey: checkinKeys.month(year, month),
       });
 
-      // Snapshot previous data for rollback
       const previousMonthData = queryClient.getQueryData<MonthlyCheckInMap>(
         checkinKeys.month(year, month),
       );
@@ -189,7 +168,6 @@ export function useUpsertCheckIn(
       const key = buildMonthKey(payload.habitId, payload.date);
       const trimmedNotes = payload.notes?.trim();
 
-      // Immediately update cache (UI updates instantly)
       queryClient.setQueryData<MonthlyCheckInMap>(
         checkinKeys.month(year, month),
         (old = {}) => ({
@@ -205,10 +183,6 @@ export function useUpsertCheckIn(
       return { previousMonthData };
     },
 
-    /**
-     * ERROR HANDLING
-     * Roll back optimistic update if request fails
-     */
     onError: (error, _payload, context) => {
       console.error('[useUpsertCheckIn] failed:', error.message);
 
@@ -220,10 +194,6 @@ export function useUpsertCheckIn(
       }
     },
 
-    /**
-     * SUCCESS HANDLING
-     * Sync cache with actual backend response
-     */
     onSuccess: (savedCheckIn) => {
       const key = buildMonthKey(savedCheckIn.habitId, savedCheckIn.date);
 
@@ -240,29 +210,20 @@ export function useUpsertCheckIn(
       );
     },
 
-    /**
-     * FINAL STEP (always runs)
-     * Ensures data consistency across app
-     */
     onSettled: (_data, _error, payload) => {
-      // Refetch month data
       queryClient.invalidateQueries({
         queryKey: checkinKeys.month(year, month),
       });
 
-      // Refetch habit details if needed
       if (payload?.habitId) {
         queryClient.invalidateQueries({
           queryKey: habitKeys.detail(payload.habitId),
         });
       }
 
-      // Refetch habit list (dashboard updates)
-      if (userId) {
-        queryClient.invalidateQueries({
-          queryKey: habitKeys.list(),
-        });
-      }
+      queryClient.invalidateQueries({
+        queryKey: habitKeys.list(),
+      });
     },
   });
 }

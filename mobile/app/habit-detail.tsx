@@ -1,5 +1,5 @@
 import CheckInModal from '@/components/checkin-modal';
-import { useCheckInsForMonth, useUpsertCheckIn } from '@/hooks/use-checkin';
+import { useCheckInsForMonth, useUpsertCheckIn, buildMonthKey } from '@/hooks/use-checkin';
 import { useDeleteHabit, useHabitDetail } from '@/hooks/use-habits';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -77,13 +77,11 @@ export default function HabitDetailScreen() {
   const { data: monthCheckIns = {} } = useCheckInsForMonth(year, month);
 
   // Build today's cache key — must match buildMonthKey in use-checkin.ts
-  const mm       = String(month + 1).padStart(2, '0');
-  const dd       = String(today.getDate()).padStart(2, '0');
-  const todayKey = `${habitId}-${year}-${mm}-${dd}`;
+  const todayKey = buildMonthKey(habitId, new Date(year, month, today.getDate(), 12));
   const checkedIn = monthCheckIns[todayKey]?.completed ?? false;
 
   // ── Mutations ──────────────────────────────────────────────────────────────
-  const { mutate: saveCheckIn }                        = useUpsertCheckIn(year, month, '');
+  const { mutate: saveCheckIn }                        = useUpsertCheckIn(year, month);
   const { mutate: deleteHabit, isPending: isDeleting } = useDeleteHabit(habitId);
 
   // ── Local UI state ─────────────────────────────────────────────────────────
@@ -150,6 +148,7 @@ export default function HabitDetailScreen() {
   }
 
   function handleEdit() {
+    if (!habit) return;
     router.push({
       pathname: '/create-habit',
       params: {
@@ -271,9 +270,7 @@ export default function HabitDetailScreen() {
                     // Build the date this cell represents
                     const cellDate = new Date(gridStart);
                     cellDate.setDate(gridStart.getDate() + idx);
-                    const cellMm  = String(cellDate.getMonth() + 1).padStart(2, '0');
-                    const cellDd  = String(cellDate.getDate()).padStart(2, '0');
-                    const cellKey = `${habitId}-${cellDate.getFullYear()}-${cellMm}-${cellDd}`;
+                    const cellKey = buildMonthKey(habitId, cellDate);
 
                     // Use live check-in cache for this cell if available,
                     // otherwise fall back to the grid from the backend
