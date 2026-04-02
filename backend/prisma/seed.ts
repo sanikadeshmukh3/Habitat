@@ -77,6 +77,8 @@ async function main() {
       active: true,
       userId: user.id,
       updatedAt: new Date(),
+      // observation window for a weekly habit is 8 weeks (56 days) from creation
+      observationWindowEnd: new Date(Date.now() + 56 * 24 * 60 * 60 * 1000),
     },
   });
 }

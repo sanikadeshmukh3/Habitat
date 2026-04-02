@@ -8,22 +8,22 @@ datasource db {
 }
 
 model User {
-  id       String   @id @default(uuid())
-  email    String   @unique
-  password String
-  firstName String @map("first_name")
-  lastName String? @map("last_name")
-  timezone String?
-  creation DateTime @default(now())
-  settings Json     @default("{\"the guy\": {\"last name\": \"guy\", \"first name\": \"might\"}}")
-  habit    Habit[]
-
-  isVerified Boolean @default(false) @map("is_verified")
-  verificationCode String? @map("verification_code")
-  codeExpires DateTime? @map("code_expires")
-
-  friends User[] @relation("UserFriends")
-  friendsOf User[] @relation("UserFriends")
+  id                  String               @id @default(uuid())
+  email               String               @unique
+  password            String
+  firstName           String               @map("first_name")
+  lastName            String?              @map("last_name")
+  timezone            String?
+  creation            DateTime             @default(now())
+  settings            Json                 @default("{\"the guy\": {\"last name\": \"guy\", \"first name\": \"might\"}}")
+  habit               Habit[]
+  isVerified          Boolean              @default(false) @map("is_verified")
+  verificationCode    String?              @map("verification_code")
+  codeExpires         DateTime?            @map("code_expires")
+  friends             User[]               @relation("UserFriends")
+  friendsOf           User[]               @relation("UserFriends")
+  // habit stacking — links user to their stacking enrollment history
+  stackingEnrollments StackingEnrollment[]
 
   @@map("user")
 }
@@ -39,24 +39,67 @@ model Habit {
   priorityRank  Int?           @map("priority_rank")
   frequency     HabitFrequency
   active        Boolean        @default(true)
-  createdAt    DateTime       @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  user          User           @relation(fields: [userId], references: [id])
-  checkIns      HabitCheckIn[]
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  // habit stacking fields
+  tier                  HabitTier?  // null until observation window closes
+  consistencyScore      Float?      @map("consistency_score")
+  consistencyUpdatedAt  DateTime?   @map("consistency_updated_at")
+  gracePeriodStart      DateTime?   @map("grace_period_start")
+  observationWindowEnd  DateTime    @map("observation_window_end")
+  gentleNudgeSentAt     DateTime?   @map("gentle_nudge_sent_at")
+  nudgeConsistencyScore Float?      @map("nudge_consistency_score")
+
+  user            User                    @relation(fields: [userId], references: [id])
+  checkIns        HabitCheckIn[]
+  scheduleEntries StackingScheduleEntry[]
 
   @@map("habit")
 }
 
 model HabitCheckIn {
-  id                String   @id @default(uuid())
-  date              DateTime @default(now())
-  habitId           String   @map("habit_id")
-  completed         Boolean
-  difficultyRating Int? @map("difficulty_rating")
-  notes             String?
-  habit             Habit    @relation(fields: [habitId], references: [id])
+  id               String   @id @default(uuid())
+  date             DateTime @default(now())
+  habitId          String   @map("habit_id")
+  completed        Boolean
+  difficultyRating Int?     @map("difficulty_rating")
+  notes            String?
+  habit            Habit    @relation(fields: [habitId], references: [id])
 
   @@map("habit_check_in")
+}
+
+// habit stacking — tracks a user's overall enrollment in a stacking schedule
+model StackingEnrollment {
+  id         String                   @id @default(uuid())
+  userId     String                   @map("user_id")
+  status     StackingEnrollmentStatus
+  enrolledAt DateTime                 @default(now()) @map("enrolled_at")
+  updatedAt  DateTime                 @map("updated_at")
+  user       User                     @relation(fields: [userId], references: [id])
+  entries    StackingScheduleEntry[]
+
+  @@map("stacking_enrollment")
+}
+
+// habit stacking — tracks one habit's position and state within a stacking schedule
+model StackingScheduleEntry {
+  id                  String              @id @default(uuid())
+  enrollmentId        String              @map("enrollment_id")
+  habitId             String              @map("habit_id")
+  priorityRank        Int                 @map("priority_rank")
+  status              StackingEntryStatus
+  provingWindowStart  DateTime?           @map("proving_window_start")
+  provingWindowTarget DateTime?           @map("proving_window_target")
+  lastSnoozeAt        DateTime?           @map("last_snooze_at")
+  snoozeCount         Int                 @default(0) @map("snooze_count")
+  activatedAt         DateTime?           @map("activated_at")
+  completedAt         DateTime?           @map("completed_at")
+  enrollment          StackingEnrollment  @relation(fields: [enrollmentId], references: [id])
+  habit               Habit               @relation(fields: [habitId], references: [id])
+
+  @@map("stacking_schedule_entry")
 }
 
 enum HabitFrequency {
@@ -72,4 +115,25 @@ enum HabitCategory {
   WELLNESS
   SLEEP
   OTHER
+}
+
+// habit stacking — three tier consistency model
+enum HabitTier {
+  TIER_1  // mastered — 85%+
+  TIER_2  // developing — 65-84%
+  TIER_3  // struggling — below 65%
+}
+
+// habit stacking — tracks the living state of a stacking enrollment
+enum StackingEnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  OPTED_OUT
+}
+
+// habit stacking — tracks one habit's state within a stacking schedule
+enum StackingEntryStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
 }
