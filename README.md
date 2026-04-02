@@ -115,9 +115,9 @@ The backend integration test should:
 - return 200 for habit retrieval
 - confirm that the created habit appears in the returned habit list
 #### Notes
-The integration test creates a temporary verified test user
-Test data is cleaned up before and after the test
-This test touches the backend and database
+- The integration test creates a temporary verified test user
+- Test data is cleaned up before and after the test
+- This test touches the backend and database
 
 ### Mobile unit test
 
