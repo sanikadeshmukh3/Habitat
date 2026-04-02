@@ -2,10 +2,6 @@ const { PrismaClient, HabitCategory, HabitFrequency } = require('@prisma/client'
 
 const prisma = new PrismaClient();
 
-// ─── Validation helpers ───────────────────────────────────────────────────────
-// Prisma will reject invalid enum values at runtime, but validating early lets
-// us return a clear 400 instead of a generic 500.
-
 const VALID_CATEGORIES = ['FITNESS', 'NUTRITION', 'SLEEP', 'PRODUCTIVITY', 'WELLNESS', 'OTHER'];
 const VALID_FREQUENCIES = ['DAILY', 'WEEKLY'];
 
@@ -17,15 +13,13 @@ function isValidFrequency(v) {
   return typeof v === 'string' && VALID_FREQUENCIES.includes(v);
 }
 
-// ─── Controller functions ─────────────────────────────────────────────────────
+// Helper to format a Date as a local "YYYY-MM-DD" string (avoids UTC shift)
+function toLocalDateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
-/**
- * GET /habits
- * Returns every habit that belongs to the authenticated user, newest first.
- */
 async function getHabits(req, res, next) {
   try {
-    // TODO: replace with your auth middleware value once auth is wired up
     const userId = req.user.userId;
 
     const habits = await prisma.habit.findMany({
@@ -39,29 +33,25 @@ async function getHabits(req, res, next) {
   }
 }
 
-/**
- * GET /habits/:id
- * Returns a single habit plus its aggregated stats (streak, completion grid).
- */
 async function getHabitById(req, res, next) {
   try {
     const { id } = req.params;
 
-    // 1. Fetch the habit — include its checkIns for the last 35 days in one query
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayKey = toLocalDateKey(today);
+
+    // Calculate the Sunday that opens the 5-week window
+    const gridStart = new Date(today);
+    gridStart.setDate(today.getDate() - 34 - today.getDay());
+    gridStart.setHours(0, 0, 0, 0);
+
     const habit = await prisma.habit.findUnique({
       where:   { id },
       include: {
         checkIns: {
           where: {
-            date: {
-              // Pull check-ins from the Sunday that opened this 5-week window
-              gte: (() => {
-                const d = new Date();
-                d.setDate(d.getDate() - 34 - d.getDay()); // rewind to Sunday
-                d.setHours(0, 0, 0, 0);
-                return d;
-              })(),
-            },
+            date: { gte: gridStart },
           },
           orderBy: { date: 'asc' },
         },
@@ -73,40 +63,39 @@ async function getHabitById(req, res, next) {
       return;
     }
 
-    // 2. Build the 35-day completion grid (5 full weeks, columns = S M T W T F S)
-    //    Convert the checkIn list into a Set of "YYYY-MM-DD" strings for O(1) lookup.
+    // Build Set of local date strings for O(1) lookup — use local dates to
+    // avoid UTC midnight shifting the date by one day
     const checkinDates = new Set(
-      habit.checkIns.map((c) => c.date.toISOString().slice(0, 10)),
+      habit.checkIns.map((c) => toLocalDateKey(new Date(c.date)))
     );
 
-    const today = new Date();
-    const todayKey = today.toISOString().slice(0, 10);
-    const gridStart = new Date(today);
-    gridStart.setDate(today.getDate() - 34 - today.getDay()); // rewind to Sunday
-    gridStart.setHours(0, 0, 0, 0);
+    // Habit creation date (local, time stripped)
+    const createdDate = new Date(habit.createdAt);
+    createdDate.setHours(0, 0, 0, 0);
 
+    // Build the 35-day completion grid
     const completionGrid = [];
     for (let i = 0; i < 35; i++) {
       const d = new Date(gridStart);
-      d.setDate(gridStart.getDate() + i);
-      const key = d.toISOString().slice(0, 10);
-      if (key > todayKey) {
-        completionGrid.push(null);  // future — no data yet
+      d.setDate(gridStart.getDate() - d.getDay() - 28);
+      const key = toLocalDateKey(d);
+
+      if (d > today) {
+        completionGrid.push(null);   // future — no data yet
+      } else if (d < createdDate) {
+        completionGrid.push(null);   // before habit was created
       } else {
         completionGrid.push(checkinDates.has(key));
       }
     }
 
-    // 3. Count total check-ins across all time (not just the grid window)
+    // Total completions across all time
     const totalCompletions = await prisma.habitCheckIn.count({
-      where: { habitId: id },
+      where: { habitId: id, completed: true },
     });
 
-    // 4. Compute stats
-    //    currentStreak is stored on the habit row itself — no need to recalculate.
-    //    bestStreak is derived from the grid booleans (past/present cells only).
+    // Best streak from the grid (past + present cells only)
     const gridBools = completionGrid.filter((v) => v !== null);
-
     let bestStreak = 0;
     let runningStreak = 0;
     for (const completed of gridBools) {
@@ -118,9 +107,7 @@ async function getHabitById(req, res, next) {
       }
     }
 
-    // Total days tracked = days since the habit was created, inclusive
-    const createdDate = new Date(habit.createdAt);
-    createdDate.setHours(0, 0, 0, 0);
+    // Total days tracked = days since creation, inclusive
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0);
     const totalDays = Math.floor((todayDate - createdDate) / (1000 * 60 * 60 * 24)) + 1;
@@ -134,7 +121,6 @@ async function getHabitById(req, res, next) {
       completionGrid,
     };
 
-    // Strip checkIns off the habit before sending — the client gets the grid instead
     const { checkIns, ...habitData } = habit;
     res.json({ data: { ...habitData, stats } });
   } catch (err) {
@@ -142,10 +128,6 @@ async function getHabitById(req, res, next) {
   }
 }
 
-/**
- * POST /habits
- * Creates a new habit row owned by the authenticated user.
- */
 async function createHabit(req, res, next) {
   console.log('Create Habit - Request received');
   try {
@@ -168,9 +150,6 @@ async function createHabit(req, res, next) {
       return;
     }
 
-    // ── Duplicate check ────────────────────────────────────────────────────
-    // Prevent the same user from creating two habits with the same name
-    // (case-insensitive so "drink water" and "Drink Water" are treated as equal).
     const duplicate = await prisma.habit.findFirst({
       where: {
         userId,
@@ -186,14 +165,12 @@ async function createHabit(req, res, next) {
       data: {
         userId,
         name:          body.name.trim(),
-        // Only include description if it was actually sent and is non-empty
         ...(body.description?.trim() && { description: body.description.trim() }),
         habitCategory: body.habitCategory,
         frequency:     body.frequency,
-        visibility:    body.visibility  ?? true,  // default public
-        active:        body.active      ?? true,  // default active
-        updatedAt:    new Date(),
-        // currentStreak defaults to 0 via the Prisma schema @default(0)
+        visibility:    body.visibility  ?? true,
+        active:        body.active      ?? true,
+        updatedAt:     new Date(),
         ...(body.priorityRank != null && { priorityRank: Number(body.priorityRank) }),
       },
     });
@@ -204,17 +181,11 @@ async function createHabit(req, res, next) {
   }
 }
 
-/**
- * PATCH /habits/:id
- * Partial update — only the fields present in the request body are changed.
- * Ownership is enforced by checking userId on the existing row.
- */
 async function updateHabit(req, res, next) {
   try {
     const userId = req.user.userId;
     const { id }  = req.params;
 
-    // Confirm the habit exists and belongs to this user before updating
     const existing = await prisma.habit.findUnique({ where: { id, userId } });
     if (!existing) {
       res.status(404).json({ error: 'Habit not found' });
@@ -226,8 +197,6 @@ async function updateHabit(req, res, next) {
     }
 
     const body = req.body;
-
-    // Build the update payload — only include keys that were actually sent
     const data = {};
 
     if (body.name !== undefined) {
@@ -239,7 +208,6 @@ async function updateHabit(req, res, next) {
     }
 
     if (body.description !== undefined) {
-      // Empty string clears the field; Prisma stores null for optional strings
       data.description = body.description.trim() === '' ? null : body.description.trim();
     }
 
@@ -259,10 +227,9 @@ async function updateHabit(req, res, next) {
       data.frequency = body.frequency;
     }
 
-    if (body.visibility !== undefined) data.visibility   = Boolean(body.visibility);
-    if (body.active     !== undefined) data.active       = Boolean(body.active);
+    if (body.visibility  !== undefined) data.visibility   = Boolean(body.visibility);
+    if (body.active      !== undefined) data.active       = Boolean(body.active);
     if (body.priorityRank !== undefined) {
-      // Allow null to clear the rank
       data.priorityRank = body.priorityRank === null ? null : Number(body.priorityRank);
     }
     data.updatedAt = new Date();
@@ -272,7 +239,6 @@ async function updateHabit(req, res, next) {
       return;
     }
 
-    // Prisma automatically sets updatedAt because of @updatedAt in the schema
     const habit = await prisma.habit.update({
       where: { id, userId },
       data,
@@ -284,4 +250,30 @@ async function updateHabit(req, res, next) {
   }
 }
 
-module.exports = { getHabits, getHabitById, createHabit, updateHabit };
+async function deleteHabit(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+
+    const existing = await prisma.habit.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ error: 'Habit not found' });
+      return;
+    }
+    if (existing.userId !== userId) {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    // Delete check-ins first to satisfy the foreign key constraint
+    await prisma.habitCheckIn.deleteMany({ where: { habitId: id } });
+
+    await prisma.habit.delete({ where: { id } });
+
+    res.json({ data: { id } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { getHabits, getHabitById, createHabit, updateHabit, deleteHabit };

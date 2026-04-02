@@ -1,6 +1,11 @@
-import { useRouter } from 'expo-router';
+import CheckInModal from '@/components/checkin-modal';
+import { useCheckInsForMonth, useUpsertCheckIn } from '@/hooks/use-checkin';
+import { useDeleteHabit, useHabitDetail } from '@/hooks/use-habits';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   ImageBackground,
   Platform,
   SafeAreaView,
@@ -11,279 +16,354 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import CheckInModal from '@/components/checkin-modal';
-import { useUpsertCheckIn, useCheckInsForMonth } from '@/hooks/use-checkin';
 
 // Palette
 const C = {
-  bg:           '#F7FAF5',
-  card:         '#FFFFFF',
-  sage:         '#7BAE7F',
-  sageMid:      '#A8C5A0',
-  sagePale:     '#E3F0E1',
-  yellow:       '#F5E6A3',
-  yellowDeep:   '#E8C84A',
-  indigo:       '#3D3B8E',
-  indigoPale:   '#EEEDF8',
-  indigoMid:    '#6C63FF',
-  textPrimary:  '#2B2D42',
-  textSecondary:'#6B7280',
-  border:       '#E4EDE2',
-  red:          '#FF6B6B',
-  redPale:      '#FFF0F0',
+  bg:            '#F7FAF5',
+  card:          '#FFFFFF',
+  sage:          '#7BAE7F',
+  sageMid:       '#A8C5A0',
+  sagePale:      '#E3F0E1',
+  yellow:        '#F5E6A3',
+  yellowDeep:    '#E8C84A',
+  indigo:        '#3D3B8E',
+  indigoPale:    '#EEEDF8',
+  indigoMid:     '#6C63FF',
+  textPrimary:   '#2B2D42',
+  textSecondary: '#6B7280',
+  border:        '#E4EDE2',
+  red:           '#FF6B6B',
+  redPale:       '#FFF0F0',
 };
 
-// Mock habit data
-const MOCK_HABIT = {
-  name:      'Morning walk for 20 minutes',
-  category:  'Fitness',
-  emoji:     '🏃',
-  frequency: 'Daily',
-  isPublic:  false,
-  createdAt: 'Feb 1, 2026',
-  streak:    12,
-  bestStreak: 18,
-  totalCompletions: 34,
-  totalDays: 45,
-  // true = completed, false = missed, null = future/no data
-  // 35 days of data (5 weeks)
-  completionGrid: [
-    true,  true,  false, true,  true,  true,  false,
-    true,  true,  true,  true,  false, true,  true,
-    false, true,  true,  true,  true,  true,  false,
-    true,  true,  false, true,  true,  true,  true,
-    true,  true,  true,  true,  false, true,  null,
-  ],
+// Map category enum → display label + emoji
+const CATEGORY_META: Record<string, { label: string; emoji: string }> = {
+  FITNESS:      { label: 'Fitness',      emoji: '🏃' },
+  NUTRITION:    { label: 'Nutrition',    emoji: '🥗' },
+  SLEEP:        { label: 'Sleep',        emoji: '😴' },
+  PRODUCTIVITY: { label: 'Productivity', emoji: '📋' },
+  WELLNESS:     { label: 'Wellness',     emoji: '🧘' },
+  OTHER:        { label: 'Other',        emoji: '⭐' },
 };
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-// Component
+// Format ISO date string → "Feb 1, 2026"
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
 export default function HabitDetailScreen() {
   const router = useRouter();
+  const { id: habitId } = useLocalSearchParams<{ id: string }>();
 
-  const habit = MOCK_HABIT;
-
-  const userId = 'a6d400e7-4f91-4575-b562-ccd8e2aeb0e2'; // replace later
-  const habitId = 'seeded-workout-habit'; // replace with real habit
+  // ── Data fetching ──────────────────────────────────────────────────────────
+  const { data: habit, isLoading: habitLoading } = useHabitDetail(habitId);
 
   const today = new Date();
-  const year = today.getFullYear();
+  today.setHours(0, 0, 0, 0);
+  const year  = today.getFullYear();
   const month = today.getMonth();
+
+  // Grid start — the Sunday that opens the 5-week window
+  const gridStart = new Date(today);
+  gridStart.setDate(today.getDate() - today.getDay() - 28);
+  gridStart.setHours(0, 0, 0, 0);
 
   const { data: monthCheckIns = {} } = useCheckInsForMonth(year, month);
 
-  const todayKey = `${habitId}-${year}-${month}-${today.getDate()}`;
+  // Build today's cache key — must match buildMonthKey in use-checkin.ts
+  const mm       = String(month + 1).padStart(2, '0');
+  const dd       = String(today.getDate()).padStart(2, '0');
+  const todayKey = `${habitId}-${year}-${mm}-${dd}`;
   const checkedIn = monthCheckIns[todayKey]?.completed ?? false;
 
-  const { mutate: saveCheckIn } = useUpsertCheckIn(year, month, userId);
+  // ── Mutations ──────────────────────────────────────────────────────────────
+  const { mutate: saveCheckIn }                        = useUpsertCheckIn(year, month, '');
+  const { mutate: deleteHabit, isPending: isDeleting } = useDeleteHabit(habitId);
 
-  const completionRate = Math.round((habit.totalCompletions / habit.totalDays) * 100);
-
-  const [modalVisible, setModalVisible] = useState(false);
+  // ── Local UI state ─────────────────────────────────────────────────────────
+  const [modalVisible, setModalVisible]         = useState(false);
   const [difficultyRating, setDifficultyRating] = useState<number | null>(null);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes]                       = useState('');
 
+  // ── Loading state ──────────────────────────────────────────────────────────
+  if (habitLoading || !habit) {
+    return (
+      <SafeAreaView style={[styles.safe, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={C.sage} />
+      </SafeAreaView>
+    );
+  }
+
+  // ── Derived display values ─────────────────────────────────────────────────
+  const meta           = CATEGORY_META[habit.habitCategory] ?? CATEGORY_META.OTHER;
+  const stats          = habit.stats;
+  const completionRate = stats
+    ? Math.round((stats.totalCompletions / Math.max(stats.totalDays, 1)) * 100)
+    : 0;
+  // derive best streak live so it reflects today's check-in immediately
+  const liveBestStreak = stats
+    ? Math.max(stats.bestStreak, stats.currentStreak, checkedIn ? 1 : 0)
+    : 0;
+
+  const freqLabel = habit.frequency === 'DAILY' ? 'Daily' : 'Weekly';
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
+  function handleCheckIn() {
+    if (checkedIn) {
+      saveCheckIn({
+        habitId,
+        date: new Date(year, month, today.getDate(), 12).toISOString(),
+        completed: false,
+        difficultyRating: monthCheckIns[todayKey]?.difficultyRating ?? null,
+        notes: monthCheckIns[todayKey]?.notes ?? '',
+      });
+    } else {
+      setDifficultyRating(monthCheckIns[todayKey]?.difficultyRating ?? null);
+      setNotes(monthCheckIns[todayKey]?.notes ?? '');
+      setModalVisible(true);
+    }
+  }
+
+  function handleDelete() {
+    Alert.alert(
+      'Delete Habit',
+      `Are you sure you want to delete "${habit?.name}"? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            deleteHabit(undefined, {
+              onSuccess: () => router.replace('/(tabs)/home'),
+            });
+          },
+        },
+      ],
+    );
+  }
+
+  function handleEdit() {
+    router.push({
+      pathname: '/create-habit',
+      params: {
+        habitId:       habit.id,
+        name:          habit.name,
+        habitCategory: habit.habitCategory,
+        frequency:     habit.frequency,
+        visibility:    habit.visibility ? 'true' : 'false',
+      },
+    });
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <ImageBackground
       source={require('../assets/images/leaf.png')}
       style={styles.background}
       imageStyle={{ opacity: 0.08 }}
     >
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
+      <SafeAreaView style={styles.safe}>
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.push('/(tabs)/home')} activeOpacity={0.7}>
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => router.push('/(tabs)/home')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.backArrow}>←</Text>
+          </TouchableOpacity>
+          <View style={{ flex: 1 }} />
+          <TouchableOpacity style={styles.editBtn} onPress={handleEdit} activeOpacity={0.7}>
+            <Text style={styles.editBtnText}>Edit</Text>
+          </TouchableOpacity>
+        </View>
 
-        <View style={{ flex: 1 }} />
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        <TouchableOpacity style={styles.editBtn} activeOpacity={0.7}>
-          <Text style={styles.editBtnText}>Edit</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-      >
-
-        {/* Hero card */}
-        <View style={styles.heroCard}>
-          {/* Category color bar */}
-          <View style={styles.heroAccent} />
-
-          <View style={styles.heroTop}>
-            <View style={styles.emojiCircle}>
-              <Text style={styles.heroEmoji}>{habit.emoji}</Text>
+          {/* Hero card */}
+          <View style={styles.heroCard}>
+            <View style={styles.heroAccent} />
+            <View style={styles.heroTop}>
+              <View style={styles.emojiCircle}>
+                <Text style={styles.heroEmoji}>{meta.emoji}</Text>
+              </View>
+              <View style={styles.heroBadges}>
+                <View style={styles.categoryBadge}>
+                  <Text style={styles.categoryBadgeText}>{meta.label}</Text>
+                </View>
+                <View style={styles.freqBadge}>
+                  <Text style={styles.freqBadgeText}>{freqLabel}</Text>
+                </View>
+                <View style={[styles.visibilityBadge, habit.visibility ? styles.publicBadge : styles.privateBadge]}>
+                  <Text style={[styles.visibilityText, habit.visibility ? styles.publicText : styles.privateText]}>
+                    {habit.visibility ? 'Public' : 'Private'}
+                  </Text>
+                </View>
+              </View>
             </View>
-            <View style={styles.heroBadges}>
-              <View style={styles.categoryBadge}>
-                <Text style={styles.categoryBadgeText}>{habit.category}</Text>
+            <Text style={styles.habitName}>{habit.name}</Text>
+            <Text style={styles.habitSince}>Tracking since {formatDate(habit.createdAt)}</Text>
+          </View>
+
+          {/* Quick check-in */}
+          <TouchableOpacity
+            style={[styles.checkInBtn, checkedIn && styles.checkInBtnDone]}
+            onPress={handleCheckIn}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.checkInIcon}>{checkedIn ? '✓' : '○'}</Text>
+            <Text style={styles.checkInLabel}>
+              {checkedIn ? 'Completed today!' : 'Mark as complete today'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Stats row */}
+          {stats && (
+            <View style={styles.statsRow}>
+              <StatCard
+                value={`${stats.currentStreak}`}
+                label="Current Streak"
+                sublabel={`Best: ${liveBestStreak} days`}
+                emoji="🔥"
+                accent={C.yellowDeep}
+                accentPale={C.yellow}
+              />
+              <StatCard
+                value={`${completionRate}%`}
+                label="Completion Rate"
+                sublabel={`${stats.totalCompletions} of ${stats.totalDays} days`}
+                emoji="📈"
+                accent={C.sage}
+                accentPale={C.sagePale}
+              />
+            </View>
+          )}
+
+          {/* Calendar dot grid */}
+          {stats && (
+            <View style={styles.card}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Last 5 Weeks</Text>
+                <Text style={styles.sectionSub}>{stats.totalCompletions} completions</Text>
               </View>
-              <View style={styles.freqBadge}>
-                <Text style={styles.freqBadgeText}>{habit.frequency}</Text>
+
+              <View style={styles.dayLabelsRow}>
+                {DAY_LABELS.map((d, i) => (
+                  <Text key={i} style={styles.dayLabel}>{d}</Text>
+                ))}
               </View>
-              <View style={[styles.visibilityBadge, habit.isPublic ? styles.publicBadge : styles.privateBadge]}>
-                <Text style={[styles.visibilityText, habit.isPublic ? styles.publicText : styles.privateText]}>
-                  {habit.isPublic ? 'Public' : 'Private'}
+
+              {[0, 1, 2, 3, 4].map((week) => (
+                <View key={week} style={styles.dotRow}>
+                  {[0, 1, 2, 3, 4, 5, 6].map((day) => {
+                    const idx     = week * 7 + day;
+                    const gridVal = stats.completionGrid[idx];
+
+                    // Build the date this cell represents
+                    const cellDate = new Date(gridStart);
+                    cellDate.setDate(gridStart.getDate() + idx);
+                    const cellMm  = String(cellDate.getMonth() + 1).padStart(2, '0');
+                    const cellDd  = String(cellDate.getDate()).padStart(2, '0');
+                    const cellKey = `${habitId}-${cellDate.getFullYear()}-${cellMm}-${cellDd}`;
+
+                    // Use live check-in cache for this cell if available,
+                    // otherwise fall back to the grid from the backend
+                    const liveEntry = monthCheckIns[cellKey];
+                    const val = liveEntry !== undefined ? liveEntry.completed : gridVal;
+
+                    return (
+                      <View
+                        key={day}
+                        style={[
+                          styles.dot,
+                          val === true  && styles.dotCompleted,
+                          val === false && styles.dotMissed,
+                          val === null  && styles.dotFuture,
+                        ]}
+                      />
+                    );
+                  })}
+                </View>
+              ))}
+
+              <View style={styles.legend}>
+                <LegendItem color={C.sage}   label="Completed" />
+                <LegendItem color={C.red}    label="Missed" />
+                <LegendItem color={C.border} label="No data" />
+              </View>
+            </View>
+          )}
+
+          {/* Progress bar */}
+          {stats && (
+            <View style={styles.card}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Overall Progress</Text>
+                <Text style={[styles.sectionSub, { color: C.indigo, fontWeight: '700' }]}>
+                  {completionRate}%
                 </Text>
               </View>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${completionRate}%` }]} />
+              </View>
+              <Text style={styles.progressCaption}>
+                You've completed this habit {stats.totalCompletions} times out of {stats.totalDays} days tracked.
+              </Text>
             </View>
-          </View>
+          )}
 
-          <Text style={styles.habitName}>{habit.name}</Text>
-          <Text style={styles.habitSince}>Tracking since {habit.createdAt}</Text>
-        </View>
-
-        {/* Quick check-in */}
-        <TouchableOpacity
-          style={[styles.checkInBtn, checkedIn && styles.checkInBtnDone]}
-          onPress={() => {
-            if (checkedIn) {
-              saveCheckIn({
-                habitId,
-                date: new Date(year, month, today.getDate(), 12).toISOString(),
-                completed: false,
-                difficultyRating: monthCheckIns[todayKey]?.difficultyRating ?? null,
-                notes: monthCheckIns[todayKey]?.notes ?? '',
-              });
-            } else {
-              setDifficultyRating(monthCheckIns[todayKey]?.difficultyRating ?? null);
-              setNotes(monthCheckIns[todayKey]?.notes ?? '');
-              setModalVisible(true);
-            }
-          }}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.checkInIcon}>{checkedIn ? '✓' : '○'}</Text>
-          <Text style={styles.checkInLabel}>
-            {checkedIn ? 'Completed today!' : 'Mark as complete today'}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Stats row */}
-        <View style={styles.statsRow}>
-          <StatCard
-            value={`${habit.streak}`}
-            label="Current Streak"
-            sublabel={`Best: ${habit.bestStreak} days`}
-            emoji="🔥"
-            accent={C.yellowDeep}
-            accentPale={C.yellow}
-          />
-          <StatCard
-            value={`${completionRate}%`}
-            label="Completion Rate"
-            sublabel={`${habit.totalCompletions} of ${habit.totalDays} days`}
-            emoji="📈"
-            accent={C.sage}
-            accentPale={C.sagePale}
-          />
-        </View>
-
-        {/* Calendar dot grid */}
-        <View style={styles.card}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Last 5 Weeks</Text>
-            <Text style={styles.sectionSub}>{habit.totalCompletions} completions</Text>
-          </View>
-
-          {/* Day labels */}
-          <View style={styles.dayLabelsRow}>
-            {DAY_LABELS.map((d, i) => (
-              <Text key={i} style={styles.dayLabel}>{d}</Text>
-            ))}
-          </View>
-
-          {/* Dot grid — 5 rows of 7 */}
-          {[0, 1, 2, 3, 4].map((week) => (
-            <View key={week} style={styles.dotRow}>
-              {[0, 1, 2, 3, 4, 5, 6].map((day) => {
-                const idx = week * 7 + day;
-                const val = habit.completionGrid[idx];
-                return (
-                  <View
-                    key={day}
-                    style={[
-                      styles.dot,
-                      val === true  && styles.dotCompleted,
-                      val === false && styles.dotMissed,
-                      val === null  && styles.dotFuture,
-                    ]}
-                  />
-                );
-              })}
-            </View>
-          ))}
-
-          {/* Legend */}
-          <View style={styles.legend}>
-            <LegendItem color={C.sage} label="Completed" />
-            <LegendItem color={C.red} label="Missed" />
-            <LegendItem color={C.border} label="No data" />
-          </View>
-        </View>
-
-        {/* Progress bar */}
-        <View style={styles.card}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Overall Progress</Text>
-            <Text style={[styles.sectionSub, { color: C.indigo, fontWeight: '700' }]}>
-              {completionRate}%
+          {/* Delete */}
+          <TouchableOpacity
+            style={[styles.deleteBtn, isDeleting && { opacity: 0.6 }]}
+            onPress={handleDelete}
+            activeOpacity={0.7}
+            disabled={isDeleting}
+          >
+            <Text style={styles.deleteBtnText}>
+              {isDeleting ? 'Deleting...' : 'Delete Habit'}
             </Text>
-          </View>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${completionRate}%` }]} />
-          </View>
-          <Text style={styles.progressCaption}>
-            You've completed this habit {habit.totalCompletions} times out of {habit.totalDays} days tracked.
-          </Text>
-        </View>
+          </TouchableOpacity>
 
-        {/* Danger zone */}
-        <TouchableOpacity style={styles.deleteBtn} activeOpacity={0.7}>
-          <Text style={styles.deleteBtnText}>Delete Habit</Text>
-        </TouchableOpacity>
+          <View style={{ height: 40 }} />
+        </ScrollView>
 
-        <View style={{ height: 40 }} />
-      </ScrollView>
-
-      <CheckInModal
-        visible={modalVisible}
-        initialDifficultyRating={difficultyRating}
-        initialNotes={notes}
-        onClose={() => setModalVisible(false)}
-        onSave={({ difficultyRating, notes }) => {
-          saveCheckIn({
-            habitId,
-            date: new Date(year, month, today.getDate(), 12).toISOString(),
-            completed: true,
-            difficultyRating,
-            notes,
-          });
-
-          setModalVisible(false);
-        }}
-      />
-    </SafeAreaView>
+        <CheckInModal
+          visible={modalVisible}
+          initialDifficultyRating={difficultyRating}
+          initialNotes={notes}
+          onClose={() => setModalVisible(false)}
+          onSave={({ difficultyRating, notes }) => {
+            saveCheckIn({
+              habitId,
+              date: new Date(year, month, today.getDate(), 12).toISOString(),
+              completed: true,
+              difficultyRating,
+              notes,
+            });
+            setModalVisible(false);
+          }}
+        />
+      </SafeAreaView>
     </ImageBackground>
   );
 }
 
-// Sub-components
+// ── Sub-components ─────────────────────────────────────────────────────────────
+
 function StatCard({
   value, label, sublabel, emoji, accent, accentPale,
 }: {
-  value: string;
-  label: string;
-  sublabel: string;
-  emoji: string;
-  accent: string;
-  accentPale: string;
+  value: string; label: string; sublabel: string;
+  emoji: string; accent: string; accentPale: string;
 }) {
   return (
     <View style={[styles.statCard, { borderTopColor: accent }]}>
@@ -306,7 +386,8 @@ function LegendItem({ color, label }: { color: string; label: string }) {
   );
 }
 
-// Styles
+// ── Styles ─────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   background: {
     flex: 1,
@@ -316,8 +397,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
   },
-
-  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -349,13 +428,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: C.indigo,
   },
-
   scroll: {
     paddingHorizontal: 20,
     paddingTop: 4,
   },
-
-  // Hero card
   heroCard: {
     backgroundColor: C.card,
     borderRadius: 22,
@@ -365,9 +441,7 @@ const styles = StyleSheet.create({
   },
   heroAccent: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
+    top: 0, left: 0, right: 0,
     height: 5,
     backgroundColor: C.sage,
   },
@@ -379,261 +453,102 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   emojiCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
+    width: 52, height: 52, borderRadius: 16,
     backgroundColor: C.sagePale,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
   },
-  heroEmoji: {
-    fontSize: 26,
-  },
-  heroBadges: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
+  heroEmoji:  { fontSize: 26 },
+  heroBadges: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   categoryBadge: {
-    backgroundColor: C.sagePale,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
+    backgroundColor: C.sagePale, paddingHorizontal: 10,
+    paddingVertical: 4, borderRadius: 20,
   },
   categoryBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: C.sage,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    fontSize: 11, fontWeight: '700', color: C.sage,
+    textTransform: 'uppercase', letterSpacing: 0.4,
   },
   freqBadge: {
-    backgroundColor: C.indigoPale,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
+    backgroundColor: C.indigoPale, paddingHorizontal: 10,
+    paddingVertical: 4, borderRadius: 20,
   },
   freqBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: C.indigoMid,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    fontSize: 11, fontWeight: '700', color: C.indigoMid,
+    textTransform: 'uppercase', letterSpacing: 0.4,
   },
-  visibilityBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  publicBadge:  { backgroundColor: C.sagePale },
-  privateBadge: { backgroundColor: C.indigoPale },
-  visibilityText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
-  publicText:  { color: C.sage },
-  privateText: { color: C.indigoMid },
-
+  visibilityBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  publicBadge:     { backgroundColor: C.sagePale },
+  privateBadge:    { backgroundColor: C.indigoPale },
+  visibilityText:  { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
+  publicText:      { color: C.sage },
+  privateText:     { color: C.indigoMid },
   habitName: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: C.indigo,
-    letterSpacing: -0.4,
-    lineHeight: 28,
-    marginBottom: 6,
+    fontSize: 22, fontWeight: '800', color: C.indigo,
+    letterSpacing: -0.4, lineHeight: 28, marginBottom: 6,
   },
-  habitSince: {
-    fontSize: 12,
-    color: C.textSecondary,
-  },
-
-  // Check-in button
+  habitSince: { fontSize: 12, color: C.textSecondary },
   checkInBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: C.card,
-    borderRadius: 16,
-    paddingVertical: 15,
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: C.border,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 10, backgroundColor: C.card, borderRadius: 16,
+    paddingVertical: 15, marginBottom: 12, borderWidth: 2, borderColor: C.border,
   },
-  checkInBtnDone: {
-    backgroundColor: C.sagePale,
-    borderColor: C.sage,
-  },
-  checkInIcon: {
-    fontSize: 20,
-    color: C.sage,
-    fontWeight: '700',
-  },
-  checkInLabel: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: C.textPrimary,
-  },
-
-  // Stats row
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-  },
+  checkInBtnDone: { backgroundColor: C.sagePale, borderColor: C.sage },
+  checkInIcon:    { fontSize: 20, color: C.sage, fontWeight: '700' },
+  checkInLabel:   { fontSize: 15, fontWeight: '700', color: C.textPrimary },
+  statsRow:       { flexDirection: 'row', gap: 12, marginBottom: 12 },
   statCard: {
-    flex: 1,
-    backgroundColor: C.card,
-    borderRadius: 18,
-    padding: 16,
-    alignItems: 'center',
-    borderTopWidth: 4,
-    gap: 4,
+    flex: 1, backgroundColor: C.card, borderRadius: 18,
+    padding: 16, alignItems: 'center', borderTopWidth: 4, gap: 4,
   },
   statIconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
+    width: 38, height: 38, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
   },
-  statEmoji: {
-    fontSize: 18,
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
+  statEmoji:  { fontSize: 18 },
+  statValue:  { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
   statLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: C.textPrimary,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    fontSize: 11, fontWeight: '700', color: C.textPrimary,
+    textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.4,
   },
-  statSub: {
-    fontSize: 11,
-    color: C.textSecondary,
-    textAlign: 'center',
-  },
-
-  // Card
-  card: {
-    backgroundColor: C.card,
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 12,
-  },
+  statSub:  { fontSize: 11, color: C.textSecondary, textAlign: 'center' },
+  card:     { backgroundColor: C.card, borderRadius: 20, padding: 18, marginBottom: 12 },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14,
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', marginBottom: 14,
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: C.indigo,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    fontSize: 14, fontWeight: '700', color: C.indigo,
+    textTransform: 'uppercase', letterSpacing: 0.6,
   },
-  sectionSub: {
-    fontSize: 12,
-    color: C.textSecondary,
-  },
-
-  // Dot grid
+  sectionSub:   { fontSize: 12, color: C.textSecondary },
   dayLabelsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-    paddingHorizontal: 2,
+    flexDirection: 'row', justifyContent: 'space-between',
+    marginBottom: 6, paddingHorizontal: 2,
   },
   dayLabel: {
-    width: 32,
-    textAlign: 'center',
-    fontSize: 11,
-    fontWeight: '600',
-    color: C.textSecondary,
+    width: 32, textAlign: 'center', fontSize: 11,
+    fontWeight: '600', color: C.textSecondary,
   },
   dotRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-    paddingHorizontal: 2,
+    flexDirection: 'row', justifyContent: 'space-between',
+    marginBottom: 6, paddingHorizontal: 2,
   },
-  dot: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: C.border,
-  },
-  dotCompleted: {
-    backgroundColor: C.sage,
-  },
-  dotMissed: {
-    backgroundColor: C.red,
-    opacity: 0.35,
-  },
-  dotFuture: {
-    backgroundColor: C.border,
-    opacity: 0.4,
-  },
-  legend: {
-    flexDirection: 'row',
-    gap: 16,
-    marginTop: 12,
-    justifyContent: 'center',
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 3,
-  },
-  legendLabel: {
-    fontSize: 11,
-    color: C.textSecondary,
-    fontWeight: '500',
-  },
-
-  // Progress bar
+  dot:          { width: 32, height: 32, borderRadius: 8, backgroundColor: C.border },
+  dotCompleted: { backgroundColor: C.sage },
+  dotMissed:    { backgroundColor: C.red, opacity: 0.35 },
+  dotFuture:    { backgroundColor: C.border, opacity: 0.4 },
+  legend:       { flexDirection: 'row', gap: 16, marginTop: 12, justifyContent: 'center' },
+  legendItem:   { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  legendDot:    { width: 10, height: 10, borderRadius: 3 },
+  legendLabel:  { fontSize: 11, color: C.textSecondary, fontWeight: '500' },
   progressTrack: {
-    height: 10,
-    backgroundColor: C.border,
-    borderRadius: 10,
-    overflow: 'hidden',
-    marginBottom: 10,
+    height: 10, backgroundColor: C.border, borderRadius: 10,
+    overflow: 'hidden', marginBottom: 10,
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: C.sage,
-    borderRadius: 10,
-  },
-  progressCaption: {
-    fontSize: 12,
-    color: C.textSecondary,
-    lineHeight: 17,
-  },
-
-  // Delete
+  progressFill:    { height: '100%', backgroundColor: C.sage, borderRadius: 10 },
+  progressCaption: { fontSize: 12, color: C.textSecondary, lineHeight: 17 },
   deleteBtn: {
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: 'center',
-    backgroundColor: C.redPale,
-    borderWidth: 1.5,
-    borderColor: C.red,
-    marginBottom: 4,
+    borderRadius: 16, paddingVertical: 14, alignItems: 'center',
+    backgroundColor: C.redPale, borderWidth: 1.5, borderColor: C.red, marginBottom: 4,
   },
-  deleteBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: C.red,
-  },
+  deleteBtnText: { fontSize: 14, fontWeight: '700', color: C.red },
 });
