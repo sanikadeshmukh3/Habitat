@@ -1,5 +1,5 @@
 import CheckInModal from '@/components/checkin-modal';
-import { useCheckInsForMonth, useUpsertCheckIn, buildMonthKey } from '@/hooks/use-checkin';
+import { buildMonthKey, useCheckInsForMonth, useUpsertCheckIn } from '@/hooks/use-checkin';
 import { useDeleteHabit, useHabitDetail } from '@/hooks/use-habits';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';

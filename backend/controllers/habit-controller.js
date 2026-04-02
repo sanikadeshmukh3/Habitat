@@ -161,6 +161,18 @@ async function createHabit(req, res, next) {
       return;
     }
 
+    // habit stacking — calculate the observation window end date based on frequency
+    // DAILY: 30 days, WEEKLY: 56 days (8 weeks), MONTHLY: 120 days (4 months)
+    const observationWindowDays = {
+      DAILY:   30,
+      WEEKLY:  56,
+      MONTHLY: 120,
+    };
+
+    const windowDays = observationWindowDays[body.frequency] ?? 30;
+    const observationWindowEnd = new Date();
+    observationWindowEnd.setDate(observationWindowEnd.getDate() + windowDays);
+
     const habit = await prisma.habit.create({
       data: {
         userId,
@@ -171,6 +183,7 @@ async function createHabit(req, res, next) {
         visibility:    body.visibility  ?? true,
         active:        body.active      ?? true,
         updatedAt:     new Date(),
+        observationWindowEnd,
         ...(body.priorityRank != null && { priorityRank: Number(body.priorityRank) }),
       },
     });
