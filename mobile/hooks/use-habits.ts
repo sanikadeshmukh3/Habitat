@@ -12,19 +12,18 @@
  */
 
 import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  UseQueryResult,
   UseMutationResult,
+  UseQueryResult,
+  useMutation,
+  useQuery,
+  useQueryClient,
 } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import {
+  CreateHabitPayload,
   Habit,
   HabitDetail,
-  HabitCheckIn,
-  CreateHabitPayload,
-  UpdateHabitPayload,
+  UpdateHabitPayload
 } from '../types/habit';
 
 import api from '@/lib/api';
@@ -62,6 +61,11 @@ async function updateHabit(
   payload: UpdateHabitPayload,
 ): Promise<Habit> {
   const { data } = await api.patch<{ data: Habit }>(`/habits/${habitId}`, payload);
+  return data.data;
+}
+
+async function deleteHabit(habitId: string): Promise<{ id: string }> {
+  const { data } = await api.delete<{ data: { id: string } }>(`/habits/${habitId}`);
   return data.data;
 }
 
@@ -215,6 +219,42 @@ export function useUpdateHabit(
     // ── Settle: revalidate from server after success or error ────────────────
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: habitKeys.detail(habitId) });
+      queryClient.invalidateQueries({ queryKey: habitKeys.list() });
+    },
+  });
+}
+
+/**
+ * useDeleteHabit
+ * Deletes a habit and removes it from the list cache immediately.
+ *
+ * @example
+ * const { mutate: deleteHabit, isPending } = useDeleteHabit(habitId);
+ * deleteHabit();
+ */
+export function useDeleteHabit(
+  habitId: string,
+): UseMutationResult<{ id: string }, AxiosError, void> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => deleteHabit(habitId),
+
+    // remove from list cache immediately so home screen updates instantly
+    onSuccess: () => {
+      queryClient.setQueryData<Habit[]>(
+        habitKeys.list(),
+        (old = []) => old.filter((h) => h.id !== habitId),
+      );
+      // clear the detail cache for this habit
+      queryClient.removeQueries({ queryKey: habitKeys.detail(habitId) });
+    },
+
+    onError: (error) => {
+      console.error('[useDeleteHabit] failed:', error.message);
+    },
+
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: habitKeys.list() });
     },
   });

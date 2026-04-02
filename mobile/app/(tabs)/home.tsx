@@ -1,19 +1,18 @@
-import React, { useRef, useEffect, useState } from "react";
-import { useRouter } from "expo-router";
-import { Modal } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  FlatList,
-  Pressable,
-  Animated,
-  ImageBackground,
-} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Animated,
+  FlatList,
+  ImageBackground,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 // for now I am hardcoding the habits to get a glimpse of how it would look like
 // ALPHA RELEASE - no features
@@ -148,6 +147,7 @@ export default function HomeScreen() {
                   onPress={() =>
                     router.push({
                       pathname: "/habit-detail",
+                      params: { id: item.id },
                     })
                   }
                   style={styles.habitCard}

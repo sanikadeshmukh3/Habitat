@@ -1,9 +1,50 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+// Helper to format a Date as a local "YYYY-MM-DD" string (avoids UTC shift)
+function toLocalDateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function normalizeToStartOfDay(dateInput) {
   const dt = dateInput ? new Date(dateInput) : new Date();
   return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 0, 0, 0, 0);
+}
+
+// Recalculates currentStreak by walking backwards from today
+// through consecutive completed check-ins and updates the habit row
+async function recalculateStreak(habitId) {
+  const checkIns = await prisma.habitCheckIn.findMany({
+    where: { habitId, completed: true },
+    orderBy: { date: 'desc' },
+  });
+
+  // Use local date strings to avoid UTC midnight shifting dates
+  const completedDates = new Set(
+    checkIns.map((c) => toLocalDateKey(new Date(c.date)))
+  );
+
+  // Walk backwards from today counting consecutive completed days
+  let streak = 0;
+  const cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+
+  while (true) {
+    const key = toLocalDateKey(cursor);
+    if (completedDates.has(key)) {
+      streak++;
+      cursor.setDate(cursor.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+
+  await prisma.habit.update({
+    where: { id: habitId },
+    data: { currentStreak: streak },
+  });
+
+  return streak;
 }
 
 async function upsertHabitCheckIn(userId, habitId, data) {
@@ -59,8 +100,9 @@ async function upsertHabitCheckIn(userId, habitId, data) {
     },
   });
 
+  let checkIn;
   if (existing) {
-    return prisma.habitCheckIn.update({
+    checkIn = await prisma.habitCheckIn.update({
       where: { id: existing.id },
       data: {
         completed: Boolean(completed),
@@ -69,21 +111,26 @@ async function upsertHabitCheckIn(userId, habitId, data) {
         date: start,
       },
     });
+  } else {
+    checkIn = await prisma.habitCheckIn.create({
+      data: {
+        habitId,
+        date: start,
+        completed: Boolean(completed),
+        difficultyRating: difficultyRating == null ? null : Number(difficultyRating),
+        notes: notes === '' ? null : notes,
+      },
+    });
   }
 
-  return prisma.habitCheckIn.create({
-    data: {
-      habitId,
-      date: start,
-      completed: Boolean(completed),
-      difficultyRating: difficultyRating == null ? null : Number(difficultyRating),
-      notes: notes === '' ? null : notes,
-    },
-  });
+  // Recalculate and persist the streak after every check-in change
+  await recalculateStreak(habitId);
+
+  return checkIn;
 }
 
 async function getCheckInsForMonth(userId, year, month) {
-  const parsedYear = Number(year);
+  const parsedYear  = Number(year);
   const parsedMonth = Number(month);
 
   if (Number.isNaN(parsedYear) || Number.isNaN(parsedMonth)) {
@@ -97,7 +144,7 @@ async function getCheckInsForMonth(userId, year, month) {
 
   const habitIds = habits.map((h) => h.id);
 
-  const start = new Date(parsedYear, parsedMonth, 1, 0, 0, 0, 0);
+  const start     = new Date(parsedYear, parsedMonth, 1, 0, 0, 0, 0);
   const nextMonth = new Date(parsedYear, parsedMonth + 1, 1, 0, 0, 0, 0);
 
   const checkins = await prisma.habitCheckIn.findMany({
@@ -112,12 +159,16 @@ async function getCheckInsForMonth(userId, year, month) {
 
   const result = {};
   for (const c of checkins) {
-    const d = new Date(c.date);
-    const key = `${c.habitId}-${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    const d  = new Date(c.date);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    // Key format must match what the frontend builds in use-checkin.ts:
+    // `${habitId}-${year}-${mm}-${dd}`
+    const key = `${c.habitId}-${d.getFullYear()}-${mm}-${dd}`;
     result[key] = {
-      completed: Boolean(c.completed),
+      completed:        Boolean(c.completed),
       difficultyRating: c.difficultyRating,
-      notes: c.notes,
+      notes:            c.notes,
     };
   }
 
