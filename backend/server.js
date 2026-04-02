@@ -459,6 +459,11 @@ app.get("/protected", authenticateToken, (req, res) => {
 // establishing routes for different screens
 app.use("/dashboard", dashboardRoutes);
 
-app.listen(3000, () => {
-  console.log("Server running on port 3000");
-});
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;
