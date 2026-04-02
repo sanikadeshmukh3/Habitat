@@ -5,6 +5,5 @@ module.exports = {
   testPathIgnorePatterns: ['/node_modules/'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
-    '\\.(png|jpg|jpeg|gif|webp)$': '<rootDir>/__tests__/fileMock.js',
   },
 };
