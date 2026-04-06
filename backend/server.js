@@ -32,11 +32,14 @@ app.get('/test', (req, res) => res.json({ ok: true }));
 
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
   auth: {
     user: "habitat.no.reply.signup@gmail.com",
     pass: "avvgridknyaijgjd", 
   },
+  connectionTimeout: 10000,
 });
 
 // const authenticate = (req, res, next) => {
