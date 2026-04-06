@@ -152,7 +152,7 @@ if (!emailRegex.test(email)) {
 
     if (existingUser) {
 
-      if (!user.isVerified) {
+      if (!existingUser.isVerified) {
         return res.status(403).json({
           message: "Please verify your email first.",
         });
