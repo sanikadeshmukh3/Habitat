@@ -32,12 +32,12 @@ app.get('/test', (req, res) => res.json({ ok: true }));
 
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
+  host: "smtp.sendgrid.net",
+  port: 587,
+  secure: false,
   auth: {
-    user: "habitat.no.reply.signup@gmail.com",
-    pass: "avvgridknyaijgjd", 
+    user: "apikey",
+    pass: process.env.SENDGRID_API_KEY, 
   },
   connectionTimeout: 10000,
 });
