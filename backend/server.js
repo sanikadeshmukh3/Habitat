@@ -30,14 +30,20 @@ app.locals.db = pool;
 
 app.get('/test', (req, res) => res.json({ ok: true }));
 
+const sgMail = require("@sendgrid/mail");
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+/*const transporter = nodemailer.createTransport({
+  host: "smtp.sendgrid.net",
+  port: 587,
+  secure: false,
   auth: {
-    user: "habitat.no.reply.signup@gmail.com",
-    pass: "avvgridknyaijgjd", 
+    user: "apikey",
+    pass: process.env.SENDGRID_API_KEY, 
   },
-});
+  connectionTimeout: 10000,
+});*/
 
 // const authenticate = (req, res, next) => {
 //   const authHeader = req.headers.authorization;
@@ -79,6 +85,7 @@ app.post("/login", async (req, res) => {
     });
 
     if (!user) {
+   
       return res.status(401).json({
         message: "User not found",
       });
@@ -151,7 +158,7 @@ if (!emailRegex.test(email)) {
 
     if (existingUser) {
 
-      if (!user.isVerified) {
+      if (!existingUser.isVerified) {
         return res.status(403).json({
           message: "Please verify your email first.",
         });
@@ -178,7 +185,7 @@ if (!emailRegex.test(email)) {
       },
     });
 
-    await transporter.sendMail({
+    await sgMail.send({
       from: "habitat.no.reply.signup@gmail.com",
       to: email,
       subject: "Verify your account",
@@ -272,7 +279,7 @@ app.post("/forgot-password", async (req, res) => {
       },
     });
 
-    await transporter.sendMail({
+    await sgMail.send({
       from: "habitat.no.reply.signup@gmail.com",
       to: email,
       subject: "Reset your password",
@@ -350,7 +357,7 @@ app.post("/resend-code", async (req, res) => {
       },
     });
 
-    await transporter.sendMail({
+    await sgMail.send({
       from: "habitat.no.reply.signup@gmail.com",
       to: email,
       subject: "New Verification Code",
@@ -460,8 +467,8 @@ app.get("/protected", authenticateToken, (req, res) => {
 app.use("/dashboard", dashboardRoutes);
 
 if (require.main === module) {
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
+  const PORT = process.env.PORT || 10000;
+  app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
   });
 }

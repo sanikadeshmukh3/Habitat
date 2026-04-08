@@ -42,7 +42,7 @@ export default function Login() {
         alert(data.message || "Login failed");
       }
     } catch (error: any) {
-
+      console.log(error.response.data);
       if (error.response?.status === 403) { // specifically for the situation in which a user is created but not verified
         router.push({
           pathname: "/verify",

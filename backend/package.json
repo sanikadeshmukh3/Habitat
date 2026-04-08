@@ -6,7 +6,7 @@
     "test": "jest --runInBand",
     "test:unit": "jest tests/unit --runInBand",
     "test:integration": "jest tests/integration --runInBand",
-    "start": "node server.js",
+    "start": "prisma migrate deploy && npx prisma db seed && node server.js",
     "build": "prisma generate",
     "postinstall": "prisma generate",
     "dev": "nodemon server.js"
@@ -21,6 +21,7 @@
   "dependencies": {
     "@prisma/client": "^6.19.2",
     "@react-native-async-storage/async-storage": "^3.0.1",
+    "@sendgrid/mail": "^8.1.6",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
