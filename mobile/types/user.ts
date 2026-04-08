@@ -83,6 +83,7 @@ export interface UserProfile {
  */
 export interface UpdateProfilePayload {
   email?:     string;
+  currentPassword?: string; // required server-side for auth verification, but optional here since the user might only be changing settings
   password?:  string;         // plain-text; hashed server-side
   publicTag?: string;
   isPublic?:  boolean;

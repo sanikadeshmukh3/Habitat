@@ -123,6 +123,24 @@ async function updateUserProfile(req, res, next) {
         res.status(400).json({ error: 'Password must be at least 8 characters' });
         return;
       }
+
+      // Require the current password whenever a new one is being set
+      if (!body.currentPassword) {
+        res.status(400).json({ error: 'Current password is required to set a new password.' });
+        return;
+      }
+
+      const existing = await prisma.user.findUnique({
+        where:  { id: userId },
+        select: { password: true },
+      });
+
+      const isMatch = await bcrypt.compare(body.currentPassword, existing.password);
+      if (!isMatch) {
+        res.status(401).json({ error: 'Current password is incorrect.' });
+        return;
+      }
+
       userUpdate.password = await bcrypt.hash(body.password, SALT_ROUNDS);
     }
 

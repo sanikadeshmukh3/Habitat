@@ -140,8 +140,10 @@ export function useUpdateUserProfile(
       const prevProfile  = queryClient.getQueryData<UserProfile>(userKeys.profile());
       const prevSettings = queryClient.getQueryData<UserSettings>(userKeys.settings());
 
-      // Extract settings-backed fields from the payload
-      const { email, password, ...settingsFields } = payload;
+      // Extract settings-backed fields from the payload.
+      // currentPassword is only used server-side for auth verification —
+      // it must NOT be spread into the settings cache.
+      const { email, password, currentPassword: _currentPassword, ...settingsFields } = payload;
 
       if (prevProfile) {
         queryClient.setQueryData<UserProfile>(userKeys.profile(), {

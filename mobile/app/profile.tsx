@@ -12,6 +12,9 @@ import {
   ImageBackground,
   ActivityIndicator,
   Alert,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
@@ -44,32 +47,77 @@ export default function ProfileScreen() {
   const photoUri  = profile?.settings.photoUri  ?? null;
 
   // ── UI-only state ─────────────────────────────────────────────────────────
-  const [showPassword, setShowPassword] = useState(false);
-  const [isEditing,    setIsEditing]    = useState(false);
+  const [showPassword,        setShowPassword]        = useState(false);
+  const [showNewPassword,     setShowNewPassword]     = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isEditing,           setIsEditing]           = useState(false);
+
+  // Current-password gate modal
+  const [showPasswordGate,  setShowPasswordGate]  = useState(false);
+  const [currentPassword,   setCurrentPassword]   = useState('');
+  const [showCurrentPass,   setShowCurrentPass]   = useState(false);
+  const [passwordGateError, setPasswordGateError] = useState('');
 
   // Draft values — initialised from server data when the user opens the editor
-  const [draftEmail,    setDraftEmail]    = useState('');
-  const [draftTag,      setDraftTag]      = useState('');
-  const [draftPass,     setDraftPass]     = useState('');
-  const [draftPhotoUri, setDraftPhotoUri] = useState<string | null>(null);
+  const [draftEmail,       setDraftEmail]       = useState('');
+  const [draftTag,         setDraftTag]         = useState('');
+  const [draftPass,        setDraftPass]        = useState('');
+  const [draftPassConfirm, setDraftPassConfirm] = useState('');
+  const [draftPhotoUri,    setDraftPhotoUri]    = useState<string | null>(null);
 
+  // Opens the current-password gate; on success, enters edit mode
   const startEdit = () => {
+    setCurrentPassword('');
+    setPasswordGateError('');
+    setShowCurrentPass(false);
+    setShowPasswordGate(true);
+  };
+
+  const confirmPasswordGate = () => {
+    if (currentPassword.length < 1) {
+      setPasswordGateError('Please enter your current password.');
+      return;
+    }
+    // ── TODO: if your API supports a pre-flight password-check endpoint,
+    //    call it here before proceeding.  Otherwise the currentPassword is
+    //    forwarded with the PATCH payload and the server will reject it if
+    //    it is wrong (see saveEdit below).
+    setShowPasswordGate(false);
     setDraftEmail(email);
     setDraftTag(publicTag);
-    setDraftPass('');           // never pre-fill password for security
+    setDraftPass('');
+    setDraftPassConfirm('');
     setDraftPhotoUri(photoUri);
     setIsEditing(true);
   };
 
   // ── Save: write all edited fields to the DB in a single PATCH ────────────
   const saveEdit = () => {
+    // Validate new password fields before building the payload
+    if (draftPass.length > 0 || draftPassConfirm.length > 0) {
+      if (draftPass.length < 8) {
+        Alert.alert('Invalid password', 'New password must be at least 8 characters.');
+        return;
+      }
+      if (draftPass !== draftPassConfirm) {
+        Alert.alert('Passwords do not match', 'Please make sure both password fields are identical.');
+        return;
+      }
+    }
+
     // Build the payload with only changed fields so we don't overwrite
     // unchanged data unnecessarily.
     const payload: Parameters<typeof saveProfile>[0] = {};
 
     if (draftEmail.trim()   && draftEmail.trim() !== email)     payload.email     = draftEmail.trim();
     if (draftTag.trim()     && draftTag.trim()   !== publicTag)  payload.publicTag = draftTag.trim();
-    if (draftPass.length >= 8)                                   payload.password  = draftPass;
+    if (draftPass.length >= 8) {
+      payload.password        = draftPass;
+      // ── TODO: forward currentPassword to the server so it can verify the
+      //    old password before accepting the new one.  Remove this line if
+      //    your API handles that differently (e.g. a separate confirm step).
+      payload.currentPassword = currentPassword;
+    }
     if (draftPhotoUri !== photoUri)                              payload.photoUri  = draftPhotoUri;
 
     // Nothing actually changed — skip the network call
@@ -87,12 +135,17 @@ export default function ProfileScreen() {
     });
   };
 
-  const cancelEdit = () => setIsEditing(false);
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setDraftPassConfirm('');
+    setCurrentPassword('');
+  };
 
   // ── Privacy toggle — saves immediately (single-tap action like a setting) ─
-  const handlePrivacyToggle = (value: boolean) => {
-    saveProfile({ isPublic: value });
-  };
+  // TODO: Commenting out until public/private implementation is finalized.
+  // const handlePrivacyToggle = (value: boolean) => {
+  //   saveProfile({ isPublic: value });
+  // };
 
   // ── Photo picker ──────────────────────────────────────────────────────────
   // Stores the local URI as a draft.  On save() it is submitted along with the
@@ -115,11 +168,10 @@ export default function ProfileScreen() {
 
   // ── Log out ───────────────────────────────────────────────────────────────
   const handleLogOut = async () => {
-    // TODO: clear your auth token / session before navigating
-    // e.g. await AsyncStorage.multiRemove(['@userId', '@authToken']);
-    //      or call your auth context's signOut() method.
+    AsyncStorage.removeItem('token');
     router.replace('./login');
   };
+  //clears the token and replaces the stack with login screen
 
   const goBack = () => router.push('./(tabs)/home');
 
@@ -209,30 +261,38 @@ export default function ProfileScreen() {
               <Text style={styles.infoLabel}>Password</Text>
               {isEditing ? (
                 <>
+                  <Text style={styles.infoLabel}>Create new password</Text>
                   <TextInput
                     style={styles.editInput}
                     value={draftPass}
                     onChangeText={setDraftPass}
-                    secureTextEntry={!showPassword}
+                    secureTextEntry={!showNewPassword}
                     placeholder="New password (8+ chars)"
                     placeholderTextColor={Colors.lightBrown}
                   />
-                  <TouchableOpacity onPress={() => setShowPassword(p => !p)}>
+                  <TouchableOpacity onPress={() => setShowNewPassword(p => !p)}>
                     <Text style={styles.revealLink}>
-                      {showPassword ? 'hide' : 'show'} password
+                      {showNewPassword ? 'hide' : 'show'} password
+                    </Text>
+                  </TouchableOpacity>
+
+                  <Text style={[styles.infoLabel, { marginTop: Spacing.xs }]}>Confirm new password</Text>
+                  <TextInput
+                    style={styles.editInput}
+                    value={draftPassConfirm}
+                    onChangeText={setDraftPassConfirm}
+                    secureTextEntry={!showConfirmPassword}
+                    placeholder="Re-enter new password"
+                    placeholderTextColor={Colors.lightBrown}
+                  />
+                  <TouchableOpacity onPress={() => setShowConfirmPassword(p => !p)}>
+                    <Text style={styles.revealLink}>
+                      {showConfirmPassword ? 'hide' : 'show'} password
                     </Text>
                   </TouchableOpacity>
                 </>
               ) : (
-                <TouchableOpacity onPress={() => setShowPassword(p => !p)}>
-                  <Text style={styles.infoValue}>
-                    ••••••••{'  '}
-                    <Text style={styles.revealLink}>
-                      {/* password is never returned by the API, so we never show it */}
-                      change
-                    </Text>
-                  </Text>
-                </TouchableOpacity>
+                <Text style={styles.infoValue}>••••••••</Text>
               )}
 
               {/* Edit / Save / Cancel */}
@@ -263,7 +323,8 @@ export default function ProfileScreen() {
           </View>
 
           {/* Privacy toggle — saves immediately */}
-          <View style={styles.privacyBlock}>
+          {/* TODO: Commenting out until public/private implementation is finalized. */}
+          {/* <View style={styles.privacyBlock}>
             <Text style={styles.privacyLabel}>
               {isPublic ? '🌐 Public' : '🔒 Private'}
             </Text>
@@ -273,7 +334,7 @@ export default function ProfileScreen() {
               trackColor={{ false: Colors.lightBrown, true: Colors.midGreen }}
               thumbColor={isPublic ? Colors.primaryGreen : Colors.lightBrown}
             />
-          </View>
+          </View> */}
         </View>
 
         {/* ── Stats row: points + badges ─────────────────────── */}
@@ -297,6 +358,61 @@ export default function ProfileScreen() {
         <TouchableOpacity style={styles.logOutBtn} onPress={handleLogOut}>
           <Text style={styles.logOutBtnText}>Log Out</Text>
         </TouchableOpacity>
+
+        {/* ── Current-password gate modal ───────────────────────── */}
+        <Modal
+          visible={showPasswordGate}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowPasswordGate(false)}
+        >
+          <KeyboardAvoidingView
+            style={styles.modalOverlay}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          >
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>Confirm your identity</Text>
+              <Text style={styles.modalSubtitle}>
+                Enter your current password to edit your profile.
+              </Text>
+
+              <Text style={styles.infoLabel}>Current password</Text>
+              <TextInput
+                style={styles.editInput}
+                value={currentPassword}
+                onChangeText={(v) => { setCurrentPassword(v); setPasswordGateError(''); }}
+                secureTextEntry={!showCurrentPass}
+                placeholder="Your current password"
+                placeholderTextColor={Colors.lightBrown}
+                autoFocus
+              />
+              <TouchableOpacity onPress={() => setShowCurrentPass(p => !p)}>
+                <Text style={styles.revealLink}>
+                  {showCurrentPass ? 'hide' : 'show'} password
+                </Text>
+              </TouchableOpacity>
+
+              {passwordGateError.length > 0 && (
+                <Text style={styles.modalError}>{passwordGateError}</Text>
+              )}
+
+              <View style={styles.modalBtnRow}>
+                <TouchableOpacity
+                  style={styles.saveBtn}
+                  onPress={confirmPasswordGate}
+                >
+                  <Text style={styles.saveBtnText}>Continue</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => setShowPasswordGate(false)}
+                >
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
 
       </ScrollView>
     </ImageBackground>
@@ -549,5 +665,44 @@ const styles = StyleSheet.create({
     color: '#d9534f',
     fontWeight: '700',
     fontSize: FontSize.md,
+  },
+
+  // ── Current-password gate modal ──
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: Colors.cardBg,
+    borderRadius: Radius.md,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: Spacing.xs,
+  },
+  modalTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: '700',
+    color: Colors.darkBrown,
+    marginBottom: 2,
+  },
+  modalSubtitle: {
+    fontSize: FontSize.sm,
+    color: Colors.lightBrown,
+    marginBottom: Spacing.sm,
+  },
+  modalError: {
+    fontSize: FontSize.xs,
+    color: '#d9534f',
+    marginTop: 2,
+  },
+  modalBtnRow: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+    marginTop: Spacing.sm,
   },
 });
