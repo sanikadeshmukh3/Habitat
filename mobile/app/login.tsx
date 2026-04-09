@@ -42,14 +42,16 @@ export default function Login() {
         alert(data.message || "Login failed");
       }
     } catch (error: any) {
-      console.log(error.response.data);
+      //console.log(error.response.data);
       if (error.response?.status === 403) { // specifically for the situation in which a user is created but not verified
+        await api.post("/resend-code", { email });
+
         router.push({
           pathname: "/verify",
           params: { email },
         });
       } else {
-        console.error("Login error:", error);
+       // console.error("Login error:", error);
         alert(error?.response?.data?.message || "Network or server error");
       }
     } finally {

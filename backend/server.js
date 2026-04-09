@@ -2,7 +2,7 @@ const express = require("express");
 const { PrismaClient } = require("@prisma/client");
 const { Pool } = require("pg");
 const habitRoutes = require("./routes/habit-routes");
-const checkinRoutes = require('./routes/checkinRoutes');
+const checkinRoutes = require("./routes/checkinRoutes");
 
 const userRoutes = require("./routes/user-routes");
 
@@ -17,22 +17,25 @@ const cors = require("cors");
 
 const app = express();
 app.use(express.json());
-app.use(cors({origin: "*",}));
-app.use('/habits', habitRoutes);
-app.use('/checkins', checkinRoutes);
-app.use('/users', userRoutes);
+app.use(cors({ origin: "*" }));
+app.use("/habits", habitRoutes);
+app.use("/checkins", checkinRoutes);
+app.use("/users", userRoutes);
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'your-database-connection-string-here',
+  connectionString:
+    process.env.DATABASE_URL || "your-database-connection-string-here",
 });
 
 app.locals.db = pool;
 
-app.get('/test', (req, res) => res.json({ ok: true }));
+app.get("/test", (req, res) => res.json({ ok: true }));
 
 const sgMail = require("@sendgrid/mail");
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+console.log("API KEY:", process.env.SENDGRID_API_KEY);
 
 /*const transporter = nodemailer.createTransport({
   host: "smtp.sendgrid.net",
@@ -67,7 +70,6 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 //   }
 // };
 
-
 app.post("/login", async (req, res) => {
   try {
     let { email, password } = req.body;
@@ -75,7 +77,7 @@ app.post("/login", async (req, res) => {
     email = email?.trim();
 
     if (!email || !password) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: "Email and password are required",
       });
     }
@@ -85,7 +87,6 @@ app.post("/login", async (req, res) => {
     });
 
     if (!user) {
-   
       return res.status(401).json({
         message: "User not found",
       });
@@ -105,17 +106,14 @@ app.post("/login", async (req, res) => {
       });
     }
 
-    const token = jwt.sign(
-      { userId: user.id },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-    
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
     return res.json({
       message: "Login successful",
       token,
     });
-
   } catch (error) {
     console.error(error);
     return res.status(500).json({
@@ -123,7 +121,6 @@ app.post("/login", async (req, res) => {
     });
   }
 });
-
 
 app.post("/signup", async (req, res) => {
   try {
@@ -140,11 +137,11 @@ app.post("/signup", async (req, res) => {
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-if (!emailRegex.test(email)) {
-  return res.status(400).json({
-    message: "Invalid email format",
-  });
-}
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        message: "Invalid email format",
+      });
+    }
 
     if (password.length < 6) {
       return res.status(400).json({
@@ -157,7 +154,6 @@ if (!emailRegex.test(email)) {
     });
 
     if (existingUser) {
-
       if (!existingUser.isVerified) {
         return res.status(403).json({
           message: "Please verify your email first.",
@@ -185,19 +181,23 @@ if (!emailRegex.test(email)) {
       },
     });
 
-    await sgMail.send({
-      from: "habitat.no.reply.signup@gmail.com",
-      to: email,
-      subject: "Verify your account",
-      text: `Your verification code is: ${code}`,
-    });
+    try {
+      await sgMail.send({
+        from: "habitat.no.reply.signup@gmail.com",
+        to: email,
+        subject: "Verify your account",
+        text: `Your verification code is: ${code}`,
+      });
 
+      console.log("Email sent");
+    } catch (err) {
+      console.error("SendGrid error:", err.response?.body || err);
+    }
 
     return res.status(201).json({
       message: "User created. Check your email for verification code.",
       // userId: newUser.id,
     });
-
   } catch (error) {
     console.error(error);
     return res.status(500).json({
@@ -245,7 +245,6 @@ app.post("/verify", async (req, res) => {
     return res.json({
       message: "Email verified successfully",
     });
-
   } catch (error) {
     console.error(error);
     return res.status(500).json({
@@ -253,7 +252,6 @@ app.post("/verify", async (req, res) => {
     });
   }
 });
-
 
 app.post("/forgot-password", async (req, res) => {
   try {
@@ -289,7 +287,6 @@ app.post("/forgot-password", async (req, res) => {
     return res.json({
       message: "Reset code sent",
     });
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
@@ -328,7 +325,6 @@ app.post("/reset-password", async (req, res) => {
     });
 
     res.json({ message: "Password updated" });
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
@@ -357,6 +353,8 @@ app.post("/resend-code", async (req, res) => {
       },
     });
 
+    console.log("SENDING EMAIL...");
+
     await sgMail.send({
       from: "habitat.no.reply.signup@gmail.com",
       to: email,
@@ -364,8 +362,9 @@ app.post("/resend-code", async (req, res) => {
       text: `Your new code is: ${newCode}`,
     });
 
-    return res.json({ message: "New code sent" });
+    console.log("EMAIL SENT ✅");
 
+    return res.json({ message: "New code sent" });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server error" });
@@ -467,7 +466,7 @@ app.get("/protected", authenticateToken, (req, res) => {
 app.use("/dashboard", dashboardRoutes);
 
 if (require.main === module) {
-  const PORT = process.env.PORT || 10000;
+  const PORT = process.env.PORT || 3000;
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
   });
