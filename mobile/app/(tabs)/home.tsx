@@ -44,7 +44,7 @@ export default function HomeScreen() {
     const fetchDashboard = async () => {
       try {
         const token = await AsyncStorage.getItem("token"); // retrieving the token from the signed-in user
-        const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "https://habitat-1.onrender.com";
+        const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
         const response = await fetch (`${API_URL}/dashboard`, { 
           method: "GET",
           headers: {
