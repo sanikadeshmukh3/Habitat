@@ -21,7 +21,7 @@ Return an array of 5 habits in this format:
     "name": "string",
     "category": "Fitness | Nutrition | Wellness | Productivity | Sleep",
     "emoji": "emoji",
-    "frequency": "Daily",
+    "frequency": "Daily | Weekly",
     "reason": "short explanation"
   }
 ]
