@@ -106,7 +106,7 @@ export default function CreateHabitAIScreen() {
 
     // the AI API call
     try {
-      const res = await api.post("/ai/generate-habitats", { goal });
+      const res = await api.post("/ai/generate-habits", { goal });
 
       // AI response (including defaults to prevent code crashing)
       const formatted: Suggestion[] = res.data.map((item: any, index: number) => ({
@@ -298,11 +298,23 @@ export default function CreateHabitAIScreen() {
               style={[styles.addBtn, !canAdd && styles.addBtnDisabled]}
               disabled={!canAdd}
               activeOpacity={canAdd ? 0.85 : 1}
+              onPress={() => {
+                const selectedHabit = suggestions.find(s => selected.has(s.id));
+
+                if (!selectedHabit) return;
+
+                router.push({
+                  pathname: "/create-habit",
+                  params: {
+                    name: selectedHabit.name,
+                    habitCategory: selectedHabit.category?.toUpperCase(),
+                    frequency: selectedHabit.frequency?.toUpperCase(),
+                  },
+                });
+              }}
             >
               <Text style={styles.addBtnText}>
-                {canAdd
-                  ? `Add ${selected.size} Habit${selected.size > 1 ? 's' : ''} to Habitat 🍀`
-                  : 'Select habits above'}
+                {canAdd ? "~Continue" : "Select habits above"}
               </Text>
             </TouchableOpacity>
 
