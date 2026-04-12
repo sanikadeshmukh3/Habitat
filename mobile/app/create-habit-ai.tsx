@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
+import api from '@/lib/api';
 import {
   ActivityIndicator,
   ImageBackground,
@@ -10,6 +11,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  Alert,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -33,7 +35,7 @@ const C = {
 };
 
 // Mock AI suggestions
-const MOCK_SUGGESTIONS = [
+/*const MOCK_SUGGESTIONS = [
   {
     id: '1',
     name: 'Morning walk for 20 minutes',
@@ -74,9 +76,19 @@ const MOCK_SUGGESTIONS = [
     frequency: 'Daily',
     reason: 'Consistent sleep timing improves mood, focus, and metabolism.',
   },
-];
+];*/
 
-type Suggestion = typeof MOCK_SUGGESTIONS[0];
+
+
+type Suggestion = {
+  id: string,
+  name: string,
+  category: string,
+  emoji: string,
+  frequency: string,
+  reason: string,
+};
+
 type Stage = 'input' | 'loading' | 'results';
 
 // Component
@@ -88,14 +100,33 @@ export default function CreateHabitAIScreen() {
   const [selected, setSelected]       = useState<Set<string>>(new Set());
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!goal.trim()) return;
     setStage('loading');
-    // Simulate API delay
-    setTimeout(() => {
-      setSuggestions(MOCK_SUGGESTIONS);
+
+    // the AI API call
+    try {
+      const res = await api.post("/ai/generate-habitats", { goal });
+
+      // AI response (including defaults to prevent code crashing)
+      const formatted: Suggestion[] = res.data.map((item: any, index: number) => ({
+        id: item.id || String(index),
+        name: item.name || "Unnamed habit",
+        category: item.category || "Wellness",
+        emoji: item.emoji || "🌿",
+        frequency: item.frequency || "Daily",
+        reason: item.reason || "Helps improve your routine.",
+      }));
+      
+      setSuggestions(formatted);
       setStage('results');
-    }, 2000);
+
+    } catch (err) {
+      console.error("AI Error: ", err);
+      Alert.alert("Error", "failed to generate habit");
+      setStage('input');
+    }
+    
   };
 
   const toggleSelect = (id: string) => {

@@ -3,7 +3,7 @@ const { PrismaClient } = require("@prisma/client");
 const { Pool } = require("pg");
 const habitRoutes = require("./routes/habit-routes");
 const checkinRoutes = require("./routes/checkinRoutes");
-
+const aiRoutes = require("./routes/aiRoutes");
 const userRoutes = require("./routes/user-routes");
 
 const dashboardRoutes = require("./routes/dashboardRoutes");
@@ -464,6 +464,8 @@ app.get("/protected", authenticateToken, (req, res) => {
 
 // establishing routes for different screens
 app.use("/dashboard", dashboardRoutes);
+
+app.use("/ai", aiRoutes);
 
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;
