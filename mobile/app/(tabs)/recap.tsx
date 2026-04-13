@@ -16,17 +16,10 @@ import {
     Platform,
     TouchableOpacity,
 } from 'react-native';
+import { useRecap } from '@/hooks/use-recap';
+import type { WeekdayItem } from '@/lib/recap-utility';
 
 // Some of the following are hardcoded, but general structure of the recap screen exists.
-
-type WeekdayKey = 'Sun' | 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat';
-
-type WeekdayItem = {
-    key: WeekdayKey;
-    dateNumber: number;
-    done: boolean;
-    isToday: boolean;
-};
 
 type SnapshotCard = {
     id: string;
@@ -60,39 +53,38 @@ const FONTS = {
     bodyBold: Platform.select({ ios: 'Avenir Next', android: 'sans-serif-medium' }),
 };
 
-const WEEKDAY_ORDER: WeekdayKey[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-function startOfWeekSunday(date: Date) {
-    const d = new Date(date);
-    const day = d.getDay();
-    d.setDate(d.getDate() - day);
-    d.setHours(0, 0, 0, 0);
-    return d;
-}
-
-function buildWeekItems(
-    now: Date,
-    doneByDay?: Partial<Record<WeekdayKey, boolean>>,
-): WeekdayItem[] {
-    const safeDoneByDay = doneByDay ?? {};
-    const todayIndex = now.getDay();
-    const sunday = startOfWeekSunday(now);
-
-    const items: WeekdayItem[] = [];
-    for (let i = 0; i < WEEKDAY_ORDER.length; i++) {
-        const date = new Date(sunday);
-        date.setDate(sunday.getDate() + i);
-
-        const key = WEEKDAY_ORDER[i];
-        items.push({
-        key,
-        dateNumber: date.getDate(),
-        done: Boolean(safeDoneByDay[key]),
-        isToday: i === todayIndex,
-        });
-    }
-    return items;
-}
+const ANIMAL_IMAGE_BY_TITLE: Record<string, string> = {
+  'Relentless Wolf':
+    'https://images.unsplash.com/photo-1607350999170-b893fef057ea?auto=format&fit=crop&w=1200&q=80',
+  'Busy Bee':
+    'https://images.unsplash.com/photo-1570786097801-b8b9531ed5cb?auto=format&fit=crop&w=1200&q=80',
+  'Adaptive Fox':
+    'https://images.unsplash.com/photo-1474511320723-9a56873867b5?auto=format&fit=crop&w=1200&q=80',
+  'Mindful Owl':
+    'https://images.unsplash.com/photo-1660307038737-c7ada9b70fe4?auto=format&fit=crop&w=1200&q=80',
+  'Electric Cheetah':
+    'https://images.unsplash.com/photo-1551969014-7d2c4cddf0b6?auto=format&fit=crop&w=1200&q=80',
+  'Steady Bear':
+    'https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?auto=format&fit=crop&w=1200&q=80',
+  'Reliable Dog':
+    'https://images.unsplash.com/photo-1509334768310-62736d4fb984?auto=format&fit=crop&w=1200&q=80',
+  'Calm Deer':
+    'https://images.unsplash.com/photo-1718128403369-0815d808d762?auto=format&fit=crop&w=1200&q=80',
+  'Energetic Squirrel':
+    'https://images.unsplash.com/photo-1569219357232-1116aaf94241?auto=format&fit=crop&w=1200&q=80',
+  'Resetting Frog':
+    'https://images.unsplash.com/photo-1721414759843-97b02c764db2?auto=format&fit=crop&w=1200&q=80',
+  'Thoughtful Dolphin':
+    'https://images.unsplash.com/photo-1625056084571-e83f657bfcd8?auto=format&fit=crop&w=1200&q=80',
+  'Flexible Monkey':
+    'https://images.unsplash.com/photo-1727944792538-c8cd25bb79aa?auto=format&fit=crop&w=1200&q=80',
+  'Patient Turtle':
+    'https://images.unsplash.com/photo-1656109204719-8d4ab9de33c6?auto=format&fit=crop&w=1200&q=80',
+  'Rebuilding Snail':
+    'https://images.unsplash.com/photo-1569534893984-48aec815679b?auto=format&fit=crop&w=1200&q=80',
+  'Resting Sloth':
+    'https://images.unsplash.com/photo-1718122259770-ebbe7d7f9f7f?auto=format&fit=crop&w=1200&q=80',
+};
 
 function DayChip({ item }: { item: WeekdayItem }) {
     return (
@@ -106,9 +98,11 @@ function DayChip({ item }: { item: WeekdayItem }) {
                     styles.circle,
                     item.done && styles.circleDone,
                     item.isToday && styles.circleToday,
+                    item.isFuture && { opacity: 0.4 },
                 ]}
             >
                 {item.done && <Text style={styles.check}>✓</Text>}
+                {item.isFuture && <Text style={styles.futureDot}>·</Text>}
             </View>
 
             <Text style={[styles.dayLabel, item.isToday && styles.dayLabelToday]}>
@@ -173,103 +167,158 @@ function SnapshotCardView({
     );
 }
 
-function MiniBarChart() {
-    const bars = [42, 68, 54, 84, 58, 77, 66];
-
-    return (
-        <View style={styles.chartWrap}>
-            {bars.map((h, i) => (
-                <View key={i} style={styles.barColumn}>
-                <View style={[styles.bar, { height: h }]} />
-                </View>
-            ))}
+function MiniBarChart({ values }: { values: number[] }) {
+  return (
+    <View style={styles.chartWrap}>
+      {values.map((h, i) => (
+        <View key={i} style={styles.barColumn}>
+          <View style={[styles.bar, { height: h }]} />
         </View>
-    );
+      ))}
+    </View>
+  );
 }
 
-function MoodRow() {
-    const mood = ['😌'];
+function MoodRow({ label }: { label: string }) {
+  let emoji = '📝';
 
-    return (
-        <View style={styles.moodWrap}>
-            <Text style={styles.moodEmoji}>{mood}</Text>
-        </View>
-    );
+  if (label === 'Easy') emoji = '😊';
+  else if (label === 'Okay') emoji = '🙂';
+  else if (label === 'Hard') emoji = '😓';
+  else if (label == 'No data') emoji = '🫥';
+
+  return (
+    <View style={styles.moodWrap}>
+      <Text style={styles.moodEmoji}>{emoji}</Text>
+    </View>
+  );
 }
 
-function StatsBlock() {
-    return (
-        <View style={styles.statsBlock}>
-        <View>
-            <Text style={styles.statsBig}>89%</Text>
-            <Text style={styles.statsLabel}>completion</Text>
-        </View>
-        <View>
-            <Text style={styles.statsBig}>6</Text>
-            <Text style={styles.statsLabel}>day streak</Text>
-        </View>
-        </View>
-    );
+function StatsBlock({
+  completionPercent,
+  streakPercent,
+}: {
+  completionPercent: number;
+  streakPercent: number;
+}) {
+  return (
+    <View style={styles.statsBlock}>
+      <View>
+        <Text style={styles.statsBig}>{completionPercent}%</Text>
+        <Text style={styles.statsLabel}>completion</Text>
+      </View>
+      <View>
+        <Text style={styles.statsBig}>{streakPercent}%</Text>
+        <Text style={styles.statsLabel}>streak score</Text>
+      </View>
+    </View>
+  );
 }
 
 export default function RecapScreen() {
-    const now = new Date();
     const scrollX = useRef(new Animated.Value(0)).current;
     const [showInfoModal, setShowInfoModal] = useState(false);
+    
+    const { recap, isLoading, isFromCache, weekKey } = useRecap();
 
-    const weekItems = useMemo(
-        () =>
-        buildWeekItems(now, {
-            Sun: true,
-            Mon: true,
-            Tue: true,
-            Wed: false,
-            Thu: true,
-            Fri: true,
-            Sat: false,
-        }),
-        [now],
-    );
+    if (isLoading || !recap) {
+        return (
+            <View style={styles.background}>
+                <View style={styles.loadingWrap}>
+                    <Text style={styles.loadingText}>Loading recap...</Text>
+                </View>
+            </View>
+        );
+    }
+
+    const animalImageUri =
+        ANIMAL_IMAGE_BY_TITLE[recap.archetype.title] ??
+        'https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?auto=format&fit=crop&w=1200&q=80';
+
+    const weekItems = recap.weekItems;
+
+    const weekBarValues = recap.weekItems.map((item) => {
+        if (item.ratio == null) return 8;
+        return Math.max(8, Math.round(item.ratio * 80));
+    });
 
     const snapshotCards: SnapshotCard[] = [
         {
-        id: 'habit-score',
-        title: 'Habit Score',
-        subtitle: '112',
+        id: 'completion-pulse',
+        title: 'Completion Pulse',
+        subtitle: `${recap.snapshots.completionPulse.percent}%`,
         accent: '#6E8B62',
         body: (
             <View>
-            <Text style={styles.cardBodyHeadline}>+12 from last week</Text>
-            <Text style={styles.cardBodySubtext}>
-                Your consistency picked up after Tuesday.
+            <Text style={styles.cardBodyHeadline}>
+                {recap.snapshots.completionPulse.percent}% complete
             </Text>
-            <StatsBlock />
+            <Text style={styles.cardBodySubtext}>
+                {recap.snapshots.completionPulse.insight}
+            </Text>
+            <StatsBlock
+                completionPercent={recap.snapshots.completionPulse.percent}
+                streakPercent={Math.round(recap.scores.streakScore * 100)}
+            />
             </View>
         ),
         },
         {
-        id: 'sleep',
-        title: 'Sleep Snapshot',
-        subtitle: '7.6 hrs',
+        id: 'category-leader',
+        title: 'Category Leader',
+        subtitle: recap.snapshots.categoryLeader.topCategory,
         accent: '#8E6E53',
         body: (
             <View>
-            <Text style={styles.cardBodyHeadline}>Rest was steadier</Text>
-            <Text style={styles.cardBodySubtext}>Average sleep stayed above 7 hours.</Text>
-            <MiniBarChart />
+            <Text style={styles.cardBodyHeadline}>
+                Top: {recap.snapshots.categoryLeader.topCategory} ({recap.snapshots.categoryLeader.topPercent}%)
+            </Text>
+            <Text style={styles.cardBodySubtext}>
+                Needs attention: {recap.snapshots.categoryLeader.weakestCategory} ({recap.snapshots.categoryLeader.weakestPercent}%)
+            </Text>
+            <Text style={[styles.cardBodySubtext, { marginTop: 14 }]}>
+                {recap.snapshots.categoryLeader.insight}
+            </Text>
             </View>
         ),
         },
         {
-        id: 'mood',
-        title: 'Mood Trend',
-        subtitle: 'Mostly calm',
+        id: 'rhythm-check',
+        title: 'Rhythm Check',
+        subtitle: `${recap.snapshots.rhythmCheck.strongDays} strong days`,
         accent: '#7B8F6A',
         body: (
             <View>
-            <Text style={styles.cardBodyHeadline}>You felt grounded</Text>
-            <Text style={styles.cardBodySubtext}>Your mood stayed stable for most of the week.</Text>
-            <MoodRow />
+            <Text style={styles.cardBodyHeadline}>
+                Best: {recap.snapshots.rhythmCheck.bestDay}
+            </Text>
+            <Text style={styles.cardBodySubtext}>
+                Weakest: {recap.snapshots.rhythmCheck.weakestDay}
+            </Text>
+            <MiniBarChart values={weekBarValues} />
+            <Text style={[styles.cardBodySubtext, { marginTop: 10 }]}>
+                {recap.snapshots.rhythmCheck.insight}
+            </Text>
+            </View>
+        ),
+        },
+        {
+        id: 'mood-board',
+        title: 'Mood Board',
+        subtitle: recap.snapshots.moodBoard.label,
+        accent: '#5F7A61',
+        body: (
+            <View>
+            <Text style={styles.cardBodyHeadline}>
+                Difficulty:{' '}
+                {recap.snapshots.moodBoard.averageDifficulty == null
+                ? 'No data'
+                : `${recap.snapshots.moodBoard.averageDifficulty.toFixed(1)} / 5`}
+            </Text>
+            <Text style={styles.cardBodySubtext}>
+                {recap.snapshots.moodBoard.insight}
+            </Text>
+            <MoodRow label={recap.snapshots.moodBoard.label} />
             </View>
         ),
         },
@@ -347,6 +396,7 @@ export default function RecapScreen() {
             </View>
 
             <Text style={styles.subtitle}>A recap of your health and habits this week.</Text>
+            <Text style ={styles.weekKeyText}>{recap.weekStart.slice(0, 10)} - {recap.weekEnd.slice(0, 10)}</Text>
 
             <View style={styles.weekSection}>
             <View style={styles.sectionRow}>
@@ -358,12 +408,12 @@ export default function RecapScreen() {
 
             <View style={styles.weekCard}>
                 <FlatList
-                data={weekItems}
-                keyExtractor={(i) => i.key}
-                horizontal
-                renderItem={({ item }) => <DayChip item={item} />}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.weekList}
+                    data={weekItems}
+                    keyExtractor={(i) => i.key}
+                    horizontal
+                    renderItem={({ item }) => <DayChip item={item} />}
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.weekList}
                 />
             </View>
             </View>
@@ -372,16 +422,14 @@ export default function RecapScreen() {
 
             <View style={styles.animalCard}>
             <Image
-                source={{
-                uri: 'https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-                }}
+                source={{ uri: animalImageUri }}
                 style={styles.animalImage}
             />
             <View style={styles.animalTextWrap}>
                 <Text style={styles.animalEyebrow}>behavior match</Text>
-                <Text style={styles.animalType}>Steady Bear</Text>
+                <Text style={styles.animalType}>{recap.archetype.title}</Text>
                 <Text style={styles.animalDescription}>
-                Calm, consistent, and slightly slower midweek — but you still kept your rhythm.
+                    {recap.archetype.description}
                 </Text>
             </View>
             </View>
@@ -412,9 +460,9 @@ export default function RecapScreen() {
 
             <View style={styles.summaryCard}>
             <Text style={styles.summaryEyebrow}>WEEKLY HIGHLIGHT</Text>
-            <Text style={styles.summaryHeadline}>You stayed more consistent than last week.</Text>
+            <Text style={styles.summaryHeadline}>AI Summary.</Text>
             <Text style={styles.summaryText}>
-                Your strongest areas were sleep and routine completion, with mood staying mostly calm.
+                This will be coming soon.
             </Text>
             </View>
         </ScrollView>
@@ -832,4 +880,41 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     },  
+
+    loadingWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: Dimensions.get('window').height,
+    },
+
+    loadingText: {
+        color: COLORS.forest,
+        fontSize: 16,
+        fontWeight: '600',
+    },
+
+    futureDot: {
+        fontSize: 16,
+        color: COLORS.brown,
+    },
+
+    statusRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+
+    weekKeyText: {
+        color: COLORS.brown,
+        fontSize: 12,
+    },
+
+    cacheText: {
+        color: COLORS.moss,
+        fontSize: 12,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+    },
 });
