@@ -163,7 +163,7 @@
     <ol>
       <li>Tap the link above and then tap "Download".</li>
       <li>Download <span class="inline-code">.apk</span>.</li>
-      <li>Open Android emulator.</li>
+      <li>Launch and open Android emulator.</li>
       <li>Drag the downloaded <span class="inline-code">.apk</span> file into the emulator.</li>
       <li>The app will be installed and can be opened from the emulator.</li>
     </ol>
@@ -182,8 +182,10 @@
     <ol>
       <li>Tap the link above and then tap "Download".</li>
       <li>Download <span class="inline-code">.app</span>.</li>
-      <li>Open iOS simulator.</li>
-      <li>Drag the downloaded <span class="inline-code">.app</span> file into the simulator.</li>
+      <li>Launch and open iOS simulator.</li>
+      <li>In your terminal run <span class="inline-code">xcrun simctl install booted ~/Downloads/MyApp.app</span> (replacing the path as necessary)</li>
+      <li>To find the bundle identifier, run <span class-"inline-code">plutil -p ~/Downloads/MyApp.app/Info.plist | grep CFBundleIdentifier</span> (replacing the path as necessary)</li>
+      <li>Then run, <span class="inline-code">xcrun simctl launch booted your.bundle.identifier</span></li>
       <li>The app will be installed and can be opened from the simulator.</li>
     </ol>
   </section>
