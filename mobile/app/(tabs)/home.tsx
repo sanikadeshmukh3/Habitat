@@ -1,8 +1,10 @@
+import api from "@/lib/api";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
   FlatList,
   ImageBackground,
@@ -31,6 +33,10 @@ type Friend = {
   progress: number;
 };
 
+const COLORS = {
+  forest: '#234B3A',
+};
+
 export default function HomeScreen() {
   const [open, setOpen] = useState(false);
   const animation = useRef(new Animated.Value(0)).current;
@@ -38,31 +44,65 @@ export default function HomeScreen() {
 
   const [habits, setHabits] = useState<DashboardHabit[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
-  
-  // connection to backend for habits
-  useEffect(() => {
+  const [activeTab, setActiveTab] = useState<"friends" | "requests">("friends");
+const [requests, setRequests] = useState<any[]>([]); // You can type this better later!
+const [processingId, setProcessingId] = useState<string | null>(null);
+
+// useEffect(() => {
+//   const fetchDashboard = async () => {
+//     try {
+//       const token = await AsyncStorage.getItem("token");
+//       const userId = await AsyncStorage.getItem("userId");
+
+//       if (!token || !userId) return;
+
+//       const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://10.75.170.31:3000";
+
+//       const response = await fetch(`${API_URL}/dashboard`, {
+//         method: "GET",
+//         headers: {
+//           "Content-Type": "application/json",
+//           Authorization: `Bearer ${token}`,
+//           "x-user-id": userId, // optional but useful if backend needs it
+//         },
+//       });
+
+//       const data = await response.json();
+//       console.log("DASHBOARD DATA:", data);
+
+//       setHabits(data.habits || []);
+//       setFriends(data.friends || []);
+//       setRequests(data.requests || []);
+//     } catch (err) {
+//       console.error(err);
+//     }
+//   };
+
+//   fetchDashboard();
+// }, []);
+
+useFocusEffect(
+  React.useCallback(() => {
     const fetchDashboard = async () => {
       try {
-        const token = await AsyncStorage.getItem("token"); // retrieving the token from the signed-in user
-        const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
-        const response = await fetch (`${API_URL}/dashboard`, { 
-          method: "GET",
-          headers: {
-            "Content-type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await response.json();
+        // Use your 'api' utility instead of 'fetch' 
+        // This ensures the token from api.ts is ALWAYS used
+        const response = await api.get("/dashboard");
+        
+        console.log("DASHBOARD DATA:", response.data);
 
-        setHabits(data.habits);
-        setFriends(data.friends);
-      } catch (error) {
-        console.error("Error fetching from database", error);
+        setHabits(response.data.habits || []);
+        setFriends(response.data.friends || []);
+        setRequests(response.data.requests || []);
+      } catch (err) {
+        console.error("Dashboard Fetch Error:", err);
       }
     };
 
     fetchDashboard();
-  }, []);
+  }, [])
+);
+
 
   // the toggle option when adding a habit
   const toggleMenu = () => {
@@ -73,6 +113,48 @@ export default function HomeScreen() {
     }).start();
 
     setOpen(!open);
+  };
+
+  const acceptRequest = async (requestId: string) => {
+    try {
+      await api.post('/friend/accept', { requestId });
+  
+      setRequests(prev => prev.filter(r => r.id !== requestId));
+      // if (refetchFriends) refetchFriends();
+      
+    } catch (err) {
+      console.error("Accept error:", err);
+      Alert.alert("Error", "Could not accept friend request.");
+    }
+  };
+
+  const rejectRequest = (requestId: string) => {
+    Alert.alert(
+      "Decline Request",
+      "Are you sure you want to decline this friend request?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Decline",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setProcessingId(requestId);
+              await api.post('/friend/reject', { requestId });
+              setProcessingId(null);
+  
+              // remove from UI immediately
+              setRequests(prev => prev.filter(r => r.id !== requestId));
+  
+            } catch (err) {
+              setProcessingId(null);
+              console.error("Reject error:", err);
+              Alert.alert("Error", "Could not reject request.");
+            }
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -206,33 +288,119 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle2}>Friends</Text>
+  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+    <Text style={styles.sectionTitle2}>Network</Text>
+    <TouchableOpacity onPress={() => router.push("/search")}>
+      <Ionicons name="person-add-outline" size={24} color="#2E6F40" />
+    </TouchableOpacity>
+  </View>
 
-              {friends?.map((friend) => (
-                <TouchableOpacity
-                  key={friend.id}
-                  style={styles.friendRow}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/friend",
-                      params: { name: friend.name, progress: Math.round(friend.progress * 100).toString(), },
-                    })
-                  }
-                >
-                  <View style={styles.friendAvatar}>
-                    <Text style={styles.friendAvatarText}>F</Text>
-                  </View>
+  {/* FORCE TAB BUTTONS TO SHOW */}
+  <View style={styles.tabContainer}>
+    <TouchableOpacity 
+      style={[styles.tab, activeTab === "friends" && styles.activeTab]} 
+      onPress={() => setActiveTab("friends")}
+    >
+      <Text style={[styles.tabText, activeTab === "friends" && styles.activeTabText]}>Friends</Text>
+    </TouchableOpacity>
+    
+    <TouchableOpacity 
+      style={[styles.tab, activeTab === "requests" && styles.activeTab]} 
+      onPress={() => setActiveTab("requests")}
+    >
+      <Text style={[styles.tabText, activeTab === "requests" && styles.activeTabText]}>
+        Requests ({requests?.length || 0})
+      </Text>
+    </TouchableOpacity>
+  </View>
 
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.friendName}>{friend.name}</Text>
+  {/* TAB CONTENT */}
+  {activeTab === "friends" ? (
+    <View>
+      {friends && friends.length > 0 ? (
+friends.map(f => (
+  <TouchableOpacity
+    key={f.id}
+    style={styles.friendRow}
+    onPress={() =>
+      router.push({
+        pathname: "/friend/[friendId]",
+        params: { friendId: f.id },
+      })
+    }
+  >
+    {/* Avatar */}
+    <View style={styles.friendAvatar}>
+      <Text style={styles.friendAvatarText}>
+        {f.name?.charAt(0)?.toUpperCase() || "?"}
+      </Text>
+    </View>
 
-                    <View style={styles.progressBackground}>
-                      <View style={[styles.progressFill, { width: `${friend.progress * 100}%`},]} />
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
+    {/* Info */}
+    <View style={{ flex: 1 }}>
+      <Text style={styles.friendName}>{f.name}</Text>
+
+      {/* Progress bar
+      <View style={styles.progressBackground}>
+        <View
+          style={[
+            styles.progressFill,
+            { width: `${(f.progress || 0) * 100}%` },
+          ]}
+        />
+      </View> */}
+    </View>
+  </TouchableOpacity>
+))
+) : (
+  <Text style={{ textAlign: 'center', padding: 20 }}>
+    No friends yet.
+  </Text>
+)}
+    </View>
+  ) : (
+    <View>
+{requests && requests.length > 0 ? (
+  requests.map(r => (
+    <View key={r.id} style={{ marginBottom: 10 }}>
+      <Text style={{ color: "#2E6F40" }}>{r.name}</Text>
+
+      <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
+  <TouchableOpacity
+    onPress={() => acceptRequest(r.id)}
+    style={{
+      backgroundColor: "#2E6F40",
+      padding: 6,
+      borderRadius: 6,
+    }}
+  >
+    <Text style={{ color: "white" }}>Accept</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    onPress={() => rejectRequest(r.id)}
+    disabled={processingId === r.id}
+    style={{
+      backgroundColor: processingId === r.id ? "#aaa" : "#ccc",
+      padding: 6,
+      borderRadius: 6,
+    }}
+  >
+    <Text style={{ color: "#333" }}>
+      {processingId === r.id ? "..." : "Decline"}
+      </Text>
+  </TouchableOpacity>
+</View>
+    </View>
+  ))
+) : (
+  <Text style={{ textAlign: 'center', padding: 20 }}>
+    No requests yet.
+  </Text>
+)}
+    </View>
+  )}
+</View>
           </ScrollView>
         </View>
       </ImageBackground>
@@ -370,7 +538,10 @@ const styles = StyleSheet.create({
   friendRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 15,
+    marginBottom: 12,
+    padding: 12,
+    backgroundColor: "rgba(255,255,255,0.7)",
+    borderRadius: 16,
   },
 
   friendAvatar: {
@@ -496,5 +667,48 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(46,111,64,0.08)",
     padding: 6,
     borderRadius: 30,
+  },
+
+  addBtn: {
+    marginTop: 10,
+    backgroundColor: COLORS.forest,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 999,
+    alignSelf: "center",
+  },
+
+  addText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  tabContainer: {
+    flexDirection: "row",
+    backgroundColor: "rgba(46, 111, 64, 0.15)", // subtle transparent green
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 20,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: "center",
+    borderRadius: 10,
+  },
+  activeTab: {
+    backgroundColor: "#2E6F40",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#2E6F40",
+  },
+  activeTabText: {
+    color: "#FFF",
   },
 });

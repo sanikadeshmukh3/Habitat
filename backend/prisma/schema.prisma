@@ -11,6 +11,7 @@ model User {
   id                  String               @id @default(uuid())
   email               String               @unique
   password            String
+  username            String               @unique
   firstName           String               @map("first_name")
   lastName            String?              @map("last_name")
   timezone            String?
@@ -24,6 +25,8 @@ model User {
   friendsOf           User[]               @relation("UserFriends")
   // habit stacking — links user to their stacking enrollment history
   stackingEnrollments StackingEnrollment[]
+  sentRequests     FriendRequest[] @relation("SentRequests")
+  receivedRequests FriendRequest[] @relation("ReceivedRequests")
 
   @@map("user")
 }
@@ -136,4 +139,15 @@ enum StackingEntryStatus {
   PENDING
   ACTIVE
   COMPLETED
+}
+
+model FriendRequest {
+  id        String   @id @default(uuid())
+  senderId  String
+  receiverId String
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+
+  sender   User @relation("SentRequests", fields: [senderId], references: [id])
+  receiver User @relation("ReceivedRequests", fields: [receiverId], references: [id])
 }

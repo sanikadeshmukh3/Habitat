@@ -2,6 +2,7 @@ import { useState } from "react";
 import { router } from "expo-router";
 import { View, TextInput,  Text,  TouchableOpacity,  ActivityIndicator} from "react-native";
 import api from "@/lib/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Signup() {
   const [email, setEmail] = useState("");
@@ -41,6 +42,10 @@ export default function Signup() {
       });
     
       if (status >= 200 && status < 300) {
+        if (data.userId) {
+          await AsyncStorage.setItem("userId", data.userId);
+          console.log("Saved userId to storage:", data.userId);
+        }
         router.push({
           pathname: "/verify",
           params: { email: trimmedEmail },
