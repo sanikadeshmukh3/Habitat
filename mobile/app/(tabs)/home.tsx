@@ -290,7 +290,7 @@ useFocusEffect(
             <View style={styles.sectionCard}>
   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
     <Text style={styles.sectionTitle2}>Network</Text>
-    <TouchableOpacity onPress={() => router.push("/search")}>
+    <TouchableOpacity onPress={() => router.push("/search" as any)}>
       <Ionicons name="person-add-outline" size={24} color="#2E6F40" />
     </TouchableOpacity>
   </View>
@@ -324,7 +324,7 @@ friends.map(f => (
     style={styles.friendRow}
     onPress={() =>
       router.push({
-        pathname: "/friend/[friendId]",
+        pathname: "/friend/[friendId]" as any,
         params: { friendId: f.id },
       })
     }

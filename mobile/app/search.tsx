@@ -521,7 +521,7 @@ const sendRequest = async (friendId: string) => {
         style={styles.card}
         onPress={() =>
           router.push({
-            pathname: "/friend/[friendId]",
+            pathname: "/friend/[friendId]" as any,
             params: { friendId: item.id },
           })
         }
