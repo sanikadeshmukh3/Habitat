@@ -453,7 +453,7 @@ export function getDifficultyLabel(avg: number | null) {
   return 'Hard';
 }
 
-// Archetype Determination
+// Archetype Selection
 
 export function selectArchetype(scores: WeeklyRecap['scores']): ArchetypeResult {
   const {
@@ -466,12 +466,15 @@ export function selectArchetype(scores: WeeklyRecap['scores']): ArchetypeResult 
     reflectionScore,
   } = scores;
 
+  // Broad tier definitions
   const strongTier = completionScore >= 0.7 && consistencyScore >= 0.65;
-  const weakTier =
-    completionScore < 0.4 &&
-    activityScore < 0.4 &&
-    consistencyScore < 0.4;
 
+  // Broaden weak tier so Turtle and Sloth can exist there too
+  const weakTier =
+    completionScore < 0.5 &&
+    (activityScore < 0.5 && consistencyScore < 0.5);
+
+  // STRONG
   if (strongTier) {
     if (
       completionScore >= 0.85 &&
@@ -514,15 +517,6 @@ export function selectArchetype(scores: WeeklyRecap['scores']): ArchetypeResult 
       };
     }
 
-    if (dailyVariance >= 0.5 && completionScore >= 0.5 && consistencyScore < 0.65) {
-      return {
-        animal: 'Cheetah',
-        title: 'Electric Cheetah',
-        description: 'You had powerful surges of effort, even if not always sustained.',
-        tier: 'strong',
-      };
-    }
-
     return {
       animal: 'Bear',
       title: 'Steady Bear',
@@ -532,7 +526,38 @@ export function selectArchetype(scores: WeeklyRecap['scores']): ArchetypeResult 
     };
   }
 
+  // WEAK
   if (weakTier) {
+    if (
+      completionScore < 0.4 &&
+      activityScore < 0.4 &&
+      consistencyScore < 0.4
+    ) {
+      return {
+        animal: 'Snail',
+        title: 'Rebuilding Snail',
+        description:
+          'You’re in a reset phase — small steps matter most right now.',
+        tier: 'weak',
+      };
+    }
+
+    if (
+      completionScore >= 0.35 &&
+      completionScore < 0.5 &&
+      consistencyScore >= 0.4 &&
+      dailyVariance <= 0.4 &&
+      activityScore < 0.6
+    ) {
+      return {
+        animal: 'Turtle',
+        title: 'Patient Turtle',
+        description:
+          'You moved at a slower pace, but kept making quiet progress.',
+        tier: 'weak',
+      };
+    }
+
     return {
       animal: 'Sloth',
       title: 'Resting Sloth',
@@ -542,6 +567,7 @@ export function selectArchetype(scores: WeeklyRecap['scores']): ArchetypeResult 
     };
   }
 
+  // AVERAGE
   if (completionScore >= 0.6 && consistencyScore >= 0.6 && consistencyScore < 0.8) {
     return {
       animal: 'Dog',
@@ -584,6 +610,15 @@ export function selectArchetype(scores: WeeklyRecap['scores']): ArchetypeResult 
       title: 'Thoughtful Dolphin',
       description: 'You showed awareness and reflected on your progress along the way.',
       tier: 'average',
+    };
+  }
+  
+  if (dailyVariance >= 0.5 && completionScore >= 0.5 && consistencyScore < 0.65) {
+    return {
+      animal: 'Cheetah',
+      title: 'Electric Cheetah',
+      description: 'You had powerful surges of effort, even if not always sustained.',
+      tier: 'strong',
     };
   }
 

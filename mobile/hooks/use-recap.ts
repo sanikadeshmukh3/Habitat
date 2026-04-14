@@ -26,14 +26,27 @@ function mapToCheckInRecords(checkInMap: MonthlyCheckInMap): HabitCheckInRecord[
   const records: HabitCheckInRecord[] = [];
 
   for (const [key, value] of Object.entries(checkInMap)) {
-    const match = key.match(/^(.*)-(\d{4}-\d{2}-\d{2})$/);
+    const dateMatch = key.match(/\d{4}-\d{2}-\d{2}/);
 
-    if (!match) {
+    if (!dateMatch) {
       console.warn('[useRecap] Invalid check-in key format:', key);
       continue;
     }
 
-    const [, habitId, date] = match;
+    const date = dateMatch[0];
+    const dateIndex = key.indexOf(date);
+
+    if (dateIndex <= 0) {
+      console.warn('[useRecap] Invalid check-in key format:', key);
+      continue;
+    }
+
+    const habitId = key.slice(0, dateIndex - 1); // remove the dash before the date
+
+    if (!habitId) {
+      console.warn('[useRecap] Invalid check-in key format:', key);
+      continue;
+    }
 
     records.push({
       habitId,

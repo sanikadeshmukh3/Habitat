@@ -396,14 +396,11 @@ export default function RecapScreen() {
             </View>
 
             <Text style={styles.subtitle}>A recap of your health and habits this week.</Text>
-            <Text style ={styles.weekKeyText}>{recap.weekStart.slice(0, 10)} - {recap.weekEnd.slice(0, 10)}</Text>
 
             <View style={styles.weekSection}>
             <View style={styles.sectionRow}>
                 <Text style={styles.sectionEyebrow}>WEEKLY PROGRESS</Text>
-                <Pressable style={styles.morePill} hitSlop={10}>
-                <Text style={styles.moreText}>see other weeks</Text>
-                </Pressable>
+                <Text style ={styles.weekKeyText}>{recap.weekStart.slice(0, 10)} – {recap.weekEnd.slice(0, 10)}</Text>
             </View>
 
             <View style={styles.weekCard}>
@@ -594,6 +591,7 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.glass,
         borderWidth: 1,
         borderColor: 'rgba(77,58,45,0.08)',
+        alignItems: 'center',
     },
     weekList: {
         paddingRight: 10,
@@ -602,8 +600,8 @@ const styles = StyleSheet.create({
 
     dayChip: {
         alignItems: 'center',
-        gap: 7,
-        minWidth: 44,
+        gap: 5,
+        minWidth: 35,
     },
     dateNumber: {
         fontSize: 12,
