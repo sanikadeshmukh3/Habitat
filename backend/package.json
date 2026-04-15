@@ -19,7 +19,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@prisma/client": "^6.19.2",
+    "@prisma/client": "^6.19.3",
     "@react-native-async-storage/async-storage": "^3.0.1",
     "@sendgrid/mail": "^8.1.6",
     "bcrypt": "^6.0.0",

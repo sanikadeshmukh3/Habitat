@@ -113,6 +113,9 @@ app.post("/login", async (req, res) => {
     return res.json({
       message: "Login successful",
       token,
+      user: {
+        id: user.id,
+      },
     });
   } catch (error) {
     console.error(error);
@@ -126,61 +129,59 @@ app.post("/signup", async (req, res) => {
   try {
     let { email, password, firstName, lastName } = req.body;
 
+    // 1. Sanitization
     email = email?.trim().toLowerCase();
     firstName = firstName?.trim();
     lastName = lastName?.trim();
 
     if (!email || !password || !firstName || !lastName) {
-      return res.status(400).json({
-        message: "All fields are required",
-      });
+      return res.status(400).json({ message: "All fields are required" });
     }
 
+    // 2. Validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({
-        message: "Invalid email format",
-      });
+      return res.status(400).json({ message: "Invalid email format" });
     }
 
     if (password.length < 6) {
-      return res.status(400).json({
-        message: "Password must be at least 6 characters",
-      });
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
     }
 
+    // 3. Check existing user
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
 
     if (existingUser) {
       if (!existingUser.isVerified) {
-        return res.status(403).json({
-          message: "Please verify your email first.",
-        });
+        return res.status(403).json({ message: "Please verify your email first." });
       }
-
-      return res.status(400).json({
-        message: "User already exists",
-      });
+      return res.status(400).json({ message: "User already exists" });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // 4. GENERATE USERNAME (Emily + 3 random digits)
+    const randomDigits = Math.floor(100 + Math.random() * 900);
+    const generatedUsername = `${firstName.toLowerCase()}${randomDigits}`;
 
+    const hashedPassword = await bcrypt.hash(password, 10);
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 
+    // 5. Create the user with the new username field
     const newUser = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         firstName,
         lastName,
+        username: generatedUsername, // This satisfies your Prisma requirement
         isVerified: false,
         verificationCode: code,
         codeExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 min
       },
     });
 
+    // 6. SendGrid Logic
     try {
       await sgMail.send({
         from: "habitat.no.reply.signup@gmail.com",
@@ -188,24 +189,24 @@ app.post("/signup", async (req, res) => {
         subject: "Verify your account",
         text: `Your verification code is: ${code}`,
       });
-
-      console.log("Email sent");
+      console.log(`Email sent to ${email}. Username created: @${generatedUsername}`);
     } catch (err) {
+      // We log the error but don't stop the process because the user is already in the DB
       console.error("SendGrid error:", err.response?.body || err);
     }
 
+    // 7. Success Response
     return res.status(201).json({
       message: "User created. Check your email for verification code.",
-      // userId: newUser.id,
+      userId: newUser.id, // Returning this so your frontend can store it!
+      username: newUser.username
     });
+
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({
-      message: "Server error",
-    });
+    console.error("🔥 SIGNUP CRASH:", error);
+    return res.status(500).json({ message: "Server error" });
   }
 });
-
 app.post("/verify", async (req, res) => {
   try {
     const { email, code } = req.body;
@@ -462,6 +463,205 @@ app.get("/protected", authenticateToken, (req, res) => {
   });
 });
 
+app.get("/users/search", async (req, res) => {
+  try {
+    console.log("🔥 SEARCH ROUTE HIT");
+    
+    // Safely extract and clean the query
+    const rawQuery = req.query.query;
+    const query = typeof rawQuery === "string" ? rawQuery.trim() : "";
+
+    console.log(`RAW QUERY PARAM: "${query}"`);
+
+    if (!query) {
+      return res.status(200).json([]);
+    }
+
+    // Split query by spaces to support full name searches
+    const terms = query.split(/\s+/);
+    const searchConditions = terms.map(term => ({
+      OR: [
+        { username: { contains: term, mode: "insensitive" } },
+        { firstName: { contains: term, mode: "insensitive" } },
+        { lastName: { contains: term, mode: "insensitive" } },
+      ],
+    }));
+
+    const users = await prisma.user.findMany({
+      where: { AND: searchConditions },
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+      },
+      take: 20 // Good practice: limit the number of results
+    });
+
+    console.log(`Found ${users.length} users`);
+    
+    // Guarantee we return an array, never null
+    return res.status(200).json(users || []);
+  } catch (err) {
+    console.error("SEARCH ERROR:", err);
+    return res.status(500).json([]); // Guarantee we return an array on error
+  }
+});
+
+
+app.get('/users/:id', async (req, res) => {
+  const { id } = req.params;
+
+  const user = await prisma.user.findUnique({
+    where: { id },
+    include: {
+      habit: true,
+    },
+  });
+
+  res.json(user);
+});
+
+
+app.post("/friend/request", async (req, res) => {
+  try {
+    const { senderId, friendId } = req.body;
+
+    // 1. Check if already friends
+    const user = await prisma.user.findUnique({
+      where: { id: senderId },
+      include: { friends: true },
+    });
+
+    if (user.friends.some(f => f.id === friendId)) {
+      return res.status(400).json({ error: "Already friends" });
+    }
+
+    // 2. Check if request already sent
+    const existingRequest = await prisma.friendRequest.findFirst({
+      where: { senderId, receiverId: friendId, status: "PENDING" },
+    });
+
+    if (existingRequest) {
+      return res.status(400).json({ error: "Request already sent" });
+    }
+
+    // 3. Create the request
+    const request = await prisma.friendRequest.create({
+      data: { senderId, receiverId: friendId },
+    });
+
+    res.json(request);
+  } catch (err) {
+    console.error("Friend request creation failed:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/friend/requests", async (req, res) => {
+  const { userId } = req.query;
+
+  const requests = await prisma.friendRequest.findMany({
+    where: {
+      receiverId: userId,
+      status: "PENDING",
+    },
+    include: {
+      sender: true,
+    },
+  });
+
+  res.json(requests);
+});
+
+app.post("/friend/accept", async (req, res) => {
+  const { requestId } = req.body;
+
+  const request = await prisma.friendRequest.update({
+    where: { id: requestId },
+    data: { status: "ACCEPTED" },
+  });
+
+  // add to friends list
+  await prisma.user.update({
+    where: { id: request.senderId },
+    data: {
+      friends: {
+        connect: { id: request.receiverId },
+      },
+    },
+  });
+
+  await prisma.user.update({
+    where: { id: request.receiverId },
+    data: {
+      friends: {
+        connect: { id: request.senderId },
+      },
+    },
+  });
+
+  res.json({ success: true });
+});
+
+app.post("/friend/reject", async (req, res) => {
+  const { requestId } = req.body;
+
+  try {
+    await prisma.friendRequest.delete({
+      where: { id: requestId },
+    });
+
+    res.json({ message: "Request rejected" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to reject request" });
+  }
+});
+
+app.get("/users/:id/friends", async (req, res) => {
+  const { id } = req.params;
+
+  const user = await prisma.user.findUnique({
+    where: { id },
+    include: { friends: true },
+  });
+
+  res.json(user.friends);
+});
+
+app.get("/friend/status", async (req, res) => {
+  const { userId, friendId } = req.query;
+
+  // 1. Check if already friends
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { friends: true },
+  });
+
+  const isFriend = user.friends.some(f => f.id === friendId);
+
+  if (isFriend) {
+    return res.json({ status: "friends" });
+  }
+
+  // 2. Check if request already sent
+  const existingRequest = await prisma.friendRequest.findFirst({
+    where: {
+      senderId: userId,
+      receiverId: friendId,
+      status: "PENDING",
+    },
+  });
+
+  if (existingRequest) {
+    return res.json({ status: "requested" });
+  }
+
+  // 3. Default
+  return res.json({ status: "none" });
+}); 
+
 // establishing routes for different screens
 app.use("/dashboard", dashboardRoutes);
 
@@ -473,5 +673,9 @@ if (require.main === module) {
     console.log(`Server running on port ${PORT}`);
   });
 }
+
+app.get("/test", (req, res) => {
+  res.send("Server is reachable");
+});
 
 module.exports = app;
