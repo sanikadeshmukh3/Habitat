@@ -60,7 +60,7 @@ const ANIMAL_IMAGE_BY_TITLE: Record<string, string> = {
     'https://images.unsplash.com/photo-1570786097801-b8b9531ed5cb?auto=format&fit=crop&w=1200&q=80',
   'Adaptive Fox':
     'https://images.unsplash.com/photo-1474511320723-9a56873867b5?auto=format&fit=crop&w=1200&q=80',
-  'Mindful Owl':
+  'Insightful Owl':
     'https://images.unsplash.com/photo-1660307038737-c7ada9b70fe4?auto=format&fit=crop&w=1200&q=80',
   'Electric Cheetah':
     'https://images.unsplash.com/photo-1551969014-7d2c4cddf0b6?auto=format&fit=crop&w=1200&q=80',
@@ -68,19 +68,15 @@ const ANIMAL_IMAGE_BY_TITLE: Record<string, string> = {
     'https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?auto=format&fit=crop&w=1200&q=80',
   'Reliable Dog':
     'https://images.unsplash.com/photo-1509334768310-62736d4fb984?auto=format&fit=crop&w=1200&q=80',
-  'Calm Deer':
-    'https://images.unsplash.com/photo-1718128403369-0815d808d762?auto=format&fit=crop&w=1200&q=80',
   'Energetic Squirrel':
     'https://images.unsplash.com/photo-1569219357232-1116aaf94241?auto=format&fit=crop&w=1200&q=80',
-  'Resetting Frog':
-    'https://images.unsplash.com/photo-1721414759843-97b02c764db2?auto=format&fit=crop&w=1200&q=80',
-  'Thoughtful Dolphin':
+  'Reflective Dolphin':
     'https://images.unsplash.com/photo-1625056084571-e83f657bfcd8?auto=format&fit=crop&w=1200&q=80',
   'Flexible Monkey':
     'https://images.unsplash.com/photo-1727944792538-c8cd25bb79aa?auto=format&fit=crop&w=1200&q=80',
   'Patient Turtle':
     'https://images.unsplash.com/photo-1656109204719-8d4ab9de33c6?auto=format&fit=crop&w=1200&q=80',
-  'Rebuilding Snail':
+  'Resetting Snail':
     'https://images.unsplash.com/photo-1569534893984-48aec815679b?auto=format&fit=crop&w=1200&q=80',
   'Resting Sloth':
     'https://images.unsplash.com/photo-1718122259770-ebbe7d7f9f7f?auto=format&fit=crop&w=1200&q=80',

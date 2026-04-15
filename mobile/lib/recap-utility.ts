@@ -15,6 +15,7 @@ export type HabitRecord = {
   active?: boolean;
   habitCategory?: string;
   frequency?: string;
+  createdAt?: string | Date | null;
 };
 
 export type HabitCheckInRecord = {
@@ -64,6 +65,7 @@ export type WeeklyRecap = {
     recoveryScore: number;
     activityScore: number;
     reflectionScore: number;
+    difficultyScore: number;
   };
   weekItems: WeekdayItem[];
   archetype: ArchetypeResult;
@@ -137,6 +139,46 @@ export function parseDate(date: string | Date) {
   return new Date(date);
 }
 
+function getHabitEffectiveStartDate(
+  habit: HabitRecord,
+  checkIns: HabitCheckInRecord[]
+) {
+  const createdAtDate = habit.createdAt ? startOfDay(parseDate(habit.createdAt)) : null;
+
+  const habitCheckInDates = checkIns
+    .filter((c) => c.habitId === habit.id)
+    .map((c) => startOfDay(parseDate(c.date)));
+
+  const firstCheckInDate =
+    habitCheckInDates.length > 0
+      ? new Date(Math.min(...habitCheckInDates.map((d) => d.getTime())))
+      : null;
+
+  if (createdAtDate && firstCheckInDate) {
+    return createdAtDate <= firstCheckInDate ? createdAtDate : firstCheckInDate;
+  }
+
+  if (createdAtDate) return createdAtDate;
+  if (firstCheckInDate) return firstCheckInDate;
+
+  return null;
+}
+
+function habitExistsOnDate(
+  habit: HabitRecord,
+  date: Date,
+  checkIns: HabitCheckInRecord[]
+) {
+  const effectiveStart = getHabitEffectiveStartDate(habit, checkIns);
+  if (!effectiveStart) return true;
+
+  return effectiveStart <= endOfDay(date);
+}
+
+function isCompletedCheckIn(checkIn: HabitCheckInRecord) {
+  return Boolean(checkIn.completed);
+}
+
 export function startOfWeekSunday(date: Date) {
   const d = startOfDay(date);
   d.setDate(d.getDate() - d.getDay());
@@ -170,25 +212,28 @@ export function buildWeeklyDaySummaries(
     const currentDate = addDays(weekStart, i);
     const isFuture = currentDate > endOfDay(now);
 
-    const expected = isFuture ? 0 : activeHabits.length;
+    const expectedHabits = isFuture
+      ? []
+      : activeHabits.filter((habit) => habitExistsOnDate(habit, currentDate, checkIns));
+
+    const expected = expectedHabits.length;
 
     let completed = 0;
 
     if (!isFuture) {
-        for (const habit of activeHabits) {
-            const found = checkIns.some((checkIn) => {
-            const checkInDate = parseDate(checkIn.date);
+      for (const habit of expectedHabits) {
+        const found = checkIns.some((checkIn) => {
+          const checkInDate = parseDate(checkIn.date);
 
-            const matches =
-                checkIn.habitId === habit.id &&
-                Boolean(checkIn.completed) &&
-                sameDay(checkInDate, currentDate);
+          return (
+            checkIn.habitId === habit.id &&
+            Boolean(checkIn.completed) &&
+            sameDay(checkInDate, currentDate)
+          );
+        });
 
-            return matches;
-            });
-
-            if (found) completed += 1;
-        }
+        if (found) completed += 1;
+      }
     }
 
     summaries.push({
@@ -241,7 +286,6 @@ export function computeCompletionScore(
   now = new Date()
 ) {
   const days = getElapsedDaySummaries(habits, checkIns, now);
-
   const totalExpected = days.reduce((sum, d) => sum + d.expected, 0);
   const totalCompleted = days.reduce((sum, d) => sum + d.completed, 0);
 
@@ -254,7 +298,7 @@ export function computeConsistencyScore(
   checkIns: HabitCheckInRecord[],
   now = new Date()
 ) {
-  const days = getElapsedDaySummaries(habits, checkIns, now);
+  const days = getElapsedDaySummaries(habits, checkIns, now).filter((d) => d.expected > 0);
   if (days.length === 0) return 0;
 
   const successfulDays = days.filter((d) => d.ratio >= 0.7).length;
@@ -266,7 +310,7 @@ export function computeStreakScore(
   checkIns: HabitCheckInRecord[],
   now = new Date()
 ) {
-  const days = getElapsedDaySummaries(habits, checkIns, now);
+  const days = getElapsedDaySummaries(habits, checkIns, now).filter((d) => d.expected > 0);
   if (days.length === 0) return 0;
 
   let longest = 0;
@@ -289,7 +333,7 @@ export function computeDailyVariance(
   checkIns: HabitCheckInRecord[],
   now = new Date()
 ) {
-  const days = getElapsedDaySummaries(habits, checkIns, now);
+  const days = getElapsedDaySummaries(habits, checkIns, now).filter((d) => d.expected > 0);
   if (days.length === 0) return 0;
 
   const ratios = days.map((d) => d.ratio);
@@ -301,10 +345,10 @@ export function computeRecoveryScore(
   checkIns: HabitCheckInRecord[],
   now = new Date()
 ) {
-  const days = getElapsedDaySummaries(habits, checkIns, now);
+  const days = getElapsedDaySummaries(habits, checkIns, now).filter((d) => d.expected > 0);
   if (days.length <= 1) return 0.5;
 
-  let missDays = 0;
+  let lowDays = 0;
   let rebounds = 0;
 
   for (let i = 0; i < days.length - 1; i++) {
@@ -312,15 +356,13 @@ export function computeRecoveryScore(
     const next = days[i + 1];
 
     if (current.ratio < 0.4) {
-      missDays += 1;
-      if (next.ratio >= 0.7) {
-        rebounds += 1;
-      }
+      lowDays += 1;
+      if (next.ratio >= 0.7) rebounds += 1;
     }
   }
 
-  if (missDays === 0) return 0.5;
-  return rebounds / missDays;
+  if (lowDays === 0) return 0.5;
+  return rebounds / lowDays;
 }
 
 export function computeActivityScore(
@@ -328,15 +370,11 @@ export function computeActivityScore(
   checkIns: HabitCheckInRecord[],
   now = new Date()
 ) {
-  const activeHabits = habits.filter((h) => h.active !== false);
-  const days = getElapsedDaySummaries(habits, checkIns, now);
+  const days = getElapsedDaySummaries(habits, checkIns, now).filter((d) => d.expected > 0);
+  if (days.length === 0) return 0;
 
-  if (activeHabits.length === 0 || days.length === 0) return 0;
-
-  const totalCompleted = days.reduce((sum, d) => sum + d.completed, 0);
-  const averageCompletedPerDay = totalCompleted / days.length;
-
-  return Math.min(1, averageCompletedPerDay / activeHabits.length);
+  const activeDays = days.filter((d) => d.completed > 0).length;
+  return activeDays / days.length;
 }
 
 export function computeReflectionScore(
@@ -349,7 +387,12 @@ export function computeReflectionScore(
 
   const relevant = checkIns.filter((c) => {
     const d = parseDate(c.date);
-    return activeHabitIds.has(c.habitId) && d >= weekStart && d <= endOfDay(now);
+    return (
+      activeHabitIds.has(c.habitId) &&
+      isCompletedCheckIn(c) &&
+      d >= weekStart &&
+      d <= endOfDay(now)
+    );
   });
 
   if (relevant.length === 0) return 0;
@@ -365,6 +408,33 @@ export function computeReflectionScore(
   const noteLengthScore = Math.min(1, avgNoteLength / 120);
 
   return 0.7 * noteFrequency + 0.3 * noteLengthScore;
+}
+
+export function computeDifficultyScore(
+  habits: HabitRecord[],
+  checkIns: HabitCheckInRecord[],
+  now = new Date()
+) {
+  const activeHabitIds = new Set(habits.filter((h) => h.active !== false).map((h) => h.id));
+  const weekStart = startOfWeekSunday(now);
+
+  const relevant = checkIns.filter((c) => {
+    const d = parseDate(c.date);
+    return (
+      activeHabitIds.has(c.habitId) &&
+      isCompletedCheckIn(c) &&
+      d >= weekStart &&
+      d <= endOfDay(now) &&
+      typeof c.difficultyRating === 'number'
+    );
+  });
+
+  if (relevant.length === 0) return 0;
+
+  const avgDifficulty =
+    relevant.reduce((sum, c) => sum + (c.difficultyRating ?? 0), 0) / relevant.length;
+
+  return Math.max(0, Math.min(1, (avgDifficulty - 1) / 4));
 }
 
 // Category Breakdown
@@ -434,6 +504,7 @@ export function computeAverageDifficulty(
     const d = parseDate(c.date);
     return (
       activeHabitIds.has(c.habitId) &&
+      isCompletedCheckIn(c) &&
       d >= weekStart &&
       d <= endOfDay(now) &&
       typeof c.difficultyRating === 'number'
@@ -455,6 +526,39 @@ export function getDifficultyLabel(avg: number | null) {
 
 // Archetype Selection
 
+function clamp(value: number, min = 0, max = 1) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function near(value: number, target: number, tolerance = 0.2) {
+  const distance = Math.abs(value - target);
+  return clamp(1 - distance / tolerance);
+}
+
+function above(value: number, threshold: number, softness = 0.15) {
+  return clamp((value - threshold + softness) / softness);
+}
+
+function below(value: number, threshold: number, softness = 0.15) {
+  return clamp((threshold - value + softness) / softness);
+}
+
+function getTier(scores: WeeklyRecap['scores']): 'strong' | 'average' | 'weak' {
+  const { completionScore, consistencyScore } = scores;
+
+  if (completionScore >= 0.72 && consistencyScore >= 0.68) {
+    return 'strong';
+  }
+
+  if (completionScore < 0.45 && consistencyScore < 0.4) {
+    return 'weak';
+  }
+
+  return 'average';
+}
+
+type Candidate = ArchetypeResult & { score: number };
+
 export function selectArchetype(scores: WeeklyRecap['scores']): ArchetypeResult {
   const {
     completionScore,
@@ -464,170 +568,192 @@ export function selectArchetype(scores: WeeklyRecap['scores']): ArchetypeResult 
     recoveryScore,
     activityScore,
     reflectionScore,
+    difficultyScore,
   } = scores;
 
-  // Broad tier definitions
-  const strongTier = completionScore >= 0.7 && consistencyScore >= 0.65;
+  const tier = getTier(scores);
 
-  // Broaden weak tier so Turtle and Sloth can exist there too
-  const weakTier =
-    completionScore < 0.5 &&
-    (activityScore < 0.5 && consistencyScore < 0.5);
-
-  // STRONG
-  if (strongTier) {
+  if (tier === 'strong') {
     if (
-      completionScore >= 0.85 &&
-      consistencyScore >= 0.8 &&
-      streakScore >= 0.7 &&
-      dailyVariance <= 0.25
+      completionScore >= 0.9 &&
+      consistencyScore >= 0.85 &&
+      streakScore >= 0.8 &&
+      dailyVariance <= 0.15
     ) {
       return {
         animal: 'Wolf',
         title: 'Relentless Wolf',
-        description: 'You executed with intention and stayed in control of your habits.',
+        description: 'You were elite and kept a highly controlled rhythm throughout the week.',
         tier: 'strong',
       };
     }
 
-    if (activityScore >= 0.8 && completionScore >= 0.7) {
-      return {
+    const strongCandidates: Candidate[] = [
+      {
         animal: 'Bee',
         title: 'Busy Bee',
-        description: 'You brought energy and momentum into your routines.',
+        description: 'You kept moving, stayed productive, and carried strong momentum all week.',
         tier: 'strong',
-      };
-    }
-
-    if (recoveryScore >= 0.7 && dailyVariance >= 0.3 && completionScore >= 0.5) {
-      return {
-        animal: 'Fox',
-        title: 'Adaptive Fox',
-        description: 'You bounced back quickly and adjusted when things slipped.',
-        tier: 'strong',
-      };
-    }
-
-    if (reflectionScore >= 0.7 && completionScore >= 0.45) {
-      return {
+        score:
+          0.45 * above(activityScore, 0.8) +
+          0.25 * above(completionScore, 0.7) +
+          0.15 * above(consistencyScore, 0.65) +
+          0.15 * above(difficultyScore, 0.55),
+      },
+      {
         animal: 'Owl',
-        title: 'Mindful Owl',
-        description: 'You paid attention to patterns and learned from your habits.',
+        title: 'Insightful Owl',
+        description: 'You paired a solid week with strong awareness and reflection.',
         tier: 'strong',
+        score:
+          0.65 * above(reflectionScore, 0.6) +
+          0.2 * above(completionScore, 0.68) +
+          0.05 * above(consistencyScore, 0.65) +
+          0.1 * above(difficultyScore, 0.4),
+      },
+      {
+        animal: 'Cheetah',
+        title: 'Electric Cheetah',
+        description: 'You still had a strong week, but it came in powerful bursts rather than a flat rhythm.',
+        tier: 'strong',
+        score:
+          0.5 * above(dailyVariance, 0.45) +
+          0.2 * above(completionScore, 0.68) +
+          0.15 * above(activityScore, 0.7) +
+          0.15 * above(recoveryScore, 0.55),
+      },
+    ];
+
+    const best = strongCandidates.reduce((max, current) =>
+      current.score > max.score ? current : max
+    );
+
+    if (best.score >= 0.62) {
+      return {
+        animal: best.animal,
+        title: best.title,
+        description: best.description,
+        tier: best.tier,
       };
     }
 
     return {
       animal: 'Bear',
       title: 'Steady Bear',
-      description:
-        'You showed consistent strength and balance across your habits without needing extremes.',
+      description: 'You had a strong week built on stable follow-through and dependable consistency.',
       tier: 'strong',
     };
   }
 
-  // WEAK
-  if (weakTier) {
-    if (
-      completionScore < 0.4 &&
-      activityScore < 0.4 &&
-      consistencyScore < 0.4
-    ) {
-      return {
-        animal: 'Snail',
-        title: 'Rebuilding Snail',
-        description:
-          'You’re in a reset phase — small steps matter most right now.',
-        tier: 'weak',
-      };
-    }
+  if (tier === 'average') {
+    const averageCandidates: Candidate[] = [
+      {
+        animal: 'Dog',
+        title: 'Reliable Dog',
+        description: 'You showed up with steady effort and built a dependable routine.',
+        tier: 'average',
+        score:
+          0.45 * above(consistencyScore, 0.58) +
+          0.35 * above(completionScore, 0.55) +
+          0.2 * below(dailyVariance, 0.35),
+      },
+      {
+        animal: 'Squirrel',
+        title: 'Energetic Squirrel',
+        description: 'You stayed engaged and active, even if the week was not perfectly even.',
+        tier: 'average',
+        score:
+          0.5 * above(activityScore, 0.6) +
+          0.2 * above(completionScore, 0.48) +
+          0.15 * above(consistencyScore, 0.45) +
+          0.15 * above(difficultyScore, 0.35),
+      },
+      {
+        animal: 'Dolphin',
+        title: 'Reflective Dolphin',
+        description: 'You moved through the week with self-awareness and thoughtful check-ins.',
+        tier: 'average',
+        score:
+          0.65 * above(reflectionScore, 0.5) +
+          0.2 * above(completionScore, 0.45) +
+          0.15 * above(consistencyScore, 0.45),
+      },
+      {
+        animal: 'Fox',
+        title: 'Adaptive Fox',
+        description: 'You adjusted after setbacks and found ways to recover as the week went on.',
+        tier: 'average',
+        score:
+          0.55 * above(recoveryScore, 0.58) +
+          0.2 * above(completionScore, 0.45) +
+          0.15 * above(consistencyScore, 0.45) +
+          0.1 * above(dailyVariance, 0.3),
+      },
+    ];
 
-    if (
-      completionScore >= 0.35 &&
-      completionScore < 0.5 &&
-      consistencyScore >= 0.4 &&
-      dailyVariance <= 0.4 &&
-      activityScore < 0.6
-    ) {
+    const best = averageCandidates.reduce((max, current) =>
+      current.score > max.score ? current : max
+    );
+
+    if (best.score >= 0.58) {
       return {
-        animal: 'Turtle',
-        title: 'Patient Turtle',
-        description:
-          'You moved at a slower pace, but kept making quiet progress.',
-        tier: 'weak',
+        animal: best.animal,
+        title: best.title,
+        description: best.description,
+        tier: best.tier,
       };
     }
 
     return {
-      animal: 'Sloth',
-      title: 'Resting Sloth',
-      description:
-        'You took things slower this week, focusing on what you could without pushing too hard.',
+      animal: 'Monkey',
+      title: 'Flexible Monkey',
+      description: 'Your week was mixed, adaptable, and still taking shape as you figured out your rhythm.',
+      tier: 'average',
+    };
+  }
+
+  const weakCandidates: Candidate[] = [
+    {
+      animal: 'Turtle',
+      title: 'Patient Turtle',
+      description: 'Your pace was slower, but there were still signs of steadiness underneath the week.',
       tier: 'weak',
-    };
-  }
+      score:
+        0.45 * above(consistencyScore, 0.28) +
+        0.3 * near(completionScore, 0.38, 0.12) +
+        0.25 * below(dailyVariance, 0.35),
+    },
+    {
+      animal: 'Snail',
+      title: 'Resetting Snail',
+      description: 'This week was very light, and the focus was simply on getting started again.',
+      tier: 'weak',
+      score:
+        0.45 * below(completionScore, 0.28) +
+        0.3 * below(activityScore, 0.3) +
+        0.15 * below(consistencyScore, 0.25) +
+        0.1 * below(reflectionScore, 0.25),
+    },
+  ];
 
-  // AVERAGE
-  if (completionScore >= 0.6 && consistencyScore >= 0.6 && consistencyScore < 0.8) {
-    return {
-      animal: 'Dog',
-      title: 'Reliable Dog',
-      description: 'You showed up regularly and kept your routines dependable.',
-      tier: 'average',
-    };
-  }
+  const best = weakCandidates.reduce((max, current) =>
+    current.score > max.score ? current : max
+  );
 
-  if (consistencyScore >= 0.55 && dailyVariance <= 0.35 && consistencyScore < 0.75) {
+  if (best.score >= 0.56) {
     return {
-      animal: 'Deer',
-      title: 'Calm Deer',
-      description: 'You kept a calm rhythm and avoided major swings.',
-      tier: 'average',
-    };
-  }
-
-  if (activityScore >= 0.6 && activityScore < 0.8 && completionScore >= 0.5) {
-    return {
-      animal: 'Squirrel',
-      title: 'Energetic Squirrel',
-      description: 'You stayed active and kept momentum going.',
-      tier: 'average',
-    };
-  }
-
-  if (recoveryScore >= 0.5 && recoveryScore < 0.7 && completionScore >= 0.4) {
-    return {
-      animal: 'Frog',
-      title: 'Resetting Frog',
-      description: 'You regained your footing after off days and kept moving.',
-      tier: 'average',
-    };
-  }
-
-  if (reflectionScore >= 0.4 && reflectionScore < 0.7 && completionScore >= 0.4) {
-    return {
-      animal: 'Dolphin',
-      title: 'Thoughtful Dolphin',
-      description: 'You showed awareness and reflected on your progress along the way.',
-      tier: 'average',
-    };
-  }
-  
-  if (dailyVariance >= 0.5 && completionScore >= 0.5 && consistencyScore < 0.65) {
-    return {
-      animal: 'Cheetah',
-      title: 'Electric Cheetah',
-      description: 'You had powerful surges of effort, even if not always sustained.',
-      tier: 'strong',
+      animal: best.animal,
+      title: best.title,
+      description: best.description,
+      tier: best.tier,
     };
   }
 
   return {
-    animal: 'Monkey',
-    title: 'Flexible Monkey',
-    description:
-      'You stayed engaged and adaptable, exploring what works while building your routine.',
-    tier: 'average',
+    animal: 'Sloth',
+    title: 'Resting Sloth',
+    description: 'The week moved gently, and your main focus was doing what you could without force.',
+    tier: 'weak',
   };
 }
 
@@ -668,6 +794,7 @@ export function buildWeeklyRecap(
     recoveryScore: computeRecoveryScore(habits, checkIns, now),
     activityScore: computeActivityScore(habits, checkIns, now),
     reflectionScore: computeReflectionScore(habits, checkIns, now),
+    difficultyScore: computeDifficultyScore(habits, checkIns, now),
   };
 
   const archetype = selectArchetype(scores);

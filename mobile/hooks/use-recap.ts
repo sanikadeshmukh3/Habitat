@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   buildWeeklyRecap,
   getWeekKey,
@@ -7,7 +7,6 @@ import {
   type HabitRecord,
   startOfWeekSunday,
 } from '@/lib/recap-utility';
-import { loadRecapFromCache, saveRecapToCache } from '@/lib/recap-cache';
 import { useHabits } from '@/hooks/use-habits';
 import { useCheckInsForMonth, type MonthlyCheckInMap } from '@/hooks/use-checkin';
 
@@ -80,32 +79,6 @@ export function useRecap(now = new Date()) {
     isLoading: startMonthLoading,
   } = useCheckInsForMonth(startMonthInfo.year, startMonthInfo.month);
 
-  const [cachedRecap, setCachedRecap] = useState<WeeklyRecap | null>(null);
-  const [cacheLoaded, setCacheLoaded] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadCache() {
-      try {
-        const cached = await loadRecapFromCache(weekKey);
-        if (mounted) {
-          setCachedRecap(cached);
-        }
-      } finally {
-        if (mounted) {
-          setCacheLoaded(true);
-        }
-      }
-    }
-
-    loadCache();
-
-    return () => {
-      mounted = false;
-    };
-  }, [weekKey]);
-
   const checkIns = useMemo(() => {
     const currentRecords = mapToCheckInRecords(currentMonthCheckInMap);
 
@@ -125,29 +98,19 @@ export function useRecap(now = new Date()) {
     return Array.from(deduped.values());
   }, [currentMonthCheckInMap, startMonthCheckInMap, spansTwoMonths]);
 
-  const computedRecap = useMemo(() => {
-    if (!cacheLoaded) return null;
+  const recap = useMemo(() => {
     if (!habits.length) return null;
 
     return buildWeeklyRecap(habits as HabitRecord[], checkIns, now);
-  }, [habits, checkIns, now, cacheLoaded]);
-
-  useEffect(() => {
-    if (!computedRecap) return;
-
-    saveRecapToCache(computedRecap).catch((error) => {
-      console.warn('Failed to save recap cache:', error);
-    });
-  }, [computedRecap]);
+  }, [habits, checkIns, now]);
 
   return {
-    recap: computedRecap ?? cachedRecap,
+    recap,
     isLoading:
       habitsLoading ||
       currentMonthLoading ||
-      (spansTwoMonths && startMonthLoading) ||
-      !cacheLoaded,
+      (spansTwoMonths && startMonthLoading),
     weekKey,
-    isFromCache: !computedRecap && !!cachedRecap,
+    isFromCache: false,
   };
 }
