@@ -1,4 +1,5 @@
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
+import api from '@/lib/api';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -19,6 +20,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useUserProfile, useUpdateUserProfile } from '../hooks/use-user';
+import { useQueryClient } from "@tanstack/react-query";
 
 // ── Placeholder badges/points ─────────────────────────────────────────────────
 // TODO: replace with a real hook once you add a points/badges system to your schema.
@@ -35,6 +37,7 @@ export default function ProfileScreen() {
   const {
     data:      profile,
     isLoading: profileLoading,
+    refetch,
     isError:   profileError,
   } = useUserProfile();
 
@@ -72,6 +75,16 @@ export default function ProfileScreen() {
     setShowCurrentPass(false);
     setShowPasswordGate(true);
   };
+  const queryClient = useQueryClient();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (refetch) {
+        console.log("Refreshing profile data...");
+        refetch();
+      }
+    }, [refetch])
+  );  
 
   const confirmPasswordGate = () => {
     if (currentPassword.length < 1) {
@@ -165,11 +178,38 @@ export default function ProfileScreen() {
       console.error('Image pick error:', e);
     }
   };
+  useFocusEffect(
+    React.useCallback(() => {
+      // This trick tells the hook to re-validate its data
+      // If your hook 'useUserProfile' has a 'refetch' function, call it here:
+      // const { data, refetch } = useUserProfile();
+      // refetch();
+      
+      // If you don't have a refetch function, we can force a component remount
+      // by adding a key to the parent View that changes on login
+    }, [])
+  );
 
   // ── Log out ───────────────────────────────────────────────────────────────
   const handleLogOut = async () => {
-    AsyncStorage.removeItem('token');
-    router.replace('./login');
+    try {
+      // 1. Wipe everything from disk (token, userId, etc.)
+      await AsyncStorage.clear();
+  
+      // 2. Wipe the token from Axios memory immediately
+      delete api.defaults.headers.common['Authorization'];
+    
+      queryClient.clear();
+      // 3. Force a redirect to login
+      // Using '/login' (absolute path) is safer than './login'
+      router.replace('/login');
+      
+      // 4. Optional: If you are using React Query, you'd clear the cache here.
+      // But AsyncStorage.clear() + api header removal fixes 99% of this.
+    } catch (err) {
+      console.error("Logout error:", err);
+      Alert.alert("Error", "Failed to log out properly.");
+    }
   };
   //clears the token and replaces the stack with login screen
 

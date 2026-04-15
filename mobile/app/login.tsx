@@ -28,29 +28,68 @@ export default function Login() {
     setLoading(true);
   
     try {
+      await AsyncStorage.multiRemove(["token", "userId"]);
       // POST login using your centralized API instance
       const { data } = await api.post("/login", {
         email: email.trim(),
         password,
       });
+      console.log("RAW LOGIN RESPONSE FROM SERVER:", JSON.stringify(data, null, 2));
   
       // `data` should contain { message, token? }
+      // if (data.token) {
+      //   // SAVE BOTH THE TOKEN AND THE USER ID
+      //   await AsyncStorage.setItem("token", data.token);
+        
+      //   if (data.user && data.user.id) {
+      //     await AsyncStorage.setItem("userId", data.user.id);
+      //   } else if (data.id) {
+      //     // Check if your backend sends it as .id or .userId
+      //     await AsyncStorage.setItem("userId", data.id);
+      //   }
+
+      //   router.push("/(tabs)/home");
+      // }
       if (data.token) {
         await AsyncStorage.setItem("token", data.token);
-        router.push("/(tabs)/home");
-      } else {
-        alert(data.message || "Login failed");
+        
+        api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+
+        console.log("LOGIN DATA:", data);
+        // This part looks good, but let's make it robust:
+        const idToStore = data.user?.id || data.id || data.userId;
+        if (idToStore) {
+          await AsyncStorage.setItem("userId", idToStore);
+        }
+
+        // --- CHANGE THIS FROM push TO replace ---
+        // 'replace' prevents the user from clicking 'back' into the old session
+        router.replace("/(tabs)/home"); 
       }
     } catch (error: any) {
-      console.log(error.response.data);
-      if (error.response?.status === 403) { // specifically for the situation in which a user is created but not verified
+      console.log("FULL ERROR:", error);
+    
+      if (error.response) {
+        //console.log("Server error:", error.response.data);
+    
+        if (error.response.status === 403) {
+          await api.post("/resend-code", { email });
+
         router.push({
-          pathname: "/verify",
-          params: { email },
-        });
+            pathname: "/verify",
+            params: { email },
+          });
+        } else {
+          alert(error.response.data?.message || "Server error");
+        }
+    
+      } else if (error.request) {
+        console.log("No response received:", error.request);
+        alert("Cannot connect to server");
+    
       } else {
-        console.error("Login error:", error);
-        alert(error?.response?.data?.message || "Network or server error");
+       // console.log("Unexpected error:", error.message);
+        alert("Something went wrong");
       }
     } finally {
       setLoading(false);
@@ -61,13 +100,13 @@ export default function Login() {
       return (
         <ImageBackground source={require("../assets/images/background.png")} style={{ flex: 1, padding: 40 }}>
           <View style={{ flex: 1, padding: 40 }}>
-            <Text style={{ fontSize: 24, marginBottom: 20, marginTop: 180, color: "green" }}>Habitat</Text>
+            <Text style={{ fontSize: 26, marginBottom: 20, marginTop: 180, color: "#2d6a4f" }}>Habitat</Text>
     
             <TextInput
               placeholder="Email"
               value={email}
               onChangeText={setEmail}
-              style={{ borderWidth: 1, padding: 10, marginBottom: 10 }}
+              style={{ borderWidth: 1, padding: 10, marginBottom: 10, borderRadius: 8 }}
               autoCapitalize="none"
               autoCorrect={false}
             />
@@ -76,7 +115,7 @@ export default function Login() {
               secureTextEntry
               value={password}
               onChangeText={setPassword}
-              style={{ borderWidth: 1, padding: 10, marginBottom: 20 }}
+              style={{ borderWidth: 1, padding: 10, marginBottom: 20, borderRadius: 8 }}
               autoCapitalize="none"
               autoCorrect={false}
             />

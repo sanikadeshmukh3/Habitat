@@ -2,6 +2,7 @@ import { useState } from "react";
 import { View, Text, TextInput, Button, TouchableOpacity } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import api from "@/lib/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Verify() {
   const { email } = useLocalSearchParams();
@@ -23,7 +24,17 @@ export default function Verify() {
     
       if (status >= 200 && status < 300) {
         alert("Email verified!");
-        router.push("/login");
+        if (data.token){
+          await AsyncStorage.setItem("token", data.token);
+          api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+        }
+        const idToStore = data.userId || data.user?.id || data.id;
+        if (idToStore) {
+          await AsyncStorage.setItem("userId", idToStore);
+          console.log("Verify Screen - Saved userId: ", idToStore);
+        }
+        router.replace("/(tabs)/home")
+        // router.push("/login");
       } else {
         alert(data.message || "Verification failed");
       }

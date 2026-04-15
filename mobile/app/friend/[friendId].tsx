@@ -1,6 +1,7 @@
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
-import { router } from 'expo-router';
-import React, { useMemo, useRef, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -14,45 +15,65 @@ import {
     Dimensions,
     Platform,
     TouchableOpacity,
+    TextInput,
+    ActivityIndicator,
 } from 'react-native';
+import api from '@/lib/api';
+
+type FriendType = {
+    id: string;
+    username: string;
+    firstName: string;
+    lastName?: string;
+    habit: {
+      id: string;
+      name: string;
+      habitCategory: string;
+      currentStreak: number;
+      visibility: boolean;
+    }[];
+  };
+  
+
+
 
 // hardcoded friend data for now - will be replaced with real data from backend in the future
-const FRIEND = {
+// const friend = {
     
-    displayName: 'Sample Friend',
-    publicTag: '@nonexistent_friend',
-    points: 110,
-    habits: [
-        {
-            id: '1',
-            name: 'Drink Water',
-            category: 'Health',
-            currentStreak: 12,
-            isPublic: true,
-        },
-        {
-            id: '2',
-            name: 'Morning Walk',
-            category: 'Fitness',
-            currentStreak: 8,
-            isPublic: true,
-        },
-        {
-            id: '3',
-            name: 'Brush Teeth',
-            category: 'Personal',
-            currentStreak: 5,
-            isPublic: false,
-        },
-        {
-            id: '4',
-            name: 'Stay Off TikTok',
-            category: 'Procrastination',
-            currentStreak: 14,
-            isPublic: true,
-        },
-    ],
-};
+//     displayName: 'Sample Friend',
+//     publicTag: `@${user.username}`,
+//     points: 110,
+//     habit: [
+//         {
+//             id: '1',
+//             name: 'Drink Water',
+//             category: 'Health',
+//             currentStreak: 12,
+//             isPublic: true,
+//         },
+//         {
+//             id: '2',
+//             name: 'Morning Walk',
+//             category: 'Fitness',
+//             currentStreak: 8,
+//             isPublic: true,
+//         },
+//         {
+//             id: '3',
+//             name: 'Brush Teeth',
+//             category: 'Personal',
+//             currentStreak: 5,
+//             isPublic: false,
+//         },
+//         {
+//             id: '4',
+//             name: 'Stay Off TikTok',
+//             category: 'Procrastination',
+//             currentStreak: 14,
+//             isPublic: true,
+//         },
+//     ],
+// };
 
 type PublicHabit = {
     id: string;
@@ -179,14 +200,214 @@ function HabitStatsBlock({ habitName, streak }: { habitName: string; streak: num
     );
 }
 
+
+
 export default function FriendScreen() {
     const scrollX = useRef(new Animated.Value(0)).current;
     const [showInfoModal, setShowInfoModal] = useState(false);
+    const [friend, setFriend] = useState<FriendType | null>(null);
+    const [status, setStatus] = useState<"none" | "requested" | "friends">("none");
+    const params = useLocalSearchParams();
+    const friendId = Array.isArray(params.friendId) ? params.friendId[0] : params.friendId;
 
-    const publicHabits = useMemo(
-        () => FRIEND.habits.filter((habit): habit is PublicHabit => habit.isPublic),
-        [],
-    );
+    console.log("Friend ID:", friendId);
+
+    // useEffect(() => {
+    //     if (!friendId) return;
+      
+    //     const fetchFriend = async () => {
+    //       try {
+    //         const res = await fetch(`http://10.75.170.31:10000/users/${friendId}`); // 🔹 full URL
+    //         if (!res.ok) throw new Error('Failed to fetch friend');
+      
+    //         const data = await res.json();
+    //         setFriend(data);
+    //       } catch (err) {
+    //         console.error("Friend fetch error:", err);
+    //       }
+    //     };
+      
+    //     fetchFriend();
+    //   }, [friendId]);
+
+    const [senderId, setSenderId] = useState<string | null>(null);
+
+    // 1. Load logged-in user ID once
+    useEffect(() => {
+      const loadUser = async () => {
+        try {
+          const id = await AsyncStorage.getItem("userId");
+          console.log("Profile Screen - Loaded senderId:", id);
+          setSenderId(id);
+        } catch (e) {
+          console.error("Failed to load userId", e);
+        }
+      };
+    
+      loadUser();
+    }, []);
+    
+    
+    // 2. Fetch friend data
+    useEffect(() => {
+      if (!friendId) return;
+    
+      const fetchFriend = async () => {
+        try {
+          const { data } = await api.get(`/users/${friendId}`);
+          
+          console.log("Fetched friend:", data);
+      
+          const mappedFriend: FriendType = {
+            id: data.id,
+            username: data.username,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            habit: data.habit.map((h: any) => ({
+              id: h.id,
+              name: h.name,
+              habitCategory: h.category ?? h.habitCategory,
+              currentStreak: h.currentStreak,
+              visibility: h.isPublic ?? h.visibility,
+            })),
+          };
+      
+          setFriend(mappedFriend);
+        } catch (err) {
+          console.error("Friend fetch error:", err);
+        }
+      };
+    
+      fetchFriend();
+    }, [friendId]);
+    
+    
+    useEffect(() => {
+      if (!friendId || !senderId) return;
+    
+      const fetchStatus = async () => {
+        try {
+          const { data } = await api.get('/friend/status', {
+            params: {
+              userId: senderId,
+              friendId: friendId,
+            },
+          });
+    
+          console.log("Friend status:", data.status);
+          setStatus(data.status);
+        } catch (err) {
+          console.error("Status fetch error:", err);
+        }
+      };
+    
+      fetchStatus();
+    }, [friendId, senderId]);
+    
+    
+    
+
+    //   const sendRequest = async () => {
+    //     try {
+    //       await fetch("/friends/request", {
+    //         method: "POST",
+    //         headers: { "Content-Type": "application/json" },
+    //         body: JSON.stringify({
+    //           senderId: "TEMP_USER_ID", // replace later
+    //           friendId,
+    //         }),
+    //       });
+      
+    //       setStatus("requested");
+    //     } catch (err) {
+    //       console.error(err);
+    //     }
+    //   };
+
+    const sendRequest = async (targetFriendId?: string) => {
+        if (!senderId) {
+          console.warn("Sender ID not loaded yet");
+          return;
+        }
+      
+        const idToSend = targetFriendId ?? friendId;
+      
+        try {
+          const { data } = await api.post("/friend/request", {
+            senderId,
+            friendId: idToSend,
+          });
+        
+          console.log("Friend request sent:", data);
+        
+          if (!targetFriendId) {
+            setStatus("requested"); // only update main profile button
+          }
+        } catch (err: any) {
+          console.error("Friend request error:", err);
+        
+          const errorMessage = err.response?.data?.error || "Failed to send friend request";
+          alert(errorMessage);
+        }
+      };
+
+      const renderFriendButton = () => {
+        // senderId not ready yet
+        if (!senderId) {
+          return (
+            <TouchableOpacity style={[styles.addBtn, { backgroundColor: '#ccc' }]} disabled>
+              <Text style={styles.addText}>Add Friend</Text>
+            </TouchableOpacity>
+          );
+        }
+      
+        // already friends
+        if (status === "friends") {
+          return (
+            <TouchableOpacity style={[styles.addBtn, { backgroundColor: '#aaa' }]} disabled>
+              <Text style={styles.addText}>Friends</Text>
+            </TouchableOpacity>
+          );
+        }
+      
+        // request already sent
+        if (status === "requested") {
+          return (
+            <TouchableOpacity style={[styles.addBtn, { backgroundColor: '#888' }]} disabled>
+              <Text style={styles.addText}>Requested</Text>
+            </TouchableOpacity>
+          );
+        }
+      
+        // can send friend request
+        return (
+          <TouchableOpacity style={styles.addBtn} onPress={() => sendRequest()}>
+            <Text style={styles.addText}>Add Friend</Text>
+          </TouchableOpacity>
+        );
+      };
+      
+    //   if (!friend) {
+    //     return <Text>Loading...</Text>;
+    //   }
+
+      const displayName = `${friend?.firstName ?? ""} ${friend?.lastName ?? ""}`;
+      const publicTag = friend ? `@${friend.username}`: "";
+      const points = 0; // temp
+
+      const publicHabits = useMemo(
+        () =>
+          friend?.habit
+            ?.filter((h) => h.visibility)
+            .map((h) => ({
+              id: h.id,
+              name: h.name,
+              category: h.habitCategory,
+              currentStreak: h.currentStreak,
+              isPublic: h.visibility,
+            })) ?? [],
+        [friend]
+      );
 
     const groupedHabits = useMemo(
     () =>
@@ -197,19 +418,22 @@ export default function FriendScreen() {
         acc[habit.category].push(habit);
         return acc;
         }, {}),
-    [publicHabits]
-    );
+    [publicHabits]);
+
+    // if (!friend) {
+    //     return <Text>Loading...</Text>;
+    //   }
 
     const friendHabitCards: FriendHabitCard[] = useMemo(
     () =>
-        Object.entries(groupedHabits).map(([category, habits], index) => ({
+        Object.entries(groupedHabits).map(([category, habit], index) => ({
         id: category,
         title: category,
-        subtitle: `${habits.length} habit${habits.length === 1 ? '' : 's'}`,
+        subtitle: `${habit.length} habit${habit.length === 1 ? '' : 's'}`,
         accent: ['#6E8B62', '#8E6E53', '#7B8F6A', '#7A8F85'][index % 4],
         body: (
             <View>
-            {habits.map((habit) => (
+            {habit.map((habit) => (
                 <HabitStatsBlock
                 key={habit.id}
                 habitName={habit.name}
@@ -222,9 +446,17 @@ export default function FriendScreen() {
     [groupedHabits]
     );
 
+    if (!friend) {
+      return (
+        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#EAF6E8'}}>
+          <ActivityIndicator size="large" color="#2E6F40" />
+          <Text style={{marginTop: 10, color: '#2E6F40'}}>Finding your friend...</Text>
+        </View>
+      );
+  }
     return (
         <ImageBackground
-        source={require("../assets/images/leaf.png")}
+        source={require("../../assets/images/leaf.png")}
         style={styles.background}
         imageStyle={{ opacity: 0.08 }} // want the leaves to be a bit transparent on the screen
         >
@@ -242,6 +474,14 @@ export default function FriendScreen() {
             >
                 <Text style={styles.backBtnText}>← Back</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+  style={styles.searchBtn}
+  onPress={() => router.push("/search")}
+>
+  <Text style={styles.searchBtnText}>+ Find Friends</Text>
+</TouchableOpacity>
+            
             <Modal
             visible={showInfoModal}
             transparent
@@ -298,18 +538,25 @@ export default function FriendScreen() {
 
             <View style={styles.profileCard}>
             <View style={styles.profileTextWrap}>
-                <Text style={styles.profileEyebrow}>friend overview</Text>
-                <AvatarBlock name={FRIEND.displayName} />
-                <Text style={styles.profileTag}>{FRIEND.publicTag}</Text>
-                <Text style={styles.profileDescription}>
-                This profile only shows habits your friend has marked as public.
-                </Text>
+            <Text style={styles.profileEyebrow}>friend overview</Text>
+
+            <AvatarBlock name={displayName} />
+            <Text style={styles.profileTag}>{publicTag}</Text>
+
+            <View style={{ marginTop: 10 }}>
+            {renderFriendButton()} 
             </View>
+
+            <Text style={styles.profileDescription}>
+                This profile only shows habits your friend has marked as public.
+            </Text>
+        </View>
             </View>
 
             <View style={styles.pointsCard}>
             <Text style={styles.pointsEyebrow}>POINTS</Text>
-            <Text style={styles.pointsValue}>{FRIEND.points}</Text>
+            <Text style={styles.pointsValue}>{points}</Text>
+            {/* <Text style={styles.pointsValue}>{friend.points}</Text> */}
             </View>
 
             <View style={styles.snapHeaderRow}>
@@ -715,5 +962,48 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     },
+
+    addBtn: {
+        marginTop: 10,
+        backgroundColor: COLORS.forest,
+        paddingHorizontal: 18,
+        paddingVertical: 8,
+        borderRadius: 999,
+        alignSelf: "center",
+      },
+      
+      addText: {
+        color: "white",
+        fontSize: 14,
+        fontWeight: "600",
+      },
+      
+      requestedText: {
+        marginTop: 10,
+        color: "#888",
+        fontSize: 14,
+      },
+      
+      friendText: {
+        marginTop: 10,
+        color: COLORS.moss,
+        fontSize: 14,
+        fontWeight: "600",
+      },
+
+      searchBtn: {
+        alignSelf: "center",
+        marginBottom: 12,
+        backgroundColor: COLORS.moss,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 999,
+      },
+      
+      searchBtnText: {
+        color: "white",
+        fontSize: 14,
+        fontWeight: "600",
+      },
 
 });
