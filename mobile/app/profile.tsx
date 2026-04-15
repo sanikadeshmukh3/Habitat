@@ -18,7 +18,7 @@ import {
   Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { Colors, FontSize, Radius, Spacing } from '@/constants/oldtheme';
 import { useUserProfile, useUpdateUserProfile } from '../hooks/use-user';
 import { useQueryClient } from "@tanstack/react-query";
 

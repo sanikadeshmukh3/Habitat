@@ -14,7 +14,7 @@ import {
   LayoutAnimation,
   UIManager,
 } from 'react-native';
-import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { Colors, FontSize, Radius, Spacing } from '@/constants/oldtheme';
 import api from '@/lib/api';
 import CheckInModal from '@/components/checkin-modal';
 import {
