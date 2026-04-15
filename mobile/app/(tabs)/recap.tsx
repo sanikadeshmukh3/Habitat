@@ -1,4 +1,4 @@
-import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { Colors, FontSize, Radius, Spacing } from '@/constants/oldtheme';
 import { router } from 'expo-router';
 import React, { useMemo, useRef, useState } from 'react';
 import {

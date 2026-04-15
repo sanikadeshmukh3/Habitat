@@ -1,12 +1,12 @@
 import {
   DarkTheme,
   DefaultTheme,
-  ThemeProvider,
 } from "@react-navigation/native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "react-native-reanimated";
+import { ThemeProvider } from "@/constants/theme";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
@@ -23,7 +23,7 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+      <ThemeProvider>
         <Stack
           screenOptions={{
             headerShown: false, // 🔥 THIS removes the "(tabs)" header
