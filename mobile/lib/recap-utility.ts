@@ -45,8 +45,24 @@ export type WeekdayItem = {
   ratio: number | null;
 };
 
+export type Animal =
+  | 'Wolf'
+  | 'Bee'
+  | 'Owl'
+  | 'Jaguar'
+  | 'Bear'
+  | 'Dog'
+  | 'Bunny'
+  | 'Swan'
+  | 'Fox'
+  | 'Monkey'
+  | 'Turtle'
+  | 'Sloth'
+  | 'Snail'
+  | 'Fallback';
+
 export type ArchetypeResult = {
-  animal: string;
+  animal: Animal;
   title: string;
   description: string;
   tier: 'strong' | 'average' | 'weak';
@@ -612,8 +628,8 @@ export function selectArchetype(scores: WeeklyRecap['scores']): ArchetypeResult 
           0.1 * above(difficultyScore, 0.4),
       },
       {
-        animal: 'Cheetah',
-        title: 'Electric Cheetah',
+        animal: 'Jaguar',
+        title: 'Electric Jaguar',
         description: 'You still had a strong week, but it came in powerful bursts rather than a flat rhythm.',
         tier: 'strong',
         score:
@@ -658,8 +674,8 @@ export function selectArchetype(scores: WeeklyRecap['scores']): ArchetypeResult 
           0.2 * below(dailyVariance, 0.35),
       },
       {
-        animal: 'Squirrel',
-        title: 'Energetic Squirrel',
+        animal: 'Bunny',
+        title: 'Energetic Bunny',
         description: 'You stayed engaged and active, even if the week was not perfectly even.',
         tier: 'average',
         score:
@@ -669,8 +685,8 @@ export function selectArchetype(scores: WeeklyRecap['scores']): ArchetypeResult 
           0.15 * above(difficultyScore, 0.35),
       },
       {
-        animal: 'Dolphin',
-        title: 'Reflective Dolphin',
+        animal: 'Swan',
+        title: 'Reflective Swan',
         description: 'You moved through the week with self-awareness and thoughtful check-ins.',
         tier: 'average',
         score:

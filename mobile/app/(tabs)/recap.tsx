@@ -10,6 +10,7 @@ import {
     FlatList,
     Image,
     ImageBackground,
+    ImageSourcePropType,
     Modal,
     Animated,
     Dimensions,
@@ -17,7 +18,8 @@ import {
     TouchableOpacity,
 } from 'react-native';
 import { useRecap } from '@/hooks/use-recap';
-import type { WeekdayItem } from '@/lib/recap-utility';
+import { useUserProfile } from '@/hooks/use-user';
+import type { Animal, WeekdayItem } from '@/lib/recap-utility';
 
 // Some of the following are hardcoded, but general structure of the recap screen exists.
 
@@ -30,9 +32,11 @@ type SnapshotCard = {
 };
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = SCREEN_WIDTH * 0.72;
-const CARD_SPACING = 14;
 const SIDE_SPACER = 18;
+const CARD_GAP = 12;
+const CARD_WIDTH = SCREEN_WIDTH - SIDE_SPACER * 2 - CARD_GAP;
+const SNAP_INTERVAL = CARD_WIDTH + CARD_GAP;
+const HORIZONTAL_PADDING = SIDE_SPACER - CARD_GAP / 2;
 
 const COLORS = {
     forest: '#234B3A',
@@ -47,40 +51,23 @@ const COLORS = {
     chip: 'rgba(255,255,255,0.68)',
 };
 
-const FONTS = {
-    title: Platform.select({ ios: 'Georgia', android: 'serif' }),
-    body: Platform.select({ ios: 'Avenir Next', android: 'sans-serif' }),
-    bodyBold: Platform.select({ ios: 'Avenir Next', android: 'sans-serif-medium' }),
-};
+export const ANIMAL_IMAGE_BY_ANIMAL: Record<Animal, ImageSourcePropType> = {
+  Wolf: require('@/assets/images/animals/wolf.png'),
+  Bee: require('@/assets/images/animals/bee.png'),
+  Owl: require('@/assets/images/animals/owl.png'),
+  Jaguar: require('@/assets/images/animals/jaguar.png'),
+  Bear: require('@/assets/images/animals/bear.png'),
+  Dog: require('@/assets/images/animals/dog.png'),
+  Bunny: require('@/assets/images/animals/bunny.png'),
+  Swan: require('@/assets/images/animals/swan.png'),
+  Fox: require('@/assets/images/animals/fox.png'),
+  Monkey: require('@/assets/images/animals/monkey.png'),
+  Turtle: require('@/assets/images/animals/turtle.png'),
+  Sloth: require('@/assets/images/animals/sloth.png'),
+  Snail: require('@/assets/images/animals/snail.png'),
+  Fallback: require('@/assets/images/animals/fallback-wrapped.png'),
+} as const;
 
-const ANIMAL_IMAGE_BY_TITLE: Record<string, string> = {
-  'Relentless Wolf':
-    'https://images.unsplash.com/photo-1607350999170-b893fef057ea?auto=format&fit=crop&w=1200&q=80',
-  'Busy Bee':
-    'https://images.unsplash.com/photo-1570786097801-b8b9531ed5cb?auto=format&fit=crop&w=1200&q=80',
-  'Adaptive Fox':
-    'https://images.unsplash.com/photo-1474511320723-9a56873867b5?auto=format&fit=crop&w=1200&q=80',
-  'Insightful Owl':
-    'https://images.unsplash.com/photo-1660307038737-c7ada9b70fe4?auto=format&fit=crop&w=1200&q=80',
-  'Electric Cheetah':
-    'https://images.unsplash.com/photo-1551969014-7d2c4cddf0b6?auto=format&fit=crop&w=1200&q=80',
-  'Steady Bear':
-    'https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?auto=format&fit=crop&w=1200&q=80',
-  'Reliable Dog':
-    'https://images.unsplash.com/photo-1509334768310-62736d4fb984?auto=format&fit=crop&w=1200&q=80',
-  'Energetic Squirrel':
-    'https://images.unsplash.com/photo-1569219357232-1116aaf94241?auto=format&fit=crop&w=1200&q=80',
-  'Reflective Dolphin':
-    'https://images.unsplash.com/photo-1625056084571-e83f657bfcd8?auto=format&fit=crop&w=1200&q=80',
-  'Flexible Monkey':
-    'https://images.unsplash.com/photo-1727944792538-c8cd25bb79aa?auto=format&fit=crop&w=1200&q=80',
-  'Patient Turtle':
-    'https://images.unsplash.com/photo-1656109204719-8d4ab9de33c6?auto=format&fit=crop&w=1200&q=80',
-  'Resetting Snail':
-    'https://images.unsplash.com/photo-1569534893984-48aec815679b?auto=format&fit=crop&w=1200&q=80',
-  'Resting Sloth':
-    'https://images.unsplash.com/photo-1718122259770-ebbe7d7f9f7f?auto=format&fit=crop&w=1200&q=80',
-};
 
 function DayChip({ item }: { item: WeekdayItem }) {
     return (
@@ -108,59 +95,76 @@ function DayChip({ item }: { item: WeekdayItem }) {
     );
 }
 
+function getMoodEmoji(label: string) {
+  if (label === 'Easy') return '😊';
+  if (label === 'Okay') return '🙂';
+  if (label === 'Hard') return '😓';
+  if (label === 'No data') return '🫥';
+  return '📝';
+}
+
 function SnapshotCardView({
-    card,
-    index,
-    scrollX,
+  card,
+  index,
+  scrollX,
 }: {
-    card: SnapshotCard;
-    index: number;
-    scrollX: Animated.Value;
+  card: SnapshotCard;
+  index: number;
+  scrollX: Animated.Value;
 }) {
-    const inputRange = [
-        (index - 1) * (CARD_WIDTH + CARD_SPACING),
-        index * (CARD_WIDTH + CARD_SPACING),
-        (index + 1) * (CARD_WIDTH + CARD_SPACING),
-    ];
+  const inputRange = [
+    (index - 1) * SNAP_INTERVAL,
+    index * SNAP_INTERVAL,
+    (index + 1) * SNAP_INTERVAL,
+  ];
 
-    const scale = scrollX.interpolate({
-        inputRange,
-        outputRange: [0.92, 1, 0.92],
-        extrapolate: 'clamp',
-    });
+  const scale = scrollX.interpolate({
+    inputRange,
+    outputRange: [0.97, 1, 0.97],
+    extrapolate: 'clamp',
+  });
 
-    const translateY = scrollX.interpolate({
-        inputRange,
-        outputRange: [10, 0, 10],
-        extrapolate: 'clamp',
-    });
+  const translateY = scrollX.interpolate({
+    inputRange,
+    outputRange: [8, 0, 8],
+    extrapolate: 'clamp',
+  });
 
-    const opacity = scrollX.interpolate({
-        inputRange,
-        outputRange: [0.72, 1, 0.72],
-        extrapolate: 'clamp',
-    });
+  const opacity = scrollX.interpolate({
+    inputRange,
+    outputRange: [0.82, 1, 0.82],
+    extrapolate: 'clamp',
+  });
 
-    return (
-        <Animated.View
+  return (
+    <View style={styles.snapshotCardWrap}>
+      <Animated.View
         style={[
-            styles.snapshotCard,
-            {
+          styles.snapshotCard,
+          {
             transform: [{ scale }, { translateY }],
             opacity,
-            },
+          },
         ]}
-        >
+      >
         <View style={styles.snapshotHeader}>
-            <Text style={styles.snapshotTitle}>{card.title}</Text>
-            {!!card.subtitle && <Text style={styles.snapshotSubtitle}>{card.subtitle}</Text>}
+          <Text style={styles.snapshotTitle}>{card.title}</Text>
+          {!!card.subtitle && (
+            <Text style={styles.snapshotSubtitle}>{card.subtitle}</Text>
+          )}
         </View>
 
-        <View style={[styles.snapshotAccent, { backgroundColor: card.accent ?? COLORS.moss }]} />
+        <View
+          style={[
+            styles.snapshotAccent,
+            { backgroundColor: card.accent ?? COLORS.moss },
+          ]}
+        />
 
         <View style={styles.snapshotBody}>{card.body}</View>
-        </Animated.View>
-    );
+      </Animated.View>
+    </View>
+  );
 }
 
 function MiniBarChart({ values }: { values: number[] }) {
@@ -175,27 +179,12 @@ function MiniBarChart({ values }: { values: number[] }) {
   );
 }
 
-function MoodRow({ label }: { label: string }) {
-  let emoji = '📝';
-
-  if (label === 'Easy') emoji = '😊';
-  else if (label === 'Okay') emoji = '🙂';
-  else if (label === 'Hard') emoji = '😓';
-  else if (label == 'No data') emoji = '🫥';
-
-  return (
-    <View style={styles.moodWrap}>
-      <Text style={styles.moodEmoji}>{emoji}</Text>
-    </View>
-  );
-}
-
 function StatsBlock({
   completionPercent,
-  streakPercent,
+  consistencyPercent,
 }: {
   completionPercent: number;
-  streakPercent: number;
+  consistencyPercent: number;
 }) {
   return (
     <View style={styles.statsBlock}>
@@ -204,8 +193,8 @@ function StatsBlock({
         <Text style={styles.statsLabel}>completion</Text>
       </View>
       <View>
-        <Text style={styles.statsBig}>{streakPercent}%</Text>
-        <Text style={styles.statsLabel}>streak score</Text>
+        <Text style={styles.statsBig}>{consistencyPercent}%</Text>
+        <Text style={styles.statsLabel}>consistency</Text>
       </View>
     </View>
   );
@@ -216,6 +205,12 @@ export default function RecapScreen() {
     const [showInfoModal, setShowInfoModal] = useState(false);
     
     const { recap, isLoading, isFromCache, weekKey } = useRecap();
+    const [activeIndex, setActiveIndex] = useState(0);
+    const handleSnap = (event: any) => {
+        const offsetX = event.nativeEvent.contentOffset.x;
+        const index = Math.round(offsetX / SNAP_INTERVAL);
+        setActiveIndex(Math.max(0, Math.min(index, snapshotCards.length - 1)));
+    };
 
     if (isLoading || !recap) {
         return (
@@ -227,10 +222,7 @@ export default function RecapScreen() {
         );
     }
 
-    const animalImageUri =
-        ANIMAL_IMAGE_BY_TITLE[recap.archetype.title] ??
-        'https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?auto=format&fit=crop&w=1200&q=80';
-
+    const animalImage = ANIMAL_IMAGE_BY_ANIMAL[recap.archetype.animal] ?? ANIMAL_IMAGE_BY_ANIMAL.Fallback;
     const weekItems = recap.weekItems;
 
     const weekBarValues = recap.weekItems.map((item) => {
@@ -238,86 +230,168 @@ export default function RecapScreen() {
         return Math.max(8, Math.round(item.ratio * 80));
     });
 
+    const categoryLeader = recap.snapshots.categoryLeader;
+    const rhythmCheck = recap.snapshots.rhythmCheck;
+    const moodBoard = recap.snapshots.moodBoard;
+    const completionPulse = recap.snapshots.completionPulse;
+
+    const hasOnlyOneCategory =
+    !categoryLeader.weakestCategory ||
+    categoryLeader.topCategory === categoryLeader.weakestCategory;
+
+    const categoryGap = Math.abs(
+    categoryLeader.topPercent - categoryLeader.weakestPercent
+    );
+
+    const categoriesAreBasicallyTied = !hasOnlyOneCategory && categoryGap <= 5;
+
+    const sameBestAndWorstDay =
+    !rhythmCheck.weakestDay || rhythmCheck.bestDay === rhythmCheck.weakestDay;
+
     const snapshotCards: SnapshotCard[] = [
-        {
+    {
         id: 'completion-pulse',
         title: 'Completion Pulse',
-        subtitle: `${recap.snapshots.completionPulse.percent}%`,
+        subtitle: `${completionPulse.percent}%`,
         accent: '#6E8B62',
         body: (
-            <View>
+        <View>
             <Text style={styles.cardBodyHeadline}>
-                {recap.snapshots.completionPulse.percent}% complete
+            {completionPulse.percent}% complete
             </Text>
             <Text style={styles.cardBodySubtext}>
-                {recap.snapshots.completionPulse.insight}
+            {completionPulse.insight}
             </Text>
             <StatsBlock
-                completionPercent={recap.snapshots.completionPulse.percent}
-                streakPercent={Math.round(recap.scores.streakScore * 100)}
+            completionPercent={completionPulse.percent}
+            consistencyPercent={Math.round(recap.scores.streakScore * 100)}
             />
-            </View>
+        </View>
         ),
-        },
-        {
+    },
+    {
         id: 'category-leader',
         title: 'Category Leader',
-        subtitle: recap.snapshots.categoryLeader.topCategory,
+        subtitle: categoryLeader.topCategory,
         accent: '#8E6E53',
         body: (
             <View>
-            <Text style={styles.cardBodyHeadline}>
-                Top: {recap.snapshots.categoryLeader.topCategory} ({recap.snapshots.categoryLeader.topPercent}%)
-            </Text>
-            <Text style={styles.cardBodySubtext}>
-                Needs attention: {recap.snapshots.categoryLeader.weakestCategory} ({recap.snapshots.categoryLeader.weakestPercent}%)
-            </Text>
+            <View style={styles.categoryHero}>
+                <Text style={styles.categoryHeroLabel}>Top category</Text>
+                <Text style={styles.categoryHeroName}>{categoryLeader.topCategory}</Text>
+                <Text style={styles.categoryHeroPercent}>{categoryLeader.topPercent}%</Text>
+            </View>
+
+            {hasOnlyOneCategory ? (
+                <View style={styles.categorySupportBox}>
+                <Text style={styles.categorySupportText}>
+                    This was your main focus category this week.
+                </Text>
+                </View>
+            ) : categoriesAreBasicallyTied ? (
+                <View style={styles.categorySupportBox}>
+                <Text style={styles.categorySupportText}>
+                    Your categories stayed fairly balanced overall.
+                </Text>
+                </View>
+            ) : (
+                <View style={styles.categoryCompareRow}>
+                <View style={styles.categoryCompareTextWrap}>
+                    <Text style={styles.categoryCompareLabel}>Opportunity</Text>
+                    <Text style={styles.categoryCompareName}>
+                    {categoryLeader.weakestCategory}
+                    </Text>
+                </View>
+
+                <View style={styles.categoryComparePercentPill}>
+                    <Text style={styles.categoryComparePercent}>
+                    {categoryLeader.weakestPercent}%
+                    </Text>
+                </View>
+                </View>
+            )}
+
             <Text style={[styles.cardBodySubtext, { marginTop: 14 }]}>
-                {recap.snapshots.categoryLeader.insight}
+                {categoryLeader.insight}
             </Text>
             </View>
         ),
-        },
-        {
+    },
+    {
         id: 'rhythm-check',
         title: 'Rhythm Check',
-        subtitle: `${recap.snapshots.rhythmCheck.strongDays} strong days`,
+        subtitle: `${rhythmCheck.strongDays} strong day${rhythmCheck.strongDays === 1 ? '' : 's'}`,
         accent: '#7B8F6A',
         body: (
-            <View>
+        <View>
             <Text style={styles.cardBodyHeadline}>
-                Best: {recap.snapshots.rhythmCheck.bestDay}
+            {sameBestAndWorstDay ? 'Steady all week' : `Best: ${rhythmCheck.bestDay}`}
             </Text>
+
             <Text style={styles.cardBodySubtext}>
-                Weakest: {recap.snapshots.rhythmCheck.weakestDay}
+            {sameBestAndWorstDay
+                ? 'No single day stood out above or below the rest.'
+                : `Needed support: ${rhythmCheck.weakestDay}`}
             </Text>
+
             <MiniBarChart values={weekBarValues} />
+
             <Text style={[styles.cardBodySubtext, { marginTop: 10 }]}>
-                {recap.snapshots.rhythmCheck.insight}
+            {rhythmCheck.insight}
             </Text>
-            </View>
+        </View>
         ),
-        },
-        {
+    },
+    {
         id: 'mood-board',
         title: 'Mood Board',
-        subtitle: recap.snapshots.moodBoard.label,
+        subtitle: moodBoard.label,
         accent: '#5F7A61',
         body: (
             <View>
-            <Text style={styles.cardBodyHeadline}>
-                Difficulty:{' '}
-                {recap.snapshots.moodBoard.averageDifficulty == null
-                ? 'No data'
-                : `${recap.snapshots.moodBoard.averageDifficulty.toFixed(1)} / 5`}
+            {/* HERO MOOD */}
+            <View style={styles.moodHero}>
+                <View style={styles.moodEmojiWrap}>
+                    <Text style={styles.moodEmoji}>
+                    {getMoodEmoji(moodBoard.label)}
+                    </Text>
+                </View>
+
+                <Text style={styles.moodLabel}>Weekly Mood</Text>
+                <Text style={styles.moodName}>{moodBoard.label}</Text>
+            </View>
+
+            {/* DIFFICULTY */}
+            <View style={styles.moodDifficultyRow}>
+                <Text style={styles.moodDifficultyLabel}>Difficulty</Text>
+                <Text style={styles.moodDifficultyValue}>
+                {moodBoard.averageDifficulty == null
+                    ? '—'
+                    : `${moodBoard.averageDifficulty.toFixed(1)} / 5`}
+                </Text>
+            </View>
+
+            {/* BAR */}
+            {moodBoard.averageDifficulty != null && (
+                <View style={styles.moodBarTrack}>
+                <View
+                    style={[
+                    styles.moodBarFill,
+                    {
+                        width: `${(moodBoard.averageDifficulty / 5) * 100}%`,
+                    },
+                    ]}
+                />
+                </View>
+            )}
+
+            {/* INSIGHT */}
+            <Text style={[styles.cardBodySubtext, { marginTop: 14 }]}>
+                {moodBoard.insight}
             </Text>
-            <Text style={styles.cardBodySubtext}>
-                {recap.snapshots.moodBoard.insight}
-            </Text>
-            <MoodRow label={recap.snapshots.moodBoard.label} />
             </View>
         ),
-        },
+    },
     ];
 
     return (
@@ -334,12 +408,10 @@ export default function RecapScreen() {
             ]}
             showsVerticalScrollIndicator={false}
         >
-            <TouchableOpacity 
-            style={styles.backBtn} 
-            onPress={() => router.push('/home')}
+            <View
+            style={styles.space}
             >
-                <Text style={styles.backBtnText}>← Back</Text>
-            </TouchableOpacity>
+            </View>
 
             <Modal
             visible={showInfoModal}
@@ -349,18 +421,19 @@ export default function RecapScreen() {
             >
             <View style={styles.modalOverlay}>
                 <View style={styles.modalCard}>
-                <Text style={styles.modalTitle}>About Your Recap</Text>
+                <Text style={styles.modalTitle}>About Habitat Wrapped</Text>
 
                 <Text style={styles.modalText}>
-                    This screen gives you a weekly summary of your health and habit activity.
-                    It highlights your progress throughout the week, shows an animal that
-                    matches your overall behavior, and includes snapshot cards for trends
-                    like habit score, sleep, and mood.
+                    This screen is your weekly reflection space. It highlights how consistently
+                    you showed up, which areas led the week, and the overall rhythm behind your habits.
                 </Text>
 
                 <Text style={styles.modalText}>
-                    Think of it like a Spotify Wrapped for your routines — a visual recap of
-                    how your week went.
+                    Think of it as a calm, visual recap of your routines — your own Habitat Wrapped.
+                </Text>
+
+                <Text style={styles.modalText}>
+                    You’ll also see a personalized AI summary here as more weekly patterns become available.
                 </Text>
 
                 <Pressable
@@ -374,24 +447,24 @@ export default function RecapScreen() {
             </Modal>
 
             <View style={styles.topBar}>
-
-            <View style={styles.titleWrap}>
-                <Text numberOfLines={2} style={styles.title}>
-                User's Natural Habitat
-                </Text>
-                <Pressable
-                    style={styles.helpPill}
-                    hitSlop={10}
-                    onPress={() => setShowInfoModal(true)}
-                >
-                    <Text style={styles.helpText}>i</Text>
-                </Pressable>
+                <View style={styles.titleWrap}>
+                    <Text style={styles.titleEyebrow}>Habitat Wrapped</Text>
+                    <Text style={styles.title}>Your Natural Habitat</Text>
+                </View>
             </View>
 
-            <View style={styles.rightSpacer} />
-            </View>
+            <View style={styles.subtitleRow}>
+            <Pressable
+                style={styles.helpPill}
+                onPress={() => setShowInfoModal(true)}
+            >
+                <Text style={styles.helpText}>i</Text>
+            </Pressable>
 
-            <Text style={styles.subtitle}>A recap of your health and habits this week.</Text>
+            <Text style={styles.subtitle}>
+                A recap of your health and habits this week.
+            </Text>
+            </View>
 
             <View style={styles.weekSection}>
             <View style={styles.sectionRow}>
@@ -414,10 +487,7 @@ export default function RecapScreen() {
             <Text style={styles.sectionTitle}>This week, you were a…</Text>
 
             <View style={styles.animalCard}>
-            <Image
-                source={{ uri: animalImageUri }}
-                style={styles.animalImage}
-            />
+            <Image source={animalImage} style={styles.animalImage} />
             <View style={styles.animalTextWrap}>
                 <Text style={styles.animalEyebrow}>behavior match</Text>
                 <Text style={styles.animalType}>{recap.archetype.title}</Text>
@@ -441,22 +511,37 @@ export default function RecapScreen() {
             )}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.snapList}
-            snapToInterval={CARD_WIDTH + CARD_SPACING}
+            snapToInterval={SNAP_INTERVAL}
+            snapToAlignment="start"
             decelerationRate="fast"
+            disableIntervalMomentum
             bounces={false}
             onScroll={Animated.event(
                 [{ nativeEvent: { contentOffset: { x: scrollX } } }],
                 { useNativeDriver: true }
             )}
+            onMomentumScrollEnd={handleSnap}
             scrollEventThrottle={16}
             />
 
+            <View style={styles.pagination}>
+            {snapshotCards.map((_, index) => (
+                <View
+                key={index}
+                style={[
+                    styles.paginationDot,
+                    index === activeIndex && styles.paginationDotActive,
+                ]}
+                />
+            ))}
+            </View>
+
             <View style={styles.summaryCard}>
-            <Text style={styles.summaryEyebrow}>WEEKLY HIGHLIGHT</Text>
-            <Text style={styles.summaryHeadline}>AI Summary.</Text>
-            <Text style={styles.summaryText}>
-                This will be coming soon.
-            </Text>
+                <Text style={styles.summaryEyebrow}>WEEKLY HIGHLIGHT</Text>
+                <Text style={styles.summaryHeadline}>AI Summary</Text>
+                <Text style={styles.summaryText}>
+                    Your personalized reflection will appear here once enough weekly data is available.
+                </Text>
             </View>
         </ScrollView>
         </ImageBackground>
@@ -464,451 +549,738 @@ export default function RecapScreen() {
 }
 
 const styles = StyleSheet.create({
-    background: {
-        flex: 1,
-        backgroundColor: "#EAF6E8",
-    },
-    overlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(250,246,239,0.20)',
-    },
-
-    backBtn: {
-        marginBottom: Spacing.md,
-        alignSelf: 'flex-start',
-        paddingVertical: Spacing.xs,
-        paddingHorizontal: Spacing.sm,
-        backgroundColor: Colors.paleGreen,
-        borderRadius: Radius.sm,
-    },
-    backBtnText: {
-        color: Colors.primaryGreen,
-        fontWeight: '600',
-        fontSize: FontSize.md,
-    },
-
-    container: {
-        paddingTop: Dimensions.get('window').height * 0.05,
-        paddingHorizontal: SIDE_SPACER,
-        paddingBottom: 34,
-    },
-
-    topBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-    },
-    iconButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: COLORS.chip,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(77,58,45,0.10)',
-    },
-    topIcon: {
-        fontSize: 18,
-        color: COLORS.forest,
-    },
-
-    rightSpacer: { width: 5 },
-
-    titleWrap: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 10,
-    },
-    title: {
-        fontSize: 24,
-        color: COLORS.forest,
-        maxWidth: '82%',
-        fontWeight: '700',
-        letterSpacing: 0.2,
-    },
-
-    helpPill: {
-        minWidth: 28,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: COLORS.chip,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(77,58,45,0.10)',
-    },
-    helpText: {
-        color: COLORS.brown,
-        fontSize: 14,
-    },
-
-    subtitle: {
-        marginTop: 12,
-        marginBottom: 18,
-        color: COLORS.bark,
-        fontSize: 15,
-        lineHeight: 22,
-    },
-
-    weekSection: {
-        marginBottom: 10,
-    },
-    sectionRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    sectionEyebrow: {
-        color: COLORS.moss,
-        fontSize: 12,
-        letterSpacing: 1.2,
-    },
-    morePill: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 999,
-        backgroundColor: COLORS.chip,
-        borderWidth: 1,
-        borderColor: 'rgba(77,58,45,0.10)',
-    },
-    moreText: {
-        color: COLORS.brown,
-        fontSize: 12,
-    },
-
-    weekCard: {
-        marginTop: 10,
-        paddingVertical: 14,
-        paddingHorizontal: 10,
-        borderRadius: 22,
-        backgroundColor: COLORS.glass,
-        borderWidth: 1,
-        borderColor: 'rgba(77,58,45,0.08)',
-        alignItems: 'center',
-    },
-    weekList: {
-        paddingRight: 10,
-        gap: 12,
-    },
-
-    dayChip: {
-        alignItems: 'center',
-        gap: 5,
-        minWidth: 35,
-    },
-    dateNumber: {
-        fontSize: 12,
-        color: COLORS.brown,
-    },
-    dateNumberToday: {
-        color: COLORS.forest,
-    },
-    circle: {
-        width: 30,
-        height: 30,
-        borderRadius: 15,
-        backgroundColor: 'rgba(255,255,255,0.72)',
-        borderWidth: 1.4,
-        borderColor: 'rgba(77,58,45,0.18)',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    circleDone: {
-        backgroundColor: 'rgba(95,122,97,0.18)',
-        borderColor: 'rgba(35,75,58,0.28)',
-    },
-    circleToday: {
-        borderColor: COLORS.forest,
-        borderWidth: 1.8,
-    },
-    check: {
-        color: COLORS.forest,
-        fontSize: 14,
-        fontWeight: '900',
-    },
-    dayLabel: {
-        fontSize: 12,
-        color: COLORS.brown,
-    },
-    dayLabelToday: {
-        color: COLORS.forest,
-    },
-
-    sectionTitle: {
-        marginTop: 18,
-        fontSize: 22,
-        color: COLORS.forest,
-        fontWeight: '700',
-    },
-
-    animalCard: {
-        marginTop: 12,
-        borderRadius: 24,
-        overflow: 'hidden',
-        backgroundColor: COLORS.softWhite,
-        borderWidth: 1,
-        borderColor: 'rgba(77,58,45,0.08)',
-    },
-    animalImage: {
-        width: '100%',
-        height: 215,
-    },
-    animalTextWrap: {
-        padding: 16,
-    },
-    animalEyebrow: {
-        color: COLORS.moss,
-        fontSize: 11,
-        letterSpacing: 1.1,
-        textTransform: 'uppercase',
-    },
-    animalType: {
-        marginTop: 4,
-        fontSize: 28,
-        color: COLORS.bark,
-        fontFamily: FONTS.title,
-        fontWeight: '700',
-    },
-    animalDescription: {
-        marginTop: 8,
-        fontSize: 14,
-        lineHeight: 21,
-        color: COLORS.brown,
-    },
-
-    snapHeaderRow: {
-        marginTop: 6,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-end',
-    },
-    snapHint: {
-        color: COLORS.brown,
-        fontSize: 12,
-    },
-
-    snapList: {
-        paddingTop: 14,
-        paddingBottom: 8,
-        paddingRight: SIDE_SPACER,
-    },
-    snapshotCard: {
-        width: CARD_WIDTH,
-        marginRight: CARD_SPACING,
-        padding: 16,
-        borderRadius: 24,
-        backgroundColor: COLORS.softWhite,
-        borderWidth: 1,
-        borderColor: 'rgba(77,58,45,0.08)',
-        shadowColor: '#5A4635',
-        shadowOpacity: 0.10,
-        shadowRadius: 16,
-        shadowOffset: { width: 0, height: 8 },
-        elevation: 4,
-    },
-    snapshotHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'baseline',
-    },
-    snapshotTitle: {
-        color: COLORS.bark,
-        fontSize: 18,
-    },
-    snapshotSubtitle: {
-        color: COLORS.forest,
-        fontSize: 16,
-    },
-    snapshotAccent: {
-        marginTop: 10,
-        width: 44,
-        height: 5,
-        borderRadius: 999,
-    },
-    snapshotBody: {
-        marginTop: 16,
-        minHeight: 160,
-        justifyContent: 'flex-start',
-    },
-
-    cardBodyHeadline: {
-        fontSize: 19,
-        color: COLORS.forest,
-        fontWeight: '700',
-    },
-    cardBodySubtext: {
-        marginTop: 6,
-        color: COLORS.brown,
-        fontSize: 14,
-        lineHeight: 20,
-    },
-
-    chartWrap: {
-        marginTop: 16,
-        flexDirection: 'row',
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
-        height: 90,
-        gap: 8,
-    },
-    barColumn: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-    },
-    bar: {
-        width: '100%',
-        borderRadius: 999,
-        backgroundColor: COLORS.moss,
-        opacity: 0.9,
-    },
-
-    moodWrap: {
-        marginTop: 16,
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-    },
-    moodPill: {
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        borderRadius: 999,
-        backgroundColor: 'rgba(175,195,162,0.22)',
-    },
-    moodEmoji: {
-        fontSize: 48,
-        textAlign: 'center',
-    },
-
-    statsBlock: {
-        marginTop: 16,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        backgroundColor: 'rgba(255,255,255,0.60)',
-        borderRadius: 18,
-        padding: 14,
-    },
-    statsBig: {
-        fontSize: 28,
-        color: COLORS.bark,
-        fontWeight: '700',
-    },
-    statsLabel: {
-        marginTop: 2,
-        color: COLORS.brown,
-        fontSize: 12,
-    },
-
-    summaryCard: {
-        marginTop: 18,
-        padding: 18,
-        borderRadius: 24,
-        backgroundColor: 'rgba(247,241,232,0.88)',
-        borderWidth: 1,
-        borderColor: 'rgba(77,58,45,0.08)',
-    },
-    summaryEyebrow: {
-        color: COLORS.moss,
-        fontSize: 11,
-        letterSpacing: 1.1,
-    },
-    summaryHeadline: {
-        marginTop: 6,
-        fontSize: 22,
-        color: COLORS.forest,
-        fontWeight: '700',
-    },
-    summaryText: {
-        marginTop: 8,
-        fontSize: 14,
-        lineHeight: 21,
-        color: COLORS.brown,
-    },
-
-    modalOverlay: {
+  background: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.15)',
+    backgroundColor: '#EEF6EC',
+  },
+
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(250,246,239,0.18)',
+  },
+
+  container: {
+    paddingTop: Dimensions.get('window').height * 0.055,
+    paddingHorizontal: SIDE_SPACER,
+    paddingBottom: 42,
+  },
+
+  topBar: {
+    marginBottom: 4,
+  },
+
+  titleWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  titleEyebrow: {
+    color: COLORS.moss,
+    fontSize: 12,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    fontWeight: '700',
+  },
+
+  title: {
+    fontSize: 30,
+    color: COLORS.forest,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textAlign: 'center',
+  },
+
+  rightSpacer: {
+    width: 5,
+  },
+
+  subtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginTop: 14,
+    marginBottom: 24,
+    paddingHorizontal: 2,
+  },
+
+  helpPill: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.82)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(77,58,45,0.10)',
+    marginTop: 1,
+  },
+
+  helpText: {
+    color: COLORS.brown,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
+  subtitle: {
+    flex: 1,
+    color: COLORS.bark,
+    fontSize: 15,
+    lineHeight: 23,
+  },
+
+  weekSection: {
+    marginBottom: 16,
+  },
+
+  sectionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    gap: 12,
+  },
+
+  sectionEyebrow: {
+    color: COLORS.moss,
+    fontSize: 12,
+    letterSpacing: 1.5,
+    fontWeight: '700',
+  },
+
+  weekKeyText: {
+    color: COLORS.brown,
+    fontSize: 12,
+  },
+
+  weekCard: {
+    marginTop: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.68)',
+    borderWidth: 1,
+    borderColor: 'rgba(77,58,45,0.08)',
+    alignItems: 'center',
+    shadowColor: '#5A4635',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
+
+  weekList: {
+    paddingRight: 10,
+    gap: 14,
+  },
+
+  dayChip: {
+    alignItems: 'center',
+    gap: 6,
+    minWidth: 38,
+  },
+
+  dateNumber: {
+    fontSize: 12,
+    color: COLORS.brown,
+    fontWeight: '600',
+  },
+
+  dateNumberToday: {
+    color: COLORS.forest,
+    fontWeight: '700',
+  },
+
+  circle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.86)',
+    borderWidth: 1.3,
+    borderColor: 'rgba(77,58,45,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  circleDone: {
+    backgroundColor: 'rgba(95,122,97,0.16)',
+    borderColor: 'rgba(35,75,58,0.24)',
+  },
+
+  circleToday: {
+    borderColor: COLORS.forest,
+    borderWidth: 1.9,
+    shadowColor: COLORS.forest,
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+
+  check: {
+    color: COLORS.forest,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  futureDot: {
+    fontSize: 16,
+    color: COLORS.brown,
+  },
+
+  dayLabel: {
+    fontSize: 12,
+    color: COLORS.brown,
+    fontWeight: '500',
+  },
+
+  dayLabelToday: {
+    color: COLORS.forest,
+    fontWeight: '700',
+  },
+
+  sectionTitle: {
+    marginTop: 20,
+    fontSize: 24,
+    color: COLORS.forest,
+    fontWeight: '700',
+  },
+
+  animalCard: {
+    marginTop: 14,
+    borderRadius: 28,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.78)',
+    borderWidth: 1,
+    borderColor: 'rgba(77,58,45,0.08)',
+    shadowColor: '#4B3A2F',
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5,
+  },
+
+  animalImage: {
+    width: '100%',
+    height: 230,
+    backgroundColor: 'rgba(175,195,162,0.12)',
+  },
+
+  animalTextWrap: {
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 20,
+  },
+
+  animalEyebrow: {
+    color: COLORS.moss,
+    fontSize: 11,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    fontWeight: '700',
+  },
+
+  animalType: {
+    marginTop: 6,
+    fontSize: 30,
+    color: COLORS.bark,
+    fontWeight: '700',
+  },
+
+  animalDescription: {
+    marginTop: 10,
+    fontSize: 15,
+    lineHeight: 23,
+    color: COLORS.brown,
+  },
+
+  snapHeaderRow: {
+    marginTop: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+
+  snapHint: {
+    color: COLORS.brown,
+    fontSize: 12,
+  },
+
+  snapList: {
+    paddingTop: 16,
+    paddingBottom: 10,
+    paddingHorizontal: HORIZONTAL_PADDING,
+  },
+
+  snapshotCardWrap: {
+    width: SNAP_INTERVAL,
+  },
+
+  snapshotCard: {
+    width: CARD_WIDTH,
+    padding: 18,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255,255,255,0.78)',
+    borderWidth: 1,
+    borderColor: 'rgba(77,58,45,0.08)',
+    shadowColor: '#5A4635',
+    shadowOpacity: 0.11,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+  },
+
+  snapshotHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+
+  snapshotTitle: {
+    color: COLORS.bark,
+    fontSize: 18,
+    fontWeight: '700',
+    flex: 1,
+  },
+
+  snapshotSubtitle: {
+    color: COLORS.forest,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  snapshotAccent: {
+    marginTop: 12,
+    width: 48,
+    height: 6,
+    borderRadius: 999,
+  },
+
+  snapshotBody: {
+    marginTop: 18,
+    minHeight: 168,
+    justifyContent: 'flex-start',
+  },
+
+  cardBodyHeadline: {
+    fontSize: 20,
+    color: COLORS.forest,
+    fontWeight: '700',
+    lineHeight: 26,
+  },
+
+  cardBodySubtext: {
+    marginTop: 8,
+    color: COLORS.brown,
+    fontSize: 14,
+    lineHeight: 21,
+  },
+
+  chartWrap: {
+    marginTop: 18,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    height: 94,
+    gap: 8,
+    paddingHorizontal: 2,
+  },
+
+  barColumn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+
+  bar: {
+    width: '100%',
+    borderRadius: 999,
+    backgroundColor: COLORS.moss,
+    opacity: 0.92,
+  },
+
+  moodEmoji: {
+    fontSize: 34,
+    marginBottom: 6,
+  },
+
+  moodEmojiWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.75)',
+    borderWidth: 1,
+    borderColor: 'rgba(77,58,45,0.08)',
+    marginBottom: 12,
+  },
+
+  statsBlock: {
+    marginTop: 18,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255,255,255,0.66)',
+    borderRadius: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(77,58,45,0.05)',
+  },
+
+  statsBig: {
+    fontSize: 28,
+    color: COLORS.bark,
+    fontWeight: '700',
+  },
+
+  statsLabel: {
+    marginTop: 4,
+    color: COLORS.brown,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+
+  summaryCard: {
+    marginTop: 22,
+    padding: 20,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255,255,255,0.72)',
+    borderWidth: 1,
+    borderColor: 'rgba(77,58,45,0.08)',
+    shadowColor: '#5A4635',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
+
+  summaryEyebrow: {
+    color: COLORS.moss,
+    fontSize: 11,
+    letterSpacing: 1.3,
+    textTransform: 'uppercase',
+    fontWeight: '700',
+  },
+
+  summaryHeadline: {
+    marginTop: 8,
+    fontSize: 24,
+    color: COLORS.forest,
+    fontWeight: '700',
+  },
+
+  summaryText: {
+    marginTop: 10,
+    fontSize: 14,
+    lineHeight: 22,
+    color: COLORS.brown,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(28,34,28,0.24)',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
-    },
+  },
 
-    modalCard: {
+  modalCard: {
     width: '100%',
-    borderRadius: 24,
-    backgroundColor: 'rgba(247,241,232,0.98)',
-    padding: 22,
+    borderRadius: 28,
+    backgroundColor: 'rgba(250,245,236,0.98)',
+    padding: 24,
     borderWidth: 1,
     borderColor: 'rgba(77,58,45,0.10)',
-    },
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 6,
+  },
 
-    modalTitle: {
-    fontSize: 22,
+  modalTitle: {
+    fontSize: 24,
     color: COLORS.forest,
     fontWeight: '700',
-    marginBottom: 10,
-    },
+    marginBottom: 12,
+  },
 
-    modalText: {
+  modalText: {
     fontSize: 14,
-    lineHeight: 21,
+    lineHeight: 22,
     color: COLORS.brown,
     marginBottom: 12,
-    },
+  },
 
-    modalButton: {
+  modalButton: {
     marginTop: 8,
     alignSelf: 'flex-end',
     backgroundColor: COLORS.forest,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
     borderRadius: 999,
-    },
+  },
 
-    modalButtonText: {
+  modalButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
-    },  
+    fontWeight: '700',
+  },
 
-    loadingWrap: {
+  loadingWrap: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: Dimensions.get('window').height,
-    },
+    paddingHorizontal: 24,
+  },
 
-    loadingText: {
-        color: COLORS.forest,
-        fontSize: 16,
-        fontWeight: '600',
-    },
+  loadingText: {
+    color: COLORS.forest,
+    fontSize: 17,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
 
-    futureDot: {
-        fontSize: 16,
-        color: COLORS.brown,
-    },
+  statusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
 
-    statusRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 10,
-    },
+  cacheText: {
+    color: COLORS.moss,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
 
-    weekKeyText: {
-        color: COLORS.brown,
-        fontSize: 12,
-    },
+  space: {
+    marginBottom: 8,
+  },
 
-    cacheText: {
-        color: COLORS.moss,
-        fontSize: 12,
-        fontWeight: '700',
-        textTransform: 'uppercase',
-    },
+  backBtn: {
+    marginBottom: Spacing.md,
+    alignSelf: 'flex-start',
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    backgroundColor: Colors.paleGreen,
+    borderRadius: Radius.sm,
+  },
+
+  backBtnText: {
+    color: Colors.primaryGreen,
+    fontWeight: '600',
+    fontSize: FontSize.md,
+  },
+
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.chip,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(77,58,45,0.10)',
+  },
+
+  topIcon: {
+    fontSize: 18,
+    color: COLORS.forest,
+  },
+
+  morePill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: COLORS.chip,
+    borderWidth: 1,
+    borderColor: 'rgba(77,58,45,0.10)',
+  },
+
+  moreText: {
+    color: COLORS.brown,
+    fontSize: 12,
+  },
+
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 4,
+    gap: 8,
+  },
+
+  paginationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(77,58,45,0.18)',
+  },
+
+  paginationDotActive: {
+    width: 20,
+    backgroundColor: COLORS.forest,
+  },
+
+  categoryHero: {
+    marginTop: 4,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: 'rgba(142,110,83,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(142,110,83,0.16)',
+    alignItems: 'flex-start',
+  },
+
+  categoryHeroLabel: {
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    color: COLORS.brown,
+    marginBottom: 6,
+    fontWeight: '700',
+  },
+
+  categoryHeroName: {
+    fontSize: 24,
+    color: COLORS.bark,
+    fontWeight: '700',
+    lineHeight: 30,
+  },
+
+  categoryHeroPercent: {
+    marginTop: 6,
+    fontSize: 16,
+    color: COLORS.forest,
+    fontWeight: '700',
+  },
+
+  categorySupportBox: {
+    marginTop: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.60)',
+    borderWidth: 1,
+    borderColor: 'rgba(77,58,45,0.06)',
+  },
+
+  categorySupportText: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: COLORS.brown,
+  },
+
+  categoryCompareRow: {
+    marginTop: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.60)',
+    borderWidth: 1,
+    borderColor: 'rgba(77,58,45,0.06)',
+    gap: 12,
+  },
+
+  categoryCompareTextWrap: {
+    flex: 1,
+  },
+
+  categoryCompareLabel: {
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    color: COLORS.brown,
+    marginBottom: 4,
+    fontWeight: '700',
+  },
+
+  categoryCompareName: {
+    fontSize: 15,
+    color: COLORS.bark,
+    fontWeight: '600',
+  },
+
+  categoryComparePercentPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(95,122,97,0.12)',
+  },
+
+  categoryComparePercent: {
+    fontSize: 13,
+    color: COLORS.forest,
+    fontWeight: '700',
+  },
+
+  moodHero: {
+    marginTop: 4,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: 'rgba(95,122,97,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(95,122,97,0.18)',
+  },
+
+  moodLabel: {
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    color: COLORS.brown,
+    marginBottom: 4,
+    fontWeight: '700',
+  },
+
+  moodName: {
+    fontSize: 22,
+    color: COLORS.bark,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+
+  moodDifficultyRow: {
+    marginTop: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  moodDifficultyLabel: {
+    fontSize: 13,
+    color: COLORS.brown,
+  },
+
+  moodDifficultyValue: {
+    fontSize: 14,
+    color: COLORS.forest,
+    fontWeight: '700',
+  },
+
+  moodBarTrack: {
+    marginTop: 10,
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(77,58,45,0.08)',
+    overflow: 'hidden',
+  },
+
+  moodBarFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: COLORS.moss,
+  },
 });
