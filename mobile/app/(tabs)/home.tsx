@@ -1,5 +1,6 @@
 import api from "@/lib/api";
 import { Ionicons } from "@expo/vector-icons";
+import { FA6Style } from "@expo/vector-icons/build/FontAwesome6";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -196,17 +197,17 @@ export default function HomeScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item) => item.id}
-            snapToInterval={SNAP_INTERVAL}
+            snapToOffsets={habits.map((_, i) => i * SNAP_INTERVAL)}
             decelerationRate="fast"
-            snapToAlignment="start"
+            snapToAlignment="center"
             contentContainerStyle={{
-              paddingHorizontal: (width - CARD_WIDTH) / 2,
+              paddingHorizontal: 20,
             }}
             onScroll={Animated.event(
               [{ nativeEvent: { contentOffset: { x: scrollX } } }],
               { useNativeDriver: true },
             )}
-            scrollEventThrottle={16}
+            scrollEventThrottle={20}
             renderItem={({ item, index }) => {
               const inputRange = [
                 (index - 1) * SNAP_INTERVAL,
@@ -222,14 +223,15 @@ export default function HomeScreen() {
 
               const opacity = scrollX.interpolate({
                 inputRange,
-                outputRange: [0.6, 1, 0.6],
+                outputRange: [0.4, 1, 0.4],
                 extrapolate: "clamp",
               });
 
               return (
                 <Animated.View
                   style={{
-                    width: SNAP_INTERVAL,
+                    width: CARD_WIDTH,
+                   // marginHorizontal: SPACING,
                     alignItems: "center",
                     transform: [{ scale }],
                     opacity,
@@ -498,7 +500,7 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   habitCardNew: {
-    width: 260,
+    width: CARD_WIDTH,
     height: 180,
     backgroundColor: "#2E6F40",
     borderRadius: 24,
