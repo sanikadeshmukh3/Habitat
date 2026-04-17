@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from "react-native";
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
 console.log("API URL:", API_BASE_URL);
 
 const api = axios.create({
@@ -17,8 +17,6 @@ api.interceptors.request.use(async (config) => {
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
-  } else {
-    delete config.headers.Authorization;
   }
 
   return config;
