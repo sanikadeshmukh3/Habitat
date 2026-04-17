@@ -130,318 +130,294 @@ export default function HomeScreen() {
   };
 
   return (
-    <>
-      <ImageBackground
-        source={require("../../assets/images/leaf.png")}
-        style={styles.background}
-        imageStyle={{ opacity: 0.08 }} // want the leaves to be a bit transparent on the screen
+    <ImageBackground
+      source={require("../../assets/images/leaf.png")}
+      style={styles.background}
+      imageStyle={{ opacity: 0.08 }} // want the leaves to be a bit transparent on the screen
+    >
+      <View
+        style={[
+          styles.overlay,
+          {
+            shadowColor: "#9BE7A0",
+            shadowRadius: 40,
+          },
+        ]}
       >
-        <View
-          style={[
-            styles.overlay,
-            {
-              shadowColor: "#9BE7A0",
-              shadowRadius: 40,
-            },
-          ]}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
         >
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
-          >
-            <View style={styles.topNav}>
-              <TouchableOpacity
-                style={styles.navButton}
-                activeOpacity={0.7}
-                onPress={() => router.push("/calendar")}
-              >
-                <Text style={styles.navText}>Calendar</Text>
-              </TouchableOpacity>
+          {/* TOP NAV */}
+          <View style={styles.topNav}>
+            <TouchableOpacity
+              style={styles.navButton}
+              activeOpacity={0.7}
+              onPress={() => router.push("/calendar")}
+            >
+              <Text style={styles.navText}>Calendar</Text>
+            </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.navButton}
-                activeOpacity={0.7}
-                onPress={() => router.push("/settings")}
-              >
-                <Text style={styles.navText}>Settings</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.navButton}
+              activeOpacity={0.7}
+              onPress={() => router.push("/settings")}
+            >
+              <Text style={styles.navText}>Settings</Text>
+            </TouchableOpacity>
+          </View>
 
-            <View style={styles.welcomeRow}>
-              <Text style={styles.welcome}>Welcome!</Text>
+          <View style={styles.welcomeRow}>
+            <Text style={styles.welcome}>Welcome!</Text>
 
-              <TouchableOpacity
-                onPress={() => router.push("/profile")}
-                style={styles.profileButton}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name="person-circle-outline"
-                  size={34}
-                  color="#2E6F40"
-                />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.pointsLabel}>Current Points</Text>
+            <TouchableOpacity
+              onPress={() => router.push("/profile")}
+              style={styles.profileButton}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="person-circle-outline"
+                size={34}
+                color="#2E6F40"
+              />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.pointsLabel}>Current Points</Text>
 
-            <View style={styles.pointsBox}>
-              <Text style={styles.points}>112</Text>
-            </View>
+          <View style={styles.pointsBox}>
+            <Text style={styles.points}>112</Text>
+          </View>
 
-            <Text style={styles.sectionTitle}>Your Habits</Text>
+          {/* HABITS */}
+          <Text style={styles.sectionTitle}>Your Habits</Text>
 
-            <Animated.FlatList
-              data={habits}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => item.id}
-              snapToInterval={SNAP_INTERVAL}
-              decelerationRate="fast"
-              snapToAlignment="start"
-              contentContainerStyle={{
-                paddingHorizontal: (width - CARD_WIDTH) / 2,
-              }}
-              onScroll={Animated.event(
-                [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-                { useNativeDriver: true },
-              )}
-              scrollEventThrottle={16}
-              renderItem={({ item, index }) => {
-                const inputRange = [
-                  (index - 1) * SNAP_INTERVAL,
-                  index * SNAP_INTERVAL,
-                  (index + 1) * SNAP_INTERVAL,
-                ];
+          <Animated.FlatList
+            data={habits}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item) => item.id}
+            snapToInterval={SNAP_INTERVAL}
+            decelerationRate="fast"
+            snapToAlignment="start"
+            contentContainerStyle={{
+              paddingHorizontal: (width - CARD_WIDTH) / 2,
+            }}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+              { useNativeDriver: true },
+            )}
+            scrollEventThrottle={16}
+            renderItem={({ item, index }) => {
+              const inputRange = [
+                (index - 1) * SNAP_INTERVAL,
+                index * SNAP_INTERVAL,
+                (index + 1) * SNAP_INTERVAL,
+              ];
 
-                const scale = scrollX.interpolate({
-                  inputRange,
-                  outputRange: [0.9, 1, 0.9],
-                  extrapolate: "clamp",
-                });
+              const scale = scrollX.interpolate({
+                inputRange,
+                outputRange: [0.9, 1, 0.9],
+                extrapolate: "clamp",
+              });
 
-                const opacity = scrollX.interpolate({
-                  inputRange,
-                  outputRange: [0.6, 1, 0.6],
-                  extrapolate: "clamp",
-                });
+              const opacity = scrollX.interpolate({
+                inputRange,
+                outputRange: [0.6, 1, 0.6],
+                extrapolate: "clamp",
+              });
 
-                return (
-                  <Animated.View
-                    style={{
-                      width: SNAP_INTERVAL,
-                      alignItems: "center",
-                      transform: [{ scale }],
-                      opacity,
-                    }}
-                  >
-                    <TouchableOpacity
-                      style={styles.habitCardNew}
-                      activeOpacity={0.9}
-                    >
-                      {/* overlays */}
-                      <View style={styles.cardOverlay} />
-
-                      {/* content */}
-                      <Text style={styles.habitTitleNew}>{item.name}</Text>
-                    </TouchableOpacity>
-                  </Animated.View>
-                );
-              }}
-            />
-
-            <View style={styles.fabWrapper}>
-              {open && (
+              return (
                 <Animated.View
-                  style={[
-                    styles.popupContainer,
-                    {
-                      opacity: animation,
-                      transform: [
-                        {
-                          translateY: animation.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [20, 0],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}
+                  style={{
+                    width: SNAP_INTERVAL,
+                    alignItems: "center",
+                    transform: [{ scale }],
+                    opacity,
+                  }}
                 >
-                  <Pressable
-                    style={styles.popupButton}
-                    onPress={() => router.push("/create-habit-ai")}
+                  <TouchableOpacity
+                    style={styles.habitCardNew}
+                    activeOpacity={0.9}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/habit-detail",
+                        params: { id: item.id },
+                      })
+                    }
                   >
-                    <Text style={styles.popupText}>Add a habit with AI</Text>
-                  </Pressable>
+                    {/* overlays */}
+                    <View style={styles.cardOverlay} />
 
-                  <Pressable
-                    style={styles.popupButton}
-                    onPress={() => router.push("/create-habit")}
-                  >
-                    <Text style={styles.popupText}>My Own Habit</Text>
-                  </Pressable>
+                    {/* content */}
+                    <Text style={styles.habitTitleNew}>{item.name}</Text>
+                  </TouchableOpacity>
                 </Animated.View>
-              )}
+              );
+            }}
+          />
 
-              <TouchableOpacity style={styles.fab} onPress={toggleMenu}>
-                <Text style={styles.fabText}>+</Text>
+          {/* FAB */}
+          <View style={styles.fabWrapper}>
+            {open && (
+              <Animated.View style={styles.popupContainer}>
+                <Pressable
+                  style={styles.popupButton}
+                  onPress={() => router.push("/create-habit-ai")}
+                >
+                  <Text style={styles.popupText}>Add a habit with AI</Text>
+                </Pressable>
+
+                <Pressable
+                  style={styles.popupButton}
+                  onPress={() => router.push("/create-habit")}
+                >
+                  <Text style={styles.popupText}>My Own Habit</Text>
+                </Pressable>
+              </Animated.View>
+            )}
+
+            <TouchableOpacity style={styles.fab} onPress={toggleMenu}>
+              <Text style={styles.fabText}>+</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* NETWORK CARD */}
+          <View style={[styles.sectionCard, { height: 300 }]}>
+            {/* HEADER */}
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginBottom: 12,
+              }}
+            >
+              <Text style={styles.sectionTitle2}>Network</Text>
+
+              <TouchableOpacity onPress={() => router.push("/search")}>
+                <Ionicons name="person-add-outline" size={24} color="#2E6F40" />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.sectionCard}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 15,
-                }}
+            {/* TABS */}
+            <View style={styles.tabContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.tab,
+                  activeTab === "friends" && styles.activeTab,
+                ]}
+                onPress={() => setActiveTab("friends")}
               >
-                <Text style={styles.sectionTitle2}>Network</Text>
-                <TouchableOpacity onPress={() => router.push("/search" as any)}>
-                  <Ionicons
-                    name="person-add-outline"
-                    size={24}
-                    color="#2E6F40"
-                  />
-                </TouchableOpacity>
-              </View>
-
-              {/* FORCE TAB BUTTONS TO SHOW */}
-              <View style={styles.tabContainer}>
-                <TouchableOpacity
+                <Text
                   style={[
-                    styles.tab,
-                    activeTab === "friends" && styles.activeTab,
+                    styles.tabText,
+                    activeTab === "friends" && styles.activeTabText,
                   ]}
-                  onPress={() => setActiveTab("friends")}
                 >
-                  <Text
-                    style={[
-                      styles.tabText,
-                      activeTab === "friends" && styles.activeTabText,
-                    ]}
-                  >
-                    Friends
-                  </Text>
-                </TouchableOpacity>
+                  Friends
+                </Text>
+              </TouchableOpacity>
 
-                <TouchableOpacity
+              <TouchableOpacity
+                style={[
+                  styles.tab,
+                  activeTab === "requests" && styles.activeTab,
+                ]}
+                onPress={() => setActiveTab("requests")}
+              >
+                <Text
                   style={[
-                    styles.tab,
-                    activeTab === "requests" && styles.activeTab,
+                    styles.tabText,
+                    activeTab === "requests" && styles.activeTabText,
                   ]}
-                  onPress={() => setActiveTab("requests")}
                 >
-                  <Text
-                    style={[
-                      styles.tabText,
-                      activeTab === "requests" && styles.activeTabText,
-                    ]}
-                  >
-                    Requests ({requests?.length || 0})
-                  </Text>
-                </TouchableOpacity>
-              </View>
+                  Requests ({requests?.length || 0})
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-              {/* TAB CONTENT */}
-              {activeTab === "friends" ? (
-                <View>
-                  {friends && friends.length > 0 ? (
-                    friends.map((f) => (
-                      <TouchableOpacity
-                        key={f.id}
-                        style={styles.friendRow}
-                        onPress={() =>
-                          router.push({
-                            pathname: "/friend/[friendId]" as any,
-                            params: { friendId: f.id },
-                          })
-                        }
-                      >
-                        {/* Avatar */}
-                        <View style={styles.friendAvatar}>
-                          <Text style={styles.friendAvatarText}>
-                            {f.name?.charAt(0)?.toUpperCase() || "?"}
-                          </Text>
-                        </View>
-
-                        {/* Info */}
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.friendName}>{f.name}</Text>
-
-                          {/* Progress bar
-      <View style={styles.progressBackground}>
-        <View
-          style={[
-            styles.progressFill,
-            { width: `${(f.progress || 0) * 100}%` },
-          ]}
-        />
-      </View> */}
-                        </View>
-                      </TouchableOpacity>
-                    ))
-                  ) : (
-                    <Text style={{ textAlign: "center", padding: 20 }}>
-                      No friends yet.
-                    </Text>
-                  )}
-                </View>
+            {/* SCROLLABLE LIST AREA */}
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: 10 }}
+              nestedScrollEnabled={true}
+              showsVerticalScrollIndicator={true}
+            >
+              {(activeTab === "friends" ? friends : requests).length === 0 ? (
+                <Text
+                  style={{
+                    textAlign: "center",
+                    padding: 20,
+                    fontSize: 18,
+                    color: "#1B4332",
+                  }}
+                >
+                  {activeTab === "friends"
+                    ? "No friends yet."
+                    : "No requests yet."}
+                </Text>
               ) : (
-                <View>
-                  {requests && requests.length > 0 ? (
-                    requests.map((r) => (
-                      <View key={r.id} style={{ marginBottom: 10 }}>
-                        <Text style={{ color: "#2E6F40" }}>{r.name}</Text>
+                (activeTab === "friends" ? friends : requests).map((item) =>
+                  activeTab === "friends" ? (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={styles.friendRow}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/friend/[friendId]",
+                          params: { friendId: item.id },
+                        })
+                      }
+                    >
+                      <View style={styles.friendAvatar}>
+                        <Text style={styles.friendAvatarText}>
+                          {item.name?.charAt(0)?.toUpperCase() || "?"}
+                        </Text>
+                      </View>
 
-                        <View
+                      <Text style={styles.friendName}>{item.name}</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View key={item.id} style={{ marginBottom: 12 }}>
+                      <Text style={{ color: "#2E6F40" }}>{item.name}</Text>
+
+                      <View
+                        style={{ flexDirection: "row", gap: 10, marginTop: 6 }}
+                      >
+                        <TouchableOpacity
+                          onPress={() => acceptRequest(item.id)}
                           style={{
-                            flexDirection: "row",
-                            gap: 10,
-                            marginTop: 6,
+                            backgroundColor: "#2E6F40",
+                            padding: 6,
+                            borderRadius: 6,
                           }}
                         >
-                          <TouchableOpacity
-                            onPress={() => acceptRequest(r.id)}
-                            style={{
-                              backgroundColor: "#2E6F40",
-                              padding: 6,
-                              borderRadius: 6,
-                            }}
-                          >
-                            <Text style={{ color: "white" }}>Accept</Text>
-                          </TouchableOpacity>
+                          <Text style={{ color: "white" }}>Accept</Text>
+                        </TouchableOpacity>
 
-                          <TouchableOpacity
-                            onPress={() => rejectRequest(r.id)}
-                            disabled={processingId === r.id}
-                            style={{
-                              backgroundColor:
-                                processingId === r.id ? "#aaa" : "#ccc",
-                              padding: 6,
-                              borderRadius: 6,
-                            }}
-                          >
-                            <Text style={{ color: "#333" }}>
-                              {processingId === r.id ? "..." : "Decline"}
-                            </Text>
-                          </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity
+                          onPress={() => rejectRequest(item.id)}
+                          disabled={processingId === item.id}
+                          style={{
+                            backgroundColor:
+                              processingId === item.id ? "#aaa" : "#ccc",
+                            padding: 6,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <Text style={{ color: "#333" }}>
+                            {processingId === item.id ? "..." : "Decline"}
+                          </Text>
+                        </TouchableOpacity>
                       </View>
-                    ))
-                  ) : (
-                    <Text style={{ textAlign: "center", padding: 20 }}>
-                      No requests yet.
-                    </Text>
-                  )}
-                </View>
+                    </View>
+                  ),
+                )
               )}
-            </View>
-          </ScrollView>
-        </View>
-      </ImageBackground>
-    </>
+            </ScrollView>
+          </View>
+        </ScrollView>
+      </View>
+    </ImageBackground>
   );
 }
 
