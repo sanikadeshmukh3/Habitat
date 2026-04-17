@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from "expo-router";
 import api from '@/lib/api';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,7 @@ import {
   Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Colors, FontSize, Radius, Spacing } from '@/constants/oldtheme';
+import { useTheme, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useUserProfile, useUpdateUserProfile } from '../hooks/use-user';
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -40,6 +40,8 @@ export default function ProfileScreen() {
     refetch,
     isError:   profileError,
   } = useUserProfile();
+
+  const { Colors } = useTheme();
 
   const { mutate: saveProfile, isPending: isSaving } = useUpdateUserProfile();
 
@@ -154,6 +156,8 @@ export default function ProfileScreen() {
     setCurrentPassword('');
   };
 
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
+
   // ── Privacy toggle — saves immediately (single-tap action like a setting) ─
   // TODO: Commenting out until public/private implementation is finalized.
   // const handlePrivacyToggle = (value: boolean) => {
@@ -164,8 +168,6 @@ export default function ProfileScreen() {
   // Stores the local URI as a draft.  On save() it is submitted along with the
   // other changed fields.
   //
-  // ⚠️  PRODUCTION NOTE — see advice at the bottom of this file for how to
-  //     upload the image to cloud storage before persisting a URL to the DB.
   const pickPhoto = async () => {
     try {
       const { launchImageLibraryAsync, requestMediaLibraryPermissionsAsync } =
@@ -460,7 +462,7 @@ export default function ProfileScreen() {
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet.create({
   bg: {
     flex: 1,
     backgroundColor: Colors.pageBg,
