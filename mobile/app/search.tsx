@@ -383,6 +383,7 @@ import {
 import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "@/lib/api";
+import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 
 export default function SearchScreen() {
   const [query, setQuery] = useState("");
@@ -546,6 +547,12 @@ const sendRequest = async (friendId: string) => {
 
   return (
     <View style={styles.container}>
+          <TouchableOpacity 
+          style={styles.backBtn} 
+          onPress={() => router.push('/home')} // Or router.replace('/home')
+            >
+                <Text style={styles.backBtnText}>← Back</Text>
+            </TouchableOpacity>
       <TextInput
         placeholder="Search users..."
         value={query}
@@ -649,4 +656,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
+
+  backBtn: {
+    marginBottom: Spacing.md,
+    alignSelf: 'flex-start',
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    backgroundColor: Colors.paleGreen,
+    borderRadius: Radius.sm,
+},
+backBtnText: {
+    color: Colors.primaryGreen,
+    fontWeight: '600',
+    fontSize: FontSize.md,
+},
 });

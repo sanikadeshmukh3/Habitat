@@ -10,7 +10,7 @@ import api from "@/lib/api";
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [resendLoading, setResendLoading] = useState(false);
-    const [timer, setTimer] = useState(30);
+    const [timer, setTimer] = useState(300);
   
     // countdown timer
     useEffect(() => {
@@ -71,7 +71,7 @@ import api from "@/lib/api";
       
         if (status >= 200 && status < 300) {
           alert("New code sent");
-          setTimer(30); // reset timer
+          setTimer(300); // reset timer
         } else {
           alert(data.message || "Failed to resend code");
         }
@@ -81,6 +81,12 @@ import api from "@/lib/api";
       }
   
       setResendLoading(false);
+    };
+
+    const formatTime = (t: number) => {
+      const minutes = Math.floor(t / 60);
+      const seconds = t % 60;
+      return `${minutes}:${seconds.toString().padStart(2, "0")}`;
     };
   
     return (
@@ -116,7 +122,7 @@ import api from "@/lib/api";
         <TouchableOpacity onPress={handleResend} disabled={timer > 0}>
           <Text style={{ color: "#EAF6E8", marginBottom: 20 }}>
             {timer > 0
-              ? `Resend code in ${timer}s`
+              ? `Resend code in ${formatTime(timer)}`
               : resendLoading
               ? "Sending..."
               : "Resend Code"}
