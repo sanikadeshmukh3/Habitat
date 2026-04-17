@@ -603,8 +603,8 @@ const styles = StyleSheet.create({
   sectionCard: {
     backgroundColor: "#CDECCD",
     borderRadius: 20,
-    padding: 20,
-    marginTop: 25,
+    padding: 25,
+    marginTop: 18,
     shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowRadius: 10,

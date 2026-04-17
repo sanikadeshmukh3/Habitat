@@ -274,7 +274,7 @@ app.post("/forgot-password", async (req, res) => {
       where: { email },
       data: {
         verificationCode: code,
-        codeExpires: new Date(Date.now() + 10 * 60 * 1000),
+        codeExpires: new Date(Date.now() + 5 * 60 * 1000),
       },
     });
 
@@ -350,7 +350,7 @@ app.post("/resend-code", async (req, res) => {
       where: { email },
       data: {
         verificationCode: newCode,
-        codeExpires: new Date(Date.now() + 10 * 60 * 1000),
+        codeExpires: new Date(Date.now() + 5 * 60 * 1000),
       },
     });
 
