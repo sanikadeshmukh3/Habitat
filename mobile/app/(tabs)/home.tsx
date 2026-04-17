@@ -14,6 +14,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Dimensions,
 } from "react-native";
 
 // for now I am hardcoding the habits to get a glimpse of how it would look like
@@ -24,7 +25,7 @@ type DashboardHabit = {
   id: string;
   name: string;
   streak: number;
-  progress: number;
+  //category: string;
 };
 
 type Friend = {
@@ -34,75 +35,48 @@ type Friend = {
 };
 
 const COLORS = {
-  forest: '#234B3A',
+  forest: "#234B3A",
 };
+
+const { width } = Dimensions.get("window");
+
+const CARD_WIDTH = 260;
+const SPACING = 20;
+const SNAP_INTERVAL = CARD_WIDTH + SPACING;
 
 export default function HomeScreen() {
   const [open, setOpen] = useState(false);
   const animation = useRef(new Animated.Value(0)).current;
   const router = useRouter();
+  const scrollX = useRef(new Animated.Value(0)).current;
 
   const [habits, setHabits] = useState<DashboardHabit[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [activeTab, setActiveTab] = useState<"friends" | "requests">("friends");
-const [requests, setRequests] = useState<any[]>([]); // You can type this better later!
-const [processingId, setProcessingId] = useState<string | null>(null);
+  const [requests, setRequests] = useState<any[]>([]); // You can type this better later
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
-// useEffect(() => {
-//   const fetchDashboard = async () => {
-//     try {
-//       const token = await AsyncStorage.getItem("token");
-//       const userId = await AsyncStorage.getItem("userId");
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchDashboard = async () => {
+        try {
+          // Use your 'api' utility instead of 'fetch'
+          // This ensures the token from api.ts is ALWAYS used
+          const response = await api.get("/dashboard");
 
-//       if (!token || !userId) return;
+          console.log("DASHBOARD DATA:", response.data);
 
-//       const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://10.75.170.31:3000";
+          setHabits(response.data.habits || []);
+          setFriends(response.data.friends || []);
+          setRequests(response.data.requests || []);
+        } catch (err) {
+          console.error("Dashboard Fetch Error:", err);
+        }
+      };
 
-//       const response = await fetch(`${API_URL}/dashboard`, {
-//         method: "GET",
-//         headers: {
-//           "Content-Type": "application/json",
-//           Authorization: `Bearer ${token}`,
-//           "x-user-id": userId, // optional but useful if backend needs it
-//         },
-//       });
-
-//       const data = await response.json();
-//       console.log("DASHBOARD DATA:", data);
-
-//       setHabits(data.habits || []);
-//       setFriends(data.friends || []);
-//       setRequests(data.requests || []);
-//     } catch (err) {
-//       console.error(err);
-//     }
-//   };
-
-//   fetchDashboard();
-// }, []);
-
-useFocusEffect(
-  React.useCallback(() => {
-    const fetchDashboard = async () => {
-      try {
-        // Use your 'api' utility instead of 'fetch' 
-        // This ensures the token from api.ts is ALWAYS used
-        const response = await api.get("/dashboard");
-        
-        console.log("DASHBOARD DATA:", response.data);
-
-        setHabits(response.data.habits || []);
-        setFriends(response.data.friends || []);
-        setRequests(response.data.requests || []);
-      } catch (err) {
-        console.error("Dashboard Fetch Error:", err);
-      }
-    };
-
-    fetchDashboard();
-  }, [])
-);
-
+      fetchDashboard();
+    }, []),
+  );
 
   // the toggle option when adding a habit
   const toggleMenu = () => {
@@ -117,11 +91,10 @@ useFocusEffect(
 
   const acceptRequest = async (requestId: string) => {
     try {
-      await api.post('/friend/accept', { requestId });
-  
-      setRequests(prev => prev.filter(r => r.id !== requestId));
+      await api.post("/friend/accept", { requestId });
+
+      setRequests((prev) => prev.filter((r) => r.id !== requestId));
       // if (refetchFriends) refetchFriends();
-      
     } catch (err) {
       console.error("Accept error:", err);
       Alert.alert("Error", "Could not accept friend request.");
@@ -140,20 +113,19 @@ useFocusEffect(
           onPress: async () => {
             try {
               setProcessingId(requestId);
-              await api.post('/friend/reject', { requestId });
+              await api.post("/friend/reject", { requestId });
               setProcessingId(null);
-  
+
               // remove from UI immediately
-              setRequests(prev => prev.filter(r => r.id !== requestId));
-  
+              setRequests((prev) => prev.filter((r) => r.id !== requestId));
             } catch (err) {
               setProcessingId(null);
               console.error("Reject error:", err);
               Alert.alert("Error", "Could not reject request.");
             }
-          }
-        }
-      ]
+          },
+        },
+      ],
     );
   };
 
@@ -218,34 +190,63 @@ useFocusEffect(
 
             <Text style={styles.sectionTitle}>Your Habits</Text>
 
-            <FlatList
+            <Animated.FlatList
               data={habits}
               horizontal
               showsHorizontalScrollIndicator={false}
               keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/habit-detail",
-                      params: { id: item.id },
-                    })
-                  }
-                  style={styles.habitCard}
-                >
-                  <Text style={styles.habitTitle}>{item.name}</Text>
-
-                  <View style={styles.progressBackground}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        { width: `${item.progress * 100}%` },
-                      ]}
-                    />
-                  </View>
-                </TouchableOpacity>
+              snapToInterval={SNAP_INTERVAL}
+              decelerationRate="fast"
+              snapToAlignment="start"
+              contentContainerStyle={{
+                paddingHorizontal: (width - CARD_WIDTH) / 2,
+              }}
+              onScroll={Animated.event(
+                [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+                { useNativeDriver: true },
               )}
+              scrollEventThrottle={16}
+              renderItem={({ item, index }) => {
+                const inputRange = [
+                  (index - 1) * SNAP_INTERVAL,
+                  index * SNAP_INTERVAL,
+                  (index + 1) * SNAP_INTERVAL,
+                ];
+
+                const scale = scrollX.interpolate({
+                  inputRange,
+                  outputRange: [0.9, 1, 0.9],
+                  extrapolate: "clamp",
+                });
+
+                const opacity = scrollX.interpolate({
+                  inputRange,
+                  outputRange: [0.6, 1, 0.6],
+                  extrapolate: "clamp",
+                });
+
+                return (
+                  <Animated.View
+                    style={{
+                      width: SNAP_INTERVAL,
+                      alignItems: "center",
+                      transform: [{ scale }],
+                      opacity,
+                    }}
+                  >
+                    <TouchableOpacity
+                      style={styles.habitCardNew}
+                      activeOpacity={0.9}
+                    >
+                      {/* overlays */}
+                      <View style={styles.cardOverlay} />
+
+                      {/* content */}
+                      <Text style={styles.habitTitleNew}>{item.name}</Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                );
+              }}
             />
 
             <View style={styles.fabWrapper}>
@@ -288,59 +289,88 @@ useFocusEffect(
             </View>
 
             <View style={styles.sectionCard}>
-  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-    <Text style={styles.sectionTitle2}>Network</Text>
-    <TouchableOpacity onPress={() => router.push("/search" as any)}>
-      <Ionicons name="person-add-outline" size={24} color="#2E6F40" />
-    </TouchableOpacity>
-  </View>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 15,
+                }}
+              >
+                <Text style={styles.sectionTitle2}>Network</Text>
+                <TouchableOpacity onPress={() => router.push("/search" as any)}>
+                  <Ionicons
+                    name="person-add-outline"
+                    size={24}
+                    color="#2E6F40"
+                  />
+                </TouchableOpacity>
+              </View>
 
-  {/* FORCE TAB BUTTONS TO SHOW */}
-  <View style={styles.tabContainer}>
-    <TouchableOpacity 
-      style={[styles.tab, activeTab === "friends" && styles.activeTab]} 
-      onPress={() => setActiveTab("friends")}
-    >
-      <Text style={[styles.tabText, activeTab === "friends" && styles.activeTabText]}>Friends</Text>
-    </TouchableOpacity>
-    
-    <TouchableOpacity 
-      style={[styles.tab, activeTab === "requests" && styles.activeTab]} 
-      onPress={() => setActiveTab("requests")}
-    >
-      <Text style={[styles.tabText, activeTab === "requests" && styles.activeTabText]}>
-        Requests ({requests?.length || 0})
-      </Text>
-    </TouchableOpacity>
-  </View>
+              {/* FORCE TAB BUTTONS TO SHOW */}
+              <View style={styles.tabContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.tab,
+                    activeTab === "friends" && styles.activeTab,
+                  ]}
+                  onPress={() => setActiveTab("friends")}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === "friends" && styles.activeTabText,
+                    ]}
+                  >
+                    Friends
+                  </Text>
+                </TouchableOpacity>
 
-  {/* TAB CONTENT */}
-  {activeTab === "friends" ? (
-    <View>
-      {friends && friends.length > 0 ? (
-friends.map(f => (
-  <TouchableOpacity
-    key={f.id}
-    style={styles.friendRow}
-    onPress={() =>
-      router.push({
-        pathname: "/friend/[friendId]" as any,
-        params: { friendId: f.id },
-      })
-    }
-  >
-    {/* Avatar */}
-    <View style={styles.friendAvatar}>
-      <Text style={styles.friendAvatarText}>
-        {f.name?.charAt(0)?.toUpperCase() || "?"}
-      </Text>
-    </View>
+                <TouchableOpacity
+                  style={[
+                    styles.tab,
+                    activeTab === "requests" && styles.activeTab,
+                  ]}
+                  onPress={() => setActiveTab("requests")}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === "requests" && styles.activeTabText,
+                    ]}
+                  >
+                    Requests ({requests?.length || 0})
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-    {/* Info */}
-    <View style={{ flex: 1 }}>
-      <Text style={styles.friendName}>{f.name}</Text>
+              {/* TAB CONTENT */}
+              {activeTab === "friends" ? (
+                <View>
+                  {friends && friends.length > 0 ? (
+                    friends.map((f) => (
+                      <TouchableOpacity
+                        key={f.id}
+                        style={styles.friendRow}
+                        onPress={() =>
+                          router.push({
+                            pathname: "/friend/[friendId]" as any,
+                            params: { friendId: f.id },
+                          })
+                        }
+                      >
+                        {/* Avatar */}
+                        <View style={styles.friendAvatar}>
+                          <Text style={styles.friendAvatarText}>
+                            {f.name?.charAt(0)?.toUpperCase() || "?"}
+                          </Text>
+                        </View>
 
-      {/* Progress bar
+                        {/* Info */}
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.friendName}>{f.name}</Text>
+
+                          {/* Progress bar
       <View style={styles.progressBackground}>
         <View
           style={[
@@ -349,58 +379,65 @@ friends.map(f => (
           ]}
         />
       </View> */}
-    </View>
-  </TouchableOpacity>
-))
-) : (
-  <Text style={{ textAlign: 'center', padding: 20 }}>
-    No friends yet.
-  </Text>
-)}
-    </View>
-  ) : (
-    <View>
-{requests && requests.length > 0 ? (
-  requests.map(r => (
-    <View key={r.id} style={{ marginBottom: 10 }}>
-      <Text style={{ color: "#2E6F40" }}>{r.name}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))
+                  ) : (
+                    <Text style={{ textAlign: "center", padding: 20 }}>
+                      No friends yet.
+                    </Text>
+                  )}
+                </View>
+              ) : (
+                <View>
+                  {requests && requests.length > 0 ? (
+                    requests.map((r) => (
+                      <View key={r.id} style={{ marginBottom: 10 }}>
+                        <Text style={{ color: "#2E6F40" }}>{r.name}</Text>
 
-      <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
-  <TouchableOpacity
-    onPress={() => acceptRequest(r.id)}
-    style={{
-      backgroundColor: "#2E6F40",
-      padding: 6,
-      borderRadius: 6,
-    }}
-  >
-    <Text style={{ color: "white" }}>Accept</Text>
-  </TouchableOpacity>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            gap: 10,
+                            marginTop: 6,
+                          }}
+                        >
+                          <TouchableOpacity
+                            onPress={() => acceptRequest(r.id)}
+                            style={{
+                              backgroundColor: "#2E6F40",
+                              padding: 6,
+                              borderRadius: 6,
+                            }}
+                          >
+                            <Text style={{ color: "white" }}>Accept</Text>
+                          </TouchableOpacity>
 
-  <TouchableOpacity
-    onPress={() => rejectRequest(r.id)}
-    disabled={processingId === r.id}
-    style={{
-      backgroundColor: processingId === r.id ? "#aaa" : "#ccc",
-      padding: 6,
-      borderRadius: 6,
-    }}
-  >
-    <Text style={{ color: "#333" }}>
-      {processingId === r.id ? "..." : "Decline"}
-      </Text>
-  </TouchableOpacity>
-</View>
-    </View>
-  ))
-) : (
-  <Text style={{ textAlign: 'center', padding: 20 }}>
-    No requests yet.
-  </Text>
-)}
-    </View>
-  )}
-</View>
+                          <TouchableOpacity
+                            onPress={() => rejectRequest(r.id)}
+                            disabled={processingId === r.id}
+                            style={{
+                              backgroundColor:
+                                processingId === r.id ? "#aaa" : "#ccc",
+                              padding: 6,
+                              borderRadius: 6,
+                            }}
+                          >
+                            <Text style={{ color: "#333" }}>
+                              {processingId === r.id ? "..." : "Decline"}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={{ textAlign: "center", padding: 20 }}>
+                      No requests yet.
+                    </Text>
+                  )}
+                </View>
+              )}
+            </View>
           </ScrollView>
         </View>
       </ImageBackground>
@@ -464,6 +501,19 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: "#355E3B",
   },
+  habitTitleNew: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "white",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+
+  habitCategory: {
+    fontSize: 14,
+    color: "#B7E4C7",
+    fontWeight: "500",
+  },
   habitCard: {
     width: 280,
     backgroundColor: "#2E6F40", // darker eco green
@@ -471,11 +521,51 @@ const styles = StyleSheet.create({
     padding: 20,
     marginRight: 15,
   },
+  habitCardNew: {
+    width: 260,
+    height: 180,
+    backgroundColor: "#2E6F40",
+    borderRadius: 24,
+    padding: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+
+    // 🌿 iOS shadow (soft + spread)
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: "rgba(183, 228, 199, 0.4)",
+  },
   habitTitle: {
     fontSize: 18,
     fontWeight: "600",
     color: "white",
     marginBottom: 10,
+  },
+  cardOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "50%",
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  bottomOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: "35%",
+    backgroundColor: "rgba(0,0,0,0.15)",
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   progressBackground: {
     height: 10,
