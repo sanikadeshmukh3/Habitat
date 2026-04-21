@@ -17,26 +17,10 @@ type ChatPreview = {
   time: string;
 };
 
-// hardcoding chat previews until the actual functionality is implemented
 const chats: ChatPreview[] = [
-  {
-    id: "1",
-    name: "Alex",
-    lastMessage: "Did you finish your workout today?",
-    time: "2:41 PM",
-  },
-  {
-    id: "2",
-    name: "Maya",
-    lastMessage: "Let’s stay consistent this week 💪",
-    time: "1:15 PM",
-  },
-  {
-    id: "3",
-    name: "Jordan",
-    lastMessage: "Proud of your progress!",
-    time: "Yesterday",
-  },
+  { id: "1", name: "Alex", lastMessage: "Did you finish your workout today?", time: "2:41 PM" },
+  { id: "2", name: "Maya", lastMessage: "Let’s stay consistent this week 💪", time: "1:15 PM" },
+  { id: "3", name: "Jordan", lastMessage: "Proud of your progress!", time: "Yesterday" },
 ];
 
 export default function Chat() {
@@ -51,41 +35,51 @@ export default function Chat() {
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.container}>
           <Text style={styles.title}>Chats</Text>
-          <Ionicons name="person-add-outline" size={18} color="green" />
-          <Text style={styles.contactsText}>Add from Contacts</Text>
 
-          <FlatList
-            data={chats}
-            keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={false}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.chatRow}
-                activeOpacity={0.7}
-                onPress={() =>
-                  router.push({
-                    pathname: "/chat-room" as any,
-                    params: { name: item.name },
-                  })
-                }
-              >
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
-                </View>
+          {/* MAIN CONTENT WRAPPER */}
+          <View style={styles.disabledWrapper}>
+            {/* We wrap the interactive parts in a View that ignores touches 
+               and looks faded out.
+            */}
+            <View style={{ flex: 1, opacity: 0.4 }} pointerEvents="none">
+              <View style={styles.contactsButton}>
+                <Ionicons name="person-add-outline" size={18} color="#fff" />
+                <Text style={[styles.contactsText, { color: '#fff' }]}>Add from Contacts</Text>
+              </View>
 
-                <View style={styles.chatInfo}>
-                  <View style={styles.rowBetween}>
-                    <Text style={styles.friendName}>{item.name}</Text>
-                    <Text style={styles.time}>{item.time}</Text>
+              <FlatList
+                data={chats}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false} // Disable scrolling to maintain the "locked" feel
+                renderItem={({ item }) => (
+                  <View style={styles.chatRow}>
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
+                    </View>
+                    <View style={styles.chatInfo}>
+                      <View style={styles.rowBetween}>
+                        <Text style={styles.friendName}>{item.name}</Text>
+                        <Text style={styles.time}>{item.time}</Text>
+                      </View>
+                      <Text style={styles.lastMessage} numberOfLines={1}>
+                        {item.lastMessage}
+                      </Text>
+                    </View>
                   </View>
+                )}
+              />
+            </View>
 
-                  <Text style={styles.lastMessage} numberOfLines={1}>
-                    {item.lastMessage}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            )}
-          />
+            {/* THE "COMING SOON" OVERLAY */}
+            <View style={styles.overlay}>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>COMING SOON</Text>
+              </View>
+              <Text style={styles.overlaySubtext}>
+                We're building a space for you to stay motivated with friends.
+              </Text>
+            </View>
+          </View>
         </View>
       </SafeAreaView>
     </ImageBackground>
@@ -106,24 +100,23 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: "700",
     color: "#2E6F40",
-    marginBottom: 10,
+    marginBottom: 20,
+  },
+  disabledWrapper: {
+    flex: 1,
+    position: 'relative',
   },
   contactsButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1B4332", // darker green
+    backgroundColor: "#2E6F40",
     paddingVertical: 12,
     paddingHorizontal: 18,
     borderRadius: 25,
     alignSelf: "flex-start",
     marginBottom: 25,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
   },
   contactsText: {
-    color: "green",
     marginLeft: 8,
     fontWeight: "600",
     fontSize: 14,
@@ -169,5 +162,36 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 14,
     color: "#355E3B",
+  },
+  // OVERLAY STYLES
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(234, 246, 232, 0.2)", // Very light tint
+  },
+  badge: {
+    backgroundColor: "#1B4332",
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  badgeText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
+  overlaySubtext: {
+    marginTop: 15,
+    color: "#2E6F40",
+    fontSize: 14,
+    textAlign: "center",
+    paddingHorizontal: 40,
+    opacity: 0.8,
   },
 });

@@ -97,7 +97,7 @@ export default function CreateHabitAIScreen() {
 
   const [goal, setGoal]               = useState('');
   const [stage, setStage]             = useState<Stage>('input');
-  const [selected, setSelected]       = useState<Set<string>>(new Set());
+  const [selected, setSelected]       = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
 
   const handleGenerate = async () => {
@@ -130,21 +130,17 @@ export default function CreateHabitAIScreen() {
   };
 
   const toggleSelect = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+    setSelected((prev) => (prev === id ? null : id));
   };
 
   const handleReset = () => {
     setGoal('');
     setStage('input');
-    setSelected(new Set());
+    setSelected('');
     setSuggestions([]);
   };
 
-  const canAdd = selected.size > 0;
+  const canAdd = selected !== null;
 
   return (
     <ImageBackground
@@ -261,7 +257,7 @@ export default function CreateHabitAIScreen() {
             </View>
 
             {suggestions.map((s) => {
-              const isSelected = selected.has(s.id);
+              const isSelected = selected === s.id;
               return (
                 <TouchableOpacity
                   key={s.id}
@@ -299,7 +295,7 @@ export default function CreateHabitAIScreen() {
               disabled={!canAdd}
               activeOpacity={canAdd ? 0.85 : 1}
               onPress={() => {
-                const selectedHabit = suggestions.find(s => selected.has(s.id));
+                const selectedHabit = suggestions.find(s => selected === s.id);
 
                 if (!selectedHabit) return;
 
