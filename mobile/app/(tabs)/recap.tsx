@@ -19,9 +19,28 @@ import {
 } from 'react-native';
 import { useRecap } from '@/hooks/use-recap';
 import { useUserProfile } from '@/hooks/use-user';
+import { useWeeklySummary } from '@/hooks/use-weekly-summary';
+import { useRegenerateWeeklySummary } from '@/hooks/use-regenerate-weekly-summary';
 import type { Animal, WeekdayItem } from '@/lib/recap-utility';
 
-// Some of the following are hardcoded, but general structure of the recap screen exists.
+//Weekly Summary helpers
+
+function startOfWeekSunday(date: Date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - d.getDay());
+  return d;
+}
+
+function addDays(date: Date, days: number) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function toDateKey(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
 
 type SnapshotCard = {
     id: string;
@@ -211,6 +230,54 @@ export default function RecapScreen() {
         const index = Math.round(offsetX / SNAP_INTERVAL);
         setActiveIndex(Math.max(0, Math.min(index, snapshotCards.length - 1)));
     };
+
+    const previousWeekDate = useMemo(() => {
+      const d = new Date();
+      d.setDate(d.getDate() - 7);
+      return d;
+    }, []);
+
+    const {
+      recap: previousWeekRecap,
+      isLoading: isPreviousWeekRecapLoading,
+      weekKey: previousWeekKey,
+    } = useRecap(previousWeekDate);
+
+    const weeklySummaryPayload = useMemo(() => {
+      if (!previousWeekRecap) return null;
+
+      return {
+        weekKey: previousWeekKey,
+        recap: {
+          weekStart: previousWeekRecap.weekStart,
+          weekEnd: previousWeekRecap.weekEnd,
+          archetype: previousWeekRecap.archetype,
+          scores: previousWeekRecap.scores,
+          snapshots: {
+            completionPulse: previousWeekRecap.snapshots.completionPulse,
+            categoryLeader: previousWeekRecap.snapshots.categoryLeader,
+            rhythmCheck: previousWeekRecap.snapshots.rhythmCheck,
+            moodBoard: previousWeekRecap.snapshots.moodBoard,
+          },
+        },
+      };
+    }, [previousWeekRecap, previousWeekKey]);
+
+    const {
+      data: weeklySummaryData,
+      isLoading: isWeeklySummaryLoading,
+      isError: isWeeklySummaryError,
+    } = useWeeklySummary(weeklySummaryPayload);
+
+    const regenerateMutation = useRegenerateWeeklySummary();
+
+    const refreshesRemaining = weeklySummaryData?.refreshesRemaining ?? 3;
+
+    const isRefreshDisabled =
+      !weeklySummaryPayload ||
+      weeklySummaryData?.available === false ||
+      refreshesRemaining <= 0 ||
+      regenerateMutation.isPending;
 
     if (isLoading || !recap) {
         return (
@@ -537,11 +604,40 @@ export default function RecapScreen() {
             </View>
 
             <View style={styles.summaryCard}>
-                <Text style={styles.summaryEyebrow}>WEEKLY HIGHLIGHT</Text>
-                <Text style={styles.summaryHeadline}>AI Summary</Text>
-                <Text style={styles.summaryText}>
-                    Your personalized reflection will appear here once enough weekly data is available.
+              <Text style={styles.summaryEyebrow}>AI-GENERATED REFLECTION</Text>
+              <Text style={styles.summaryHeadline}>Last Week in Review</Text>
+
+              <Text style={styles.summaryText}>
+                {isWeeklySummaryLoading
+                  ? 'Generating your weekly reflection...'
+                  : weeklySummaryData?.available === false
+                  ? weeklySummaryData.message ||
+                    'Your weekly reflection unlocks after the week is complete.'
+                  : isWeeklySummaryError
+                  ? 'Your weekly reflection could not be loaded right now.'
+                  : weeklySummaryData?.summary ||
+                    'There was not enough activity last week to generate a meaningful reflection yet.'}
+              </Text>
+
+              <Pressable
+                onPress={() => {
+                  if (!weeklySummaryPayload) return;
+                  regenerateMutation.mutate(weeklySummaryPayload);
+                }}
+                disabled={isRefreshDisabled}
+                style={[
+                  styles.refreshButton,
+                  isRefreshDisabled && styles.refreshButtonDisabled,
+                ]}
+              >
+                <Text style={styles.refreshButtonText}>
+                  {regenerateMutation.isPending
+                    ? 'Refreshing...'
+                    : refreshesRemaining <= 0
+                    ? 'No refreshes left'
+                    : `Refresh summary (${refreshesRemaining} left)`}
                 </Text>
+              </Pressable>
             </View>
         </ScrollView>
         </ImageBackground>
@@ -1282,5 +1378,24 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 999,
     backgroundColor: COLORS.moss,
+  },
+
+  refreshButton: {
+    marginTop: 16,
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.forest,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    borderRadius: 999,
+  },
+
+  refreshButtonDisabled: {
+    opacity: 0.5,
+  },
+
+  refreshButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
