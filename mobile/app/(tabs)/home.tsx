@@ -499,7 +499,7 @@ export default function HomeScreen() {
         triggeringHabitNames={triggeringHabitNames}
         onEnroll={() => {
           setShowEnrollmentModal(false);
-          router.push({ pathname: "/habit-ranking", params: { mode: "enroll" } });
+          router.push({ pathname: "/habit-ranking" as any, params: { mode: "enroll" } });
         }}
         onDismiss={() => setShowEnrollmentModal(false)}
       />
