@@ -5,6 +5,7 @@ const habitRoutes = require("./routes/habit-routes");
 const checkinRoutes = require("./routes/checkinRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const userRoutes = require("./routes/user-routes");
+const stackingRoutes = require('./routes/stacking')
 
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const bcrypt = require("bcrypt");
@@ -21,6 +22,7 @@ app.use(cors({ origin: "*" }));
 app.use("/habits", habitRoutes);
 app.use("/checkins", checkinRoutes);
 app.use("/users", userRoutes);
+app.use('/stacking', stackingRoutes);
 
 const pool = new Pool({
   connectionString:

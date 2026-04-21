@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { runOnCheckIn } = require('./activationService');
 
 // Helper to format a Date as a local "YYYY-MM-DD" string (avoids UTC shift)
 function toLocalDateKey(d) {
@@ -86,6 +87,28 @@ async function upsertHabitCheckIn(userId, habitId, data) {
     throw { status: 400, message: 'Cannot check in an inactive habit' };
   }
 
+  // for weekly habits, block a second check-in within the same Mon–Sun week
+  if (habit.frequency === 'WEEKLY') {
+    const d = new Date(date);
+    const dayOfWeek = d.getDay();
+    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const weekStart = new Date(d.getFullYear(), d.getMonth(), d.getDate() + daysToMonday, 0, 0, 0, 0);
+    const weekEnd   = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 7);
+
+    const existingThisWeek = await prisma.habitCheckIn.findFirst({
+      where: {
+        habitId,
+        completed: true,
+        date: { gte: weekStart, lt: weekEnd },
+      },
+    });
+
+    if (existingThisWeek) {
+      throw { status: 409, message: 'This habit has already been completed this week' };
+    }
+  }
+
   const start = normalizeToStartOfDay(date);
   const nextDay = new Date(start);
   nextDay.setDate(nextDay.getDate() + 1);
@@ -123,8 +146,9 @@ async function upsertHabitCheckIn(userId, habitId, data) {
     });
   }
 
-  // Recalculate and persist the streak after every check-in change
+  // Recalculate streak, then run the stacking monitoring pipeline
   await recalculateStreak(habitId);
+  await runOnCheckIn(habit.userId, habitId);
 
   return checkIn;
 }
@@ -162,8 +186,6 @@ async function getCheckInsForMonth(userId, year, month) {
     const d  = new Date(c.date);
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
-    // Key format must match what the frontend builds in use-checkin.ts:
-    // `${habitId}-${year}-${mm}-${dd}`
     const key = `${c.habitId}-${d.getFullYear()}-${mm}-${dd}`;
     result[key] = {
       completed:        Boolean(c.completed),
