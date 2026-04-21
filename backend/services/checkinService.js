@@ -398,14 +398,12 @@ async function getHabitWithStreakHealth(habitId) {
 }
 
 // ─── Existing read functions (unchanged) ─────────────────────────────────────
-  }
 
   // Recalculate streak, then run the stacking monitoring pipeline
   await recalculateStreak(habitId);
   await runOnCheckIn(habit.userId, habitId);
 
   return checkIn;
-}
 
 async function getCheckInsForMonth(userId, year, month) {
   const parsedYear  = Number(year);
