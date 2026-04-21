@@ -162,11 +162,10 @@ async function createHabit(req, res, next) {
     }
 
     // habit stacking — calculate the observation window end date based on frequency
-    // DAILY: 30 days, WEEKLY: 56 days (8 weeks), MONTHLY: 120 days (4 months)
+    // DAILY: 30 days, WEEKLY: 56 days (8 weeks)
     const observationWindowDays = {
       DAILY:   30,
       WEEKLY:  56,
-      MONTHLY: 120,
     };
 
     const windowDays = observationWindowDays[body.frequency] ?? 30;
@@ -281,6 +280,11 @@ async function deleteHabit(req, res, next) {
     // Delete check-ins first to satisfy the foreign key constraint
     await prisma.habitCheckIn.deleteMany({ where: { habitId: id } });
 
+    // habit stacking — delete any schedule entries for this habit before
+    // deleting the habit itself to satisfy the foreign key constraint on
+    // StackingScheduleEntry.habitId
+    await prisma.stackingScheduleEntry.deleteMany({ where: { habitId: id } });
+    
     await prisma.habit.delete({ where: { id } });
 
     res.json({ data: { id } });

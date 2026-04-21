@@ -1,21 +1,21 @@
+import StackingActivationModal from "@/components/StackingActivationModal";
+import StackingEnrollmentModal from "@/components/StackingEnrollmentModal";
+import StackingStatusCard from "@/components/StackingStatusCard";
 import api from "@/lib/api";
 import { Ionicons } from "@expo/vector-icons";
-import { FA6Style } from "@expo/vector-icons/build/FontAwesome6";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useRef, useState } from "react";
 import {
   Alert,
   Animated,
-  FlatList,
+  Dimensions,
   ImageBackground,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
-  Dimensions,
+  View
 } from "react-native";
 
 // for now I am hardcoding the habits to get a glimpse of how it would look like
@@ -33,6 +33,13 @@ type Friend = {
   id: string;
   name: string;
   progress: number;
+};
+
+// stacking — shape of the activation suggestion returned by /stacking/app-open
+type ActivationSuggestion = {
+  nextEntryId: string;
+  nextHabitName: string;
+  completedHabitName: string;
 };
 
 const COLORS = {
@@ -57,6 +64,13 @@ export default function HomeScreen() {
   const [requests, setRequests] = useState<any[]>([]); // You can type this better later
   const [processingId, setProcessingId] = useState<string | null>(null);
 
+  // stacking state
+  const [enrollmentId, setEnrollmentId] = useState<string | null>(null);
+  const [showEnrollmentModal, setShowEnrollmentModal] = useState(false);
+  const [triggeringHabitNames, setTriggeringHabitNames] = useState<string[]>([]);
+  const [showActivationModal, setShowActivationModal] = useState(false);
+  const [activationSuggestion, setActivationSuggestion] = useState<ActivationSuggestion | null>(null);
+
   useFocusEffect(
     React.useCallback(() => {
       const fetchDashboard = async () => {
@@ -75,7 +89,32 @@ export default function HomeScreen() {
         }
       };
 
+      // stacking — runs monitoring pipeline and checks proving windows on every focus
+      const runAppOpen = async () => {
+        try {
+          const response = await api.post("/stacking/app-open", {});
+          const { enrollmentId, triggerStacking, triggeringHabitNames, activationSuggestion } = response.data;
+
+          setEnrollmentId(enrollmentId ?? null);
+
+          // show enrollment modal only if stacking is triggered and user isn't already enrolled
+          if (triggerStacking && !enrollmentId) {
+            setTriggeringHabitNames(triggeringHabitNames ?? []);
+            setShowEnrollmentModal(true);
+          }
+
+          // show activation modal if a habit just cleared its proving window
+          if (activationSuggestion) {
+            setActivationSuggestion(activationSuggestion);
+            setShowActivationModal(true);
+          }
+        } catch (err) {
+          console.error("App open stacking check error:", err);
+        }
+      };
+
       fetchDashboard();
+      runAppOpen();
     }, []),
   );
 
@@ -123,6 +162,32 @@ export default function HomeScreen() {
               setProcessingId(null);
               console.error("Reject error:", err);
               Alert.alert("Error", "Could not reject request.");
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  // stacking — confirms before opting the user out of their active schedule
+  const handleOptOut = () => {
+    if (!enrollmentId) return;
+
+    Alert.alert(
+      "Opt Out of Habit Stacking",
+      "Are you sure? All dormant habits will be reactivated and your current progress will be lost.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Opt Out",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.post("/stacking/opt-out", { enrollmentId });
+              setEnrollmentId(null);
+            } catch (err) {
+              console.error("Opt out error:", err);
+              Alert.alert("Error", "Could not opt out. Please try again.");
             }
           },
         },
@@ -257,6 +322,14 @@ export default function HomeScreen() {
               );
             }}
           />
+
+          {/* STACKING STATUS CARD — shown only when user has an active enrollment */}
+          {enrollmentId && (
+            <StackingStatusCard
+              enrollmentId={enrollmentId}
+              onOptOut={handleOptOut}
+            />
+          )}
 
           {/* FAB */}
           <View style={styles.fabWrapper}>
@@ -419,6 +492,35 @@ export default function HomeScreen() {
           </View>
         </ScrollView>
       </View>
+
+      {/* STACKING ENROLLMENT MODAL — shown when monitoring pipeline triggers stacking */}
+      <StackingEnrollmentModal
+        visible={showEnrollmentModal}
+        triggeringHabitNames={triggeringHabitNames}
+        onEnroll={() => {
+          setShowEnrollmentModal(false);
+          router.push({ pathname: "/habit-ranking", params: { mode: "enroll" } });
+        }}
+        onDismiss={() => setShowEnrollmentModal(false)}
+      />
+
+      {/* STACKING ACTIVATION MODAL — shown when a habit clears its proving window */}
+      {activationSuggestion && (
+        <StackingActivationModal
+          visible={showActivationModal}
+          completedHabitName={activationSuggestion.completedHabitName}
+          nextHabitName={activationSuggestion.nextHabitName}
+          nextEntryId={activationSuggestion.nextEntryId}
+          onActivated={() => {
+            setShowActivationModal(false);
+            setActivationSuggestion(null);
+          }}
+          onSnoozed={() => {
+            setShowActivationModal(false);
+            setActivationSuggestion(null);
+          }}
+        />
+      )}
     </ImageBackground>
   );
 }
