@@ -90,7 +90,7 @@ export default function Signup() {
         placeholderTextColor="#ccc"
         value={firstName}
         onChangeText={setFirstName}
-        style={{ borderWidth: 1, borderColor: "#EAF6E8",padding: 12, marginBottom: 10,borderRadius: 8, color: "#fff",
+        style={{ borderWidth: 1, borderColor: "#EAF6E8",padding: 12, marginBottom: 10,borderRadius: 8, color: "#052e17",
         }}
         autoCorrect={false}
       />
@@ -100,7 +100,7 @@ export default function Signup() {
         placeholderTextColor="#ccc"
         value={lastName}
         onChangeText={setLastName}
-        style={{ borderWidth: 1, borderColor: "#EAF6E8", padding: 12, marginBottom: 10, borderRadius: 8, color: "#fff",
+        style={{ borderWidth: 1, borderColor: "#EAF6E8", padding: 12, marginBottom: 10, borderRadius: 8, color: "#052e17",
         }}
         autoCorrect={false}
       />
@@ -110,7 +110,7 @@ export default function Signup() {
         placeholderTextColor="#ccc"
         value={email}
         onChangeText={setEmail}
-        style={{ borderWidth: 1, borderColor: "#EAF6E8", padding: 12, marginBottom: 10, borderRadius: 8, color: "#fff",
+        style={{ borderWidth: 1, borderColor: "#EAF6E8", padding: 12, marginBottom: 10, borderRadius: 8, color: "#052e17",
         }}
         autoCapitalize="none"
         autoCorrect={false}
@@ -122,7 +122,7 @@ export default function Signup() {
         secureTextEntry
         value={password}
         onChangeText={setPassword}
-        style={{ borderWidth: 1, borderColor: "#EAF6E8", padding: 12, marginBottom: 10, borderRadius: 8, color: "#fff",
+        style={{ borderWidth: 1, borderColor: "#EAF6E8", padding: 12, marginBottom: 10, borderRadius: 8, color: "#052e17",
         }}
         autoCapitalize="none"
         autoCorrect={false}
@@ -134,7 +134,7 @@ export default function Signup() {
         secureTextEntry
         value={confirmPassword}
         onChangeText={setConfirmPassword}
-        style={{ borderWidth: 1, borderColor: "#EAF6E8",padding: 12, marginBottom: 25,borderRadius: 8, color: "#fff",
+        style={{ borderWidth: 1, borderColor: "#EAF6E8",padding: 12, marginBottom: 25,borderRadius: 8, color: "#052e17",
         }}
         autoCapitalize="none"
         autoCorrect={false}

@@ -3,11 +3,13 @@ import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import api from '@/lib/api';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function Login() {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
 
   // useEffect(() => {
@@ -110,15 +112,37 @@ export default function Login() {
               autoCapitalize="none"
               autoCorrect={false}
             />
-            <TextInput
-              placeholder="Password"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-              style={{ borderWidth: 1, padding: 10, marginBottom: 20, borderRadius: 8 }}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+<View style={{ position: "relative", marginBottom: 20 }}>
+  <TextInput
+    placeholder="Password"
+    secureTextEntry={!showPassword}
+    value={password}
+    onChangeText={setPassword}
+    style={{
+      borderWidth: 1,
+      padding: 10,
+      borderRadius: 8,
+      paddingRight: 40, // space for icon
+    }}
+    autoCapitalize="none"
+    autoCorrect={false}
+  />
+
+  <TouchableOpacity
+    onPress={() => setShowPassword(prev => !prev)}
+    style={{
+      position: "absolute",
+      right: 10,
+      top: 12,
+    }}
+  >
+    <Ionicons
+      name={showPassword ? "eye" : "eye-off"}
+      size={22}
+      color="gray"
+    />
+  </TouchableOpacity>
+</View>
     
             <TouchableOpacity
               onPress={handleLogin}

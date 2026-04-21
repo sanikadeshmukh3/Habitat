@@ -88,7 +88,7 @@ import api from "@/lib/api";
             padding: 12,
             marginBottom: 25,
             borderRadius: 8,
-            color: "#fff",
+            color: "#052e17",
           }}
           autoCapitalize="none"
         />

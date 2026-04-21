@@ -55,7 +55,7 @@ export default function FriendRequestScreen() {
   // Accept request
   const acceptRequest = async (requestId: string) => {
     try {
-      await fetch(`http://10.0.2.2:3000/friend/accept`, {
+      await fetch(`http://localhost:3000/friend/accept`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ requestId }),

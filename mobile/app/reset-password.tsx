@@ -115,7 +115,7 @@ import api from "@/lib/api";
           placeholderTextColor="#ccc"
           value={code}
           onChangeText={setCode}
-          style={{   borderWidth: 1,  borderColor: "#EAF6E8",  padding: 12,  marginBottom: 10, borderRadius: 8,  color: "#fff",
+          style={{   borderWidth: 1,  borderColor: "#EAF6E8",  padding: 12,  marginBottom: 10, borderRadius: 8,  color: "#052e17",
           }}
         />
   
@@ -138,7 +138,7 @@ import api from "@/lib/api";
           secureTextEntry
           value={password}
           onChangeText={setPassword}
-          style={{ borderWidth: 1,  borderColor: "#EAF6E8",  padding: 12,  marginBottom: 25,  borderRadius: 8,  color: "#fff",
+          style={{ borderWidth: 1,  borderColor: "#EAF6E8",  padding: 12,  marginBottom: 25,  borderRadius: 8,  color: "#052e17",
           }}
         />
   
