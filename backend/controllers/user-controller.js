@@ -69,6 +69,8 @@ async function getUserProfile(req, res, next) {
         timezone: true,
         creation: true,
         settings: true,   // JSONB — contains publicTag, isPublic, photoUri, etc.
+        points:   true,
+        badges:   true,
       },
     });
 
@@ -193,6 +195,8 @@ async function updateUserProfile(req, res, next) {
         timezone: true,
         creation: true,
         settings: true,
+        points:   true,
+        badges:   true,
       },
     });
 

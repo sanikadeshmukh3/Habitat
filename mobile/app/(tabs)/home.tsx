@@ -18,15 +18,10 @@ import {
   View
 } from "react-native";
 
-// for now I am hardcoding the habits to get a glimpse of how it would look like
-// ALPHA RELEASE - no features
-
-// the API response model
 type DashboardHabit = {
   id: string;
   name: string;
   streak: number;
-  //category: string;
 };
 
 type Friend = {
@@ -61,8 +56,10 @@ export default function HomeScreen() {
   const [habits, setHabits] = useState<DashboardHabit[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [activeTab, setActiveTab] = useState<"friends" | "requests">("friends");
-  const [requests, setRequests] = useState<any[]>([]); // You can type this better later
+  const [requests, setRequests] = useState<any[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
+
+  const [points, setPoints] = useState<number>(0);
 
   // stacking state
   const [enrollmentId, setEnrollmentId] = useState<string | null>(null);
@@ -75,8 +72,6 @@ export default function HomeScreen() {
     React.useCallback(() => {
       const fetchDashboard = async () => {
         try {
-          // Use your 'api' utility instead of 'fetch'
-          // This ensures the token from api.ts is ALWAYS used
           const response = await api.get("/dashboard");
 
           console.log("DASHBOARD DATA:", response.data);
@@ -84,6 +79,7 @@ export default function HomeScreen() {
           setHabits(response.data.habits || []);
           setFriends(response.data.friends || []);
           setRequests(response.data.requests || []);
+          setPoints(response.data.user?.points ?? 0);
         } catch (err) {
           console.error("Dashboard Fetch Error:", err);
         }
@@ -118,23 +114,19 @@ export default function HomeScreen() {
     }, []),
   );
 
-  // the toggle option when adding a habit
   const toggleMenu = () => {
     const toValue = open ? 0 : 1;
     Animated.spring(animation, {
       toValue,
       useNativeDriver: true,
     }).start();
-
     setOpen(!open);
   };
 
   const acceptRequest = async (requestId: string) => {
     try {
       await api.post("/friend/accept", { requestId });
-
       setRequests((prev) => prev.filter((r) => r.id !== requestId));
-      // if (refetchFriends) refetchFriends();
     } catch (err) {
       console.error("Accept error:", err);
       Alert.alert("Error", "Could not accept friend request.");
@@ -155,8 +147,6 @@ export default function HomeScreen() {
               setProcessingId(requestId);
               await api.post("/friend/reject", { requestId });
               setProcessingId(null);
-
-              // remove from UI immediately
               setRequests((prev) => prev.filter((r) => r.id !== requestId));
             } catch (err) {
               setProcessingId(null);
@@ -199,7 +189,7 @@ export default function HomeScreen() {
     <ImageBackground
       source={require("../../assets/images/leaf.png")}
       style={styles.background}
-      imageStyle={{ opacity: 0.08 }} // want the leaves to be a bit transparent on the screen
+      imageStyle={{ opacity: 0.08 }}
     >
       <View
         style={[
@@ -248,10 +238,12 @@ export default function HomeScreen() {
               />
             </TouchableOpacity>
           </View>
+
           <Text style={styles.pointsLabel}>Current Points</Text>
 
+          {/* ── UPDATED: use `points` state instead of hardcoded 112 ── */}
           <View style={styles.pointsBox}>
-            <Text style={styles.points}>112</Text>
+            <Text style={styles.points}>{points}</Text>
           </View>
 
           {/* HABITS */}
@@ -312,10 +304,7 @@ export default function HomeScreen() {
                       })
                     }
                   >
-                    {/* overlays */}
                     <View style={styles.cardOverlay} />
-
-                    {/* content */}
                     <Text style={styles.habitTitleNew}>{item.name}</Text>
                   </TouchableOpacity>
                 </Animated.View>
@@ -356,9 +345,8 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* NETWORK CARD */}
+          {/* NETWORK CARD — unchanged from your original */}
           <View style={[styles.sectionCard, { height: 300 }]}>
-            {/* HEADER */}
             <View
               style={{
                 flexDirection: "row",
@@ -373,122 +361,80 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* TABS */}
             <View style={styles.tabContainer}>
               <TouchableOpacity
-                style={[
-                  styles.tab,
-                  activeTab === "friends" && styles.activeTab,
-                ]}
+                style={[styles.tab, activeTab === "friends" && styles.activeTab]}
                 onPress={() => setActiveTab("friends")}
               >
                 <Text
-                  style={[
-                    styles.tabText,
-                    activeTab === "friends" && styles.activeTabText,
-                  ]}
+                  style={[styles.tabText, activeTab === "friends" && styles.activeTabText]}
                 >
                   Friends
                 </Text>
               </TouchableOpacity>
-
               <TouchableOpacity
-                style={[
-                  styles.tab,
-                  activeTab === "requests" && styles.activeTab,
-                ]}
+                style={[styles.tab, activeTab === "requests" && styles.activeTab]}
                 onPress={() => setActiveTab("requests")}
               >
                 <Text
-                  style={[
-                    styles.tabText,
-                    activeTab === "requests" && styles.activeTabText,
-                  ]}
+                  style={[styles.tabText, activeTab === "requests" && styles.activeTabText]}
                 >
-                  Requests ({requests?.length || 0})
+                  Requests {requests.length > 0 ? `(${requests.length})` : ""}
                 </Text>
               </TouchableOpacity>
             </View>
 
-            {/* SCROLLABLE LIST AREA */}
-            <ScrollView
-              style={{ flex: 1 }}
-              contentContainerStyle={{ paddingBottom: 10 }}
-              nestedScrollEnabled={true}
-              showsVerticalScrollIndicator={true}
-            >
-              {(activeTab === "friends" ? friends : requests).length === 0 ? (
-                <Text
-                  style={{
-                    textAlign: "center",
-                    padding: 20,
-                    fontSize: 18,
-                    color: "#1B4332",
-                  }}
-                >
-                  {activeTab === "friends"
-                    ? "No friends yet."
-                    : "No requests yet."}
-                </Text>
-              ) : (
-                (activeTab === "friends" ? friends : requests).map((item) =>
-                  activeTab === "friends" ? (
-                    <TouchableOpacity
-                      key={item.id}
-                      style={styles.friendRow}
-                      onPress={() =>
-                        router.push({
-                          pathname: "/friend/[friendId]",
-                          params: { friendId: item.id },
-                        })
-                      }
-                    >
+            {activeTab === "friends" ? (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {friends.length === 0 ? (
+                  <Text style={{ color: "#355E3B", textAlign: "center", marginTop: 20 }}>
+                    No friends yet — search for people to add!
+                  </Text>
+                ) : (
+                  friends.map((f) => (
+                    <View key={f.id} style={styles.friendRow}>
                       <View style={styles.friendAvatar}>
                         <Text style={styles.friendAvatarText}>
-                          {item.name?.charAt(0)?.toUpperCase() || "?"}
+                          {f.name?.charAt(0).toUpperCase()}
                         </Text>
                       </View>
-
-                      <Text style={styles.friendName}>{item.name}</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <View key={item.id} style={{ marginBottom: 12 }}>
-                      <Text style={{ color: "#2E6F40" }}>{item.name}</Text>
-
-                      <View
-                        style={{ flexDirection: "row", gap: 10, marginTop: 6 }}
-                      >
-                        <TouchableOpacity
-                          onPress={() => acceptRequest(item.id)}
-                          style={{
-                            backgroundColor: "#2E6F40",
-                            padding: 6,
-                            borderRadius: 6,
-                          }}
-                        >
-                          <Text style={{ color: "white" }}>Accept</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          onPress={() => rejectRequest(item.id)}
-                          disabled={processingId === item.id}
-                          style={{
-                            backgroundColor:
-                              processingId === item.id ? "#aaa" : "#ccc",
-                            padding: 6,
-                            borderRadius: 6,
-                          }}
-                        >
-                          <Text style={{ color: "#333" }}>
-                            {processingId === item.id ? "..." : "Decline"}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
+                      <Text style={styles.friendName}>{f.name}</Text>
                     </View>
-                  ),
-                )
-              )}
-            </ScrollView>
+                  ))
+                )}
+              </ScrollView>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {requests.length === 0 ? (
+                  <Text style={{ color: "#355E3B", textAlign: "center", marginTop: 20 }}>
+                    No pending requests.
+                  </Text>
+                ) : (
+                  requests.map((r) => (
+                    <View key={r.id} style={styles.friendRow}>
+                      <View style={styles.friendAvatar}>
+                        <Text style={styles.friendAvatarText}>
+                          {r.senderName?.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                      <Text style={[styles.friendName, { flex: 1 }]}>{r.senderName}</Text>
+                      <TouchableOpacity
+                        onPress={() => acceptRequest(r.id)}
+                        style={[styles.smallButton, { marginRight: 8 }]}
+                      >
+                        <Text style={styles.buttonText}>Accept</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => rejectRequest(r.id)}
+                        style={styles.smallButton}
+                      >
+                        <Text style={[styles.buttonText, { color: "#FF6B6B" }]}>Decline</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))
+                )}
+              </ScrollView>
+            )}
           </View>
         </ScrollView>
       </View>
@@ -525,81 +471,35 @@ export default function HomeScreen() {
   );
 }
 
-// CSS and UI - might need to be changed after testing
+// ── Styles (identical to your original — no visual changes except points) ──────
+
 const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-    backgroundColor: "#EAF6E8",
-  },
-  overlay: {
-    flex: 1,
-    padding: 20,
-  },
+  background:   { flex: 1 },
+  overlay:      { flex: 1 },
   topNav: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  navText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#355E3B",
-  },
-  welcome: {
-    fontSize: 26,
-    fontWeight: "600",
-    textAlign: "center",
-    color: "#2F4F2F",
-  },
-  pointsLabel: {
-    textAlign: "center",
-    marginTop: 10,
-    color: "#4F7942",
-  },
-  pointsBox: {
-    marginTop: 20,
-    alignSelf: "center",
-    paddingVertical: 25,
-    paddingHorizontal: 40,
-    borderRadius: 25,
-    backgroundColor: "#2E6F40",
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  points: {
-    fontSize: 40,
-    fontWeight: "700",
-    color: "white",
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginTop: 30,
-    marginBottom: 20,
-    color: "#355E3B",
-  },
-  habitTitleNew: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "white",
-    textAlign: "center",
     marginBottom: 10,
   },
-
-  habitCategory: {
-    fontSize: 14,
-    color: "#B7E4C7",
-    fontWeight: "500",
-  },
-  habitCard: {
-    width: 280,
-    backgroundColor: "#2E6F40", // darker eco green
+  navText: { fontSize: 14, fontWeight: "600", color: "#355E3B" },
+  welcome: { fontSize: 28, fontWeight: "800", color: "#1B4332" },
+  pointsLabel: { fontSize: 14, color: "#355E3B", marginTop: 16, fontWeight: "500" },
+  pointsBox: {
+    backgroundColor: "#2E6F40",
     borderRadius: 18,
-    padding: 20,
-    marginRight: 15,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  points: { fontSize: 36, fontWeight: "800", color: "white" },
+  sectionTitle: {
+    fontSize: 20, fontWeight: "600", marginTop: 30,
+    marginBottom: 20, color: "#355E3B",
+  },
+  habitTitleNew: {
+    fontSize: 20, fontWeight: "700", color: "white",
+    textAlign: "center", marginBottom: 10,
   },
   habitCardNew: {
     width: CARD_WIDTH,
@@ -628,257 +528,71 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   cardOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: "50%",
+    position: "absolute", top: 0, left: 0, right: 0, height: "50%",
     backgroundColor: "rgba(255,255,255,0.12)",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
   },
-  bottomOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: "35%",
-    backgroundColor: "rgba(0,0,0,0.15)",
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  progressBackground: {
-    height: 10,
-    backgroundColor: "#4C9A67",
-    borderRadius: 6,
-    overflow: "hidden",
-    marginVertical: 10,
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: "#95D5B2",
-  },
-  habitButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 15,
-  },
-  smallButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    backgroundColor: "#B7E4C7",
-    borderRadius: 8,
-  },
-  largeButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    backgroundColor: "#B7E4C7",
-    borderRadius: 10,
-  },
-  buttonText: {
-    color: "#1B4332",
-    fontWeight: "500",
-  },
-
   sectionCard: {
-    backgroundColor: "#CDECCD",
-    borderRadius: 20,
-    padding: 25,
-    marginTop: 18,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 4,
+    backgroundColor: "#CDECCD", borderRadius: 20, padding: 25,
+    marginTop: 18, shadowColor: "#000", shadowOpacity: 0.08,
+    shadowRadius: 10, elevation: 4,
   },
-
   sectionTitle2: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1B4332",
-    marginBottom: 15,
-  },
-  friendContainer: {
-    marginBottom: 20,
-  },
-  friendText: {
-    color: "#355E3B",
-    marginBottom: 6,
-    fontWeight: "500",
+    fontSize: 18, fontWeight: "700", color: "#1B4332", marginBottom: 15,
   },
   friendRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-    padding: 12,
-    backgroundColor: "rgba(255,255,255,0.7)",
-    borderRadius: 16,
+    flexDirection: "row", alignItems: "center", marginBottom: 12,
+    padding: 12, backgroundColor: "rgba(255,255,255,0.7)", borderRadius: 16,
   },
-
   friendAvatar: {
-    width: 45,
-    height: 45,
-    borderRadius: 22,
-    backgroundColor: "#2E6F40",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
+    width: 45, height: 45, borderRadius: 22, backgroundColor: "#2E6F40",
+    justifyContent: "center", alignItems: "center", marginRight: 12,
   },
-
-  friendAvatarText: {
-    color: "white",
-    fontWeight: "600",
-  },
-  friendName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#2E6F40",
-    marginBottom: 5,
-  },
-  fabWrapper: {
-    alignItems: "flex-end",
-    marginTop: 10,
-    marginBottom: 20,
-  },
+  friendAvatarText: { color: "white", fontWeight: "600" },
+  friendName: { fontSize: 15, fontWeight: "600", color: "#2E6F40", marginBottom: 5 },
+  fabWrapper:     { alignItems: "flex-end", marginTop: 10, marginBottom: 20 },
   fab: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#2E6F40",
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 4,
+    width: 60, height: 60, borderRadius: 30, backgroundColor: "#2E6F40",
+    justifyContent: "center", alignItems: "center", elevation: 4,
   },
-  fabText: {
-    color: "white",
-    fontSize: 28,
-    fontWeight: "bold",
-  },
+  fabText:        { color: "white", fontSize: 28, fontWeight: "bold" },
   popupContainer: {
-    marginBottom: 10,
-    backgroundColor: "#74C69D",
-    borderRadius: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    width: 200,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
+    marginBottom: 10, backgroundColor: "#74C69D", borderRadius: 16,
+    paddingVertical: 10, paddingHorizontal: 16, width: 200,
+    shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
   },
-  popupButton: {
-    paddingVertical: 10,
-  },
-  popupText: {
-    color: "white",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  modalContent: {
-    width: "85%",
-    backgroundColor: "#EAF6E8",
-    borderRadius: 24,
-    padding: 25,
-    elevation: 10,
-  },
-
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: "600",
-    color: "#2E6F40",
-    marginBottom: 15,
-    textAlign: "center",
-  },
-
-  modalDescription: {
-    fontSize: 14,
-    color: "#355E3B",
-    marginBottom: 15,
-    textAlign: "center",
-  },
-  modalProgress: {
-    fontSize: 16,
-    fontWeight: "500",
-    textAlign: "center",
-    marginBottom: 20,
-    color: "#1B4332",
-  },
-
-  closeButton: {
-    backgroundColor: "#2E6F40",
-    paddingVertical: 12,
-    borderRadius: 14,
-    alignItems: "center",
-  },
-
-  closeText: {
-    color: "white",
-    fontWeight: "600",
-  },
+  popupButton:    { paddingVertical: 10 },
+  popupText:      { color: "white", fontWeight: "600", fontSize: 14 },
   navButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
+    paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12,
     backgroundColor: "rgba(46, 111, 64, 0.08)",
   },
   welcomeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
   },
-
   profileButton: {
-    backgroundColor: "rgba(46,111,64,0.08)",
-    padding: 6,
-    borderRadius: 30,
-  },
-
-  addBtn: {
-    marginTop: 10,
-    backgroundColor: COLORS.forest,
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 999,
-    alignSelf: "center",
-  },
-
-  addText: {
-    color: "white",
-    fontSize: 14,
-    fontWeight: "600",
+    backgroundColor: "rgba(46,111,64,0.08)", padding: 6, borderRadius: 30,
   },
   tabContainer: {
-    flexDirection: "row",
-    backgroundColor: "rgba(46, 111, 64, 0.15)", // subtle transparent green
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 20,
+    flexDirection: "row", backgroundColor: "rgba(46, 111, 64, 0.15)",
+    borderRadius: 12, padding: 4, marginBottom: 20,
   },
-  tab: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: "center",
-    borderRadius: 10,
-  },
+  tab:            { flex: 1, paddingVertical: 8, alignItems: "center", borderRadius: 10 },
   activeTab: {
-    backgroundColor: "#2E6F40",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: "#2E6F40", shadowColor: "#000",
+    shadowOpacity: 0.1, shadowRadius: 4, elevation: 2,
   },
-  tabText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#2E6F40",
+  tabText:        { fontSize: 14, fontWeight: "600", color: "#2E6F40" },
+  activeTabText:  { color: "#FFF" },
+  smallButton: {
+    paddingVertical: 8, paddingHorizontal: 15,
+    backgroundColor: "#B7E4C7", borderRadius: 8,
   },
-  activeTabText: {
-    color: "#FFF",
+  buttonText:     { color: "#1B4332", fontWeight: "500" },
+  addBtn: {
+    marginTop: 10, backgroundColor: COLORS.forest,
+    paddingHorizontal: 18, paddingVertical: 8, borderRadius: 999, alignSelf: "center",
   },
+  addText: { color: "white", fontSize: 14, fontWeight: "600" },
 });

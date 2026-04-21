@@ -29,6 +29,7 @@ export interface Habit {
   priorityRank?:  number;
   createdAt:      string;    // ISO-8601 string
   updatedAt:      string;    // ISO-8601 string
+  inProbationPeriod?: boolean;
 }
 
 /**

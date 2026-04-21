@@ -59,6 +59,34 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   photoUri:      null,
 };
 
+// ─── Badge types ──────────────────────────────────────────────────────────────
+ 
+export type UserBadge = {
+  badgeId:   string;
+  earnedAt:  string; // ISO date string
+};
+ 
+// Frontend display metadata — mirrors BADGE_DEFINITIONS in lib/badges.js
+export const BADGE_META: Record<string, { name: string; emoji: string; description: string }> = {
+  starting_out:          { name: 'Starting Out',          emoji: '🌱', description: 'Used the app for a full week.' },
+  getting_into_it:       { name: 'Getting Into It',       emoji: '🌿', description: 'Used the app for a full month.' },
+  really_habitual:       { name: 'Really Habitual',       emoji: '🌳', description: 'Used the app for a full year.' },
+  humble_leaf:           { name: 'Humble Leaf',           emoji: '🍃', description: 'Achieved 80%+ consistency on any habit tracked for at least a month.' },
+  automaticity_achieved: { name: 'Automaticity Achieved', emoji: '⚡', description: 'Maintained 95%+ consistency on any habit tracked for a full year.' },
+  streak_starter:        { name: 'Streak Starter',        emoji: '🔥', description: 'Reached a 7-day streak on any habit.' },
+  streak_warrior:        { name: 'Streak Warrior',        emoji: '⚔️', description: 'Reached a 30-day streak on any habit.' },
+  streak_legend:         { name: 'Streak Legend',         emoji: '👑', description: 'Reached a 100-day streak on any habit.' },
+  point_collector:       { name: 'Point Collector',       emoji: '💎', description: 'Earned a total of 100 points.' },
+  point_hoarder:         { name: 'Point Hoarder',         emoji: '🏆', description: 'Earned a total of 1,000 points.' },
+};
+ 
+/** Returns the display label used in the badge chip, e.g. "🔥 Streak Starter" */
+export function badgeLabel(badgeId: string): string {
+  const meta = BADGE_META[badgeId];
+  if (!meta) return badgeId;
+  return `${meta.emoji} ${meta.name}`;
+}
+
 // ─── User profile ─────────────────────────────────────────────────────────────
 
 /**
@@ -71,6 +99,8 @@ export interface UserProfile {
   email:    string;
   timezone: string | null;
   creation: string;           // ISO-8601 date string from JSON serialisation
+  points: number;
+  badges: UserBadge[];
   settings: UserSettings;
 }
 
