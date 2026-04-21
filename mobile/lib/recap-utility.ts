@@ -296,6 +296,11 @@ function getElapsedDaySummaries(
 
 // Key Metrics
 
+/* Completion Score: Overall follow-through on expected habits across the week.
+ * Example:
+ * - If you had 3 habits each day for 7 days, that's 21 expected habit completions.
+ * - If you completed 15, your score would be 15/21 = ~0.71.
+ */
 export function computeCompletionScore(
   habits: HabitRecord[],
   checkIns: HabitCheckInRecord[],
@@ -309,6 +314,15 @@ export function computeCompletionScore(
   return totalCompleted / totalExpected;
 }
 
+/*
+ * Consistency Score: How consistently you followed through across the days of the week.
+ * This looks at the ratio of completed to expected habits for each day.
+ * Then it calculates the percentage of days where you were above a certain threshold (e.g., 70%).
+ * Example:
+ * - Suppose you had 7 days with expected habits.
+ * - On 5 of those days you completed at least 70% of the habits.
+ * - Then your consistency score would be 5/7 = ~0.71.
+ */
 export function computeConsistencyScore(
   habits: HabitRecord[],
   checkIns: HabitCheckInRecord[],
@@ -321,6 +335,12 @@ export function computeConsistencyScore(
   return successfulDays / days.length;
 }
 
+/* Streak Score: Measures the longest run of days where you maintained a strong completion ratio (e.g., 70% or higher).
+ * This rewards sustained effort and momentum across the week.
+ * Example:
+ * - Suppose your longest streak of days with 70%+ completion was 4 days, and there were 7 days total.
+ * - Then your score would be 4/7 = ~0.57.
+ */
 export function computeStreakScore(
   habits: HabitRecord[],
   checkIns: HabitCheckInRecord[],
@@ -344,6 +364,12 @@ export function computeStreakScore(
   return longest / days.length;
 }
 
+/* Daily Variance: Captures the variability in your daily completion ratios across the week.
+ * A lower variance indicates a more consistent rhythm, while a higher variance suggests more ups and downs.
+ * Example:
+ * - If your daily ratios were [0.8, 0.75, 0.9, 0.7, 0.85, 0.8, 0.9], the variance would be low.
+ * - If your daily ratios were [0.9, 0.5, 0.8, 0.3, 0.85, 0.4, 0.95], the variance would be higher.
+ */
 export function computeDailyVariance(
   habits: HabitRecord[],
   checkIns: HabitCheckInRecord[],
@@ -356,6 +382,13 @@ export function computeDailyVariance(
   return Math.max(...ratios) - Math.min(...ratios);
 }
 
+/* Recovery Score: Evaluates how well you bounced back after lower-performing days.
+ * It looks at sequences of days where you had a low completion ratio (e.g., below 40%) followed by a strong recovery (e.g., above 70%).
+ * The score is the percentage of low days that were followed by a strong recovery the next day.
+ * Example:
+ * - Suppose you had 3 low days, and 2 of them were followed by a strong recovery.
+ * - Then your score would be 2/3 = ~0.67.
+ */
 export function computeRecoveryScore(
   habits: HabitRecord[],
   checkIns: HabitCheckInRecord[],
@@ -381,6 +414,13 @@ export function computeRecoveryScore(
   return rebounds / lowDays;
 }
 
+/* Activity Score: Measures how active you were across the week in terms of showing up and completing habits, regardless of the total volume.
+ * It looks at the percentage of days where you completed at least one habit, out of the days where you had expected habits.
+ * Example:
+ * - Suppose you had 7 days with expected habits.
+ * - On 6 of those days you completed at least one habit.
+ * - Then your score would be 6/7 = ~0.86.
+ */
 export function computeActivityScore(
   habits: HabitRecord[],
   checkIns: HabitCheckInRecord[],
@@ -393,6 +433,15 @@ export function computeActivityScore(
   return activeDays / days.length;
 }
 
+/* Reflection Score: Evaluates the quality and frequency of your notes and reflections in your check-ins.
+ * It combines the percentage of completed check-ins that included notes with the average length of those notes.
+ * The score is a weighted combination of note frequency and note length, normalized to a 0-1 scale.
+ * Example:
+ * - Suppose you had 20 completed check-ins, and 10 of them included notes.
+ * - That's a note frequency of 0.5.
+ * - If the average note length was 60 characters, that might translate to a note length score of 0.5 (if we consider 120 characters as a strong note).
+ * - The final reflection score could be calculated as 0.7 * 0.5 (note frequency) + 0.3 * 0.5 (note length) = 0.5.
+ */
 export function computeReflectionScore(
   habits: HabitRecord[],
   checkIns: HabitCheckInRecord[],
@@ -426,6 +475,12 @@ export function computeReflectionScore(
   return 0.7 * noteFrequency + 0.3 * noteLengthScore;
 }
 
+/* Difficulty Score: Assesses the average difficulty rating you assigned to your completed habits.
+  * It looks at the average difficulty rating for completed check-ins and normalizes it to a 0-1 scale.
+  * Example:
+  * - Suppose you had 20 completed check-ins with difficulty ratings, and the average rating was 3 out of 5.
+  * - Normalizing this to a 0-1 scale (where 1 is the most difficult), you might calculate it as (3 - 1) / 4 = 0.5.
+  */
 export function computeDifficultyScore(
   habits: HabitRecord[],
   checkIns: HabitCheckInRecord[],

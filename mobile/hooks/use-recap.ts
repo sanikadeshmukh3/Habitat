@@ -60,8 +60,8 @@ function mapToCheckInRecords(checkInMap: MonthlyCheckInMap): HabitCheckInRecord[
 }
 
 export function useRecap(now = new Date()) {
-  const weekKey = getWeekKey(now);
   const weekStart = startOfWeekSunday(now);
+  const weekKey = getWeekKey(weekStart);
 
   const currentMonthInfo = monthKey(now);
   const startMonthInfo = monthKey(weekStart);
@@ -87,7 +87,6 @@ export function useRecap(now = new Date()) {
     }
 
     const startRecords = mapToCheckInRecords(startMonthCheckInMap);
-
     const deduped = new Map<string, HabitCheckInRecord>();
 
     for (const checkIn of [...startRecords, ...currentRecords]) {
@@ -100,7 +99,6 @@ export function useRecap(now = new Date()) {
 
   const recap = useMemo(() => {
     if (!habits.length) return null;
-
     return buildWeeklyRecap(habits as HabitRecord[], checkIns, now);
   }, [habits, checkIns, now]);
 
