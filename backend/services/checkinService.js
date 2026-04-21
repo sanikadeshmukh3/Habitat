@@ -390,20 +390,20 @@ async function getHabitWithStreakHealth(habitId) {
         data:  { currentStreak: 0 },
       });
     }
-  }
 
   // Return the habit without the nested checkIns array (client doesn't need it here)
   const { checkIns: _, ...habitData } = habit;
   return { ...habitData, currentStreak, inProbationPeriod };
-}
 
 // ─── Existing read functions (unchanged) ─────────────────────────────────────
+  }
 
   // Recalculate streak, then run the stacking monitoring pipeline
   await recalculateStreak(habitId);
   await runOnCheckIn(habit.userId, habitId);
 
   return checkIn;
+}
 
 async function getCheckInsForMonth(userId, year, month) {
   const parsedYear  = Number(year);
