@@ -26,6 +26,9 @@ exports.getDashboardData = async (userId) => {
         });
 
         return {
+            user: {
+                points: user.points ?? 0,
+            },
             habits: user.habit.map((h) => ({
                 id: h.id,
                 name: h.name,

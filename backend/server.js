@@ -1,5 +1,4 @@
 const express = require("express");
-const { PrismaClient } = require("@prisma/client");
 const { Pool } = require("pg");
 const habitRoutes = require("./routes/habit-routes");
 const checkinRoutes = require("./routes/checkinRoutes");
@@ -12,7 +11,7 @@ const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 const authenticateToken = require("./middleware/authenticateToken");
 
-const prisma = new PrismaClient();
+const prisma = require("./lib/prisma");
 const cors = require("cors");
 
 const app = express();

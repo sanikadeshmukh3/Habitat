@@ -17,6 +17,8 @@ model User {
   timezone            String?
   creation            DateTime             @default(now())
   settings            Json                 @default("{\"the guy\": {\"last name\": \"guy\", \"first name\": \"might\"}}")
+  points              Int                  @default(0)
+  badges              UserBadge[]          
   habit               Habit[]
   isVerified          Boolean              @default(false) @map("is_verified")
   verificationCode    String?              @map("verification_code")
@@ -39,6 +41,7 @@ model Habit {
   habitCategory HabitCategory  @map("habit_category")
   visibility    Boolean        @default(true)
   currentStreak Int            @default(0) @map("current_streak")
+  streakProbationPeriodStart DateTime? @map("streak_probation_period_start")
   priorityRank  Int?           @map("priority_rank")
   frequency     HabitFrequency
   active        Boolean        @default(true)
@@ -68,6 +71,7 @@ model HabitCheckIn {
   completed        Boolean
   difficultyRating Int?     @map("difficulty_rating")
   notes            String?
+  pointsEarned     Int      @default(0) @map("points_earned")
   habit            Habit    @relation(fields: [habitId], references: [id])
 
   @@map("habit_check_in")
@@ -103,6 +107,18 @@ model StackingScheduleEntry {
   habit               Habit               @relation(fields: [habitId], references: [id])
 
   @@map("stacking_schedule_entry")
+}
+
+model UserBadge {
+  id       String   @id @default(uuid())
+  userId   String   @map("user_id")
+  badgeId  String   @map("badge_id")
+  earnedAt DateTime @default(now()) @map("earned_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, badgeId])
+  @@map("user_badge")
 }
 
 enum HabitFrequency {

@@ -1,5 +1,16 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
+const {
+  computePointsEarned,
+  computeDailyCheckIn,
+  computeWeeklyCheckIn,
+  evaluateDailyStreakHealth,
+  evaluateWeeklyStreakHealth,
+  recalculateDailyStreak,
+  recalculateWeeklyStreak,
+  diffDays,
+} = require('../lib/streaks');
+const { evaluateNewBadges, BADGE_DEFINITIONS } = require('../lib/badges');
+
 
 // Helper to format a Date as a local "YYYY-MM-DD" string (avoids UTC shift)
 function toLocalDateKey(d) {
@@ -11,42 +22,17 @@ function normalizeToStartOfDay(dateInput) {
   return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 0, 0, 0, 0);
 }
 
-// Recalculates currentStreak by walking backwards from today
-// through consecutive completed check-ins and updates the habit row
-async function recalculateStreak(habitId) {
-  const checkIns = await prisma.habitCheckIn.findMany({
-    where: { habitId, completed: true },
-    orderBy: { date: 'desc' },
-  });
+// ─── Main upsert ──────────────────────────────────────────────────────────────
 
-  // Use local date strings to avoid UTC midnight shifting dates
-  const completedDates = new Set(
-    checkIns.map((c) => toLocalDateKey(new Date(c.date)))
-  );
-
-  // Walk backwards from today counting consecutive completed days
-  let streak = 0;
-  const cursor = new Date();
-  cursor.setHours(0, 0, 0, 0);
-
-  while (true) {
-    const key = toLocalDateKey(cursor);
-    if (completedDates.has(key)) {
-      streak++;
-      cursor.setDate(cursor.getDate() - 1);
-    } else {
-      break;
-    }
-  }
-
-  await prisma.habit.update({
-    where: { id: habitId },
-    data: { currentStreak: streak },
-  });
-
-  return streak;
-}
-
+/**
+ * Upserts a check-in then, if completed=true, orchestrates:
+ *   1. Streak update (daily or weekly rules, with probation period for daily)
+ *   2. Points award (1 + floor(log2(newStreak)))
+ *   3. Badge evaluation and insert
+ *
+ * Returns the check-in row plus metadata the client can use for toasts/UI:
+ *   { checkIn, pointsEarned, newStreak, streakBroke, newBadges, totalPoints }
+ */
 async function upsertHabitCheckIn(userId, habitId, data) {
   const {
     date,
@@ -70,64 +56,317 @@ async function upsertHabitCheckIn(userId, habitId, data) {
     throw { status: 400, message: 'notes must be 500 characters or less' };
   }
 
-  const habit = await prisma.habit.findUnique({
-    where: { id: habitId },
-  });
+  const habit = await prisma.habit.findUnique({ where: { id: habitId } });
 
-  if (!habit) {
-    throw { status: 404, message: 'Habit not found' };
-  }
+  if (!habit)            throw { status: 404, message: 'Habit not found' };
+  if (habit.userId !== userId) throw { status: 403, message: 'Forbidden' };
+  if (!habit.active)     throw { status: 400, message: 'Cannot check in an inactive habit' };
 
-  if (habit.userId !== userId) {
-    throw { status: 403, message: 'Forbidden' };
-  }
-
-  if (!habit.active) {
-    throw { status: 400, message: 'Cannot check in an inactive habit' };
-  }
-
-  const start = normalizeToStartOfDay(date);
-  const nextDay = new Date(start);
+  const checkInDate = normalizeToStartOfDay(date);
+  const nextDay     = new Date(checkInDate);
   nextDay.setDate(nextDay.getDate() + 1);
 
-  const existing = await prisma.habitCheckIn.findFirst({
-    where: {
-      habitId,
-      date: {
-        gte: start,
-        lt: nextDay,
+  // ── Wrap everything in a transaction so check-in + streak + points + badges are atomic ──
+  const result = await prisma.$transaction(async (tx) => {
+
+    // 1. Find any existing check-in for this day (needed for both paths below)
+    const existing = await tx.habitCheckIn.findFirst({
+      where: { habitId, date: { gte: checkInDate, lt: nextDay } },
+    });
+
+    // ── UNCHECK PATH ──────────────────────────────────────────────────────────
+    // When unchecking we need to:
+    //   a) Deduct exactly the points that were awarded when this was checked in
+    //      (stored on the row so there is no guesswork).
+    //   b) Recalculate the streak from scratch because removing a check-in can
+    //      collapse a streak differently from the incremental logic.
+    //   c) Clear the probation period — a full recalculation is the source of truth.
+    if (!Boolean(completed)) {
+      const pointsToDeduct = existing?.pointsEarned ?? 0;
+
+      // Mark the check-in as incomplete (or create a false one if it doesn't exist)
+      let checkIn;
+      if (existing) {
+        checkIn = await tx.habitCheckIn.update({
+          where: { id: existing.id },
+          data: {
+            completed:        false,
+            pointsEarned:     0,
+            difficultyRating: difficultyRating == null ? null : Number(difficultyRating),
+            notes:            notes === '' ? null : notes,
+          },
+        });
+      } else {
+        checkIn = await tx.habitCheckIn.create({
+          data: {
+            habitId,
+            date:             checkInDate,
+            completed:        false,
+            pointsEarned:     0,
+            difficultyRating: difficultyRating == null ? null : Number(difficultyRating),
+            notes:            notes === '' ? null : notes,
+          },
+        });
+      }
+
+      // All completed check-ins that remain after this uncheck
+      const remaining = await tx.habitCheckIn.findMany({
+        where: { habitId, completed: true },
+        orderBy: { date: 'desc' },
+      });
+      const remainingDates = remaining.map((c) => new Date(c.date));
+
+      let newStreak = 0;
+      if (habit.frequency === 'DAILY') {
+        newStreak = recalculateDailyStreak(remainingDates).streak;
+      } else if (habit.frequency === 'WEEKLY') {
+        newStreak = recalculateWeeklyStreak(remainingDates).streak;
+      }
+
+      await tx.habit.update({
+        where: { id: habitId },
+        data: {
+          currentStreak:              newStreak,
+          streakProbationPeriodStart: null, // full recalc clears probation
+        },
+      });
+
+      // Deduct points (floor at 0 — can't go negative)
+      const updatedUser = await tx.user.update({
+        where: { id: userId },
+        data: { points: { decrement: pointsToDeduct } },
+        select: { points: true },
+      });
+      const totalPoints = Math.max(0, updatedUser.points);
+
+      // If the DB went negative (race condition), clamp it
+      if (updatedUser.points < 0) {
+        await tx.user.update({
+          where: { id: userId },
+          data: { points: 0 },
+        });
+      }
+
+      return {
+        checkIn,
+        pointsEarned:  -pointsToDeduct,
+        newStreak,
+        streakBroke:   newStreak < habit.currentStreak,
+        newBadges:     [],
+        totalPoints,
+      };
+    }
+
+    // ── COMPLETE PATH ─────────────────────────────────────────────────────────
+    let checkIn;
+    if (existing) {
+      checkIn = await tx.habitCheckIn.update({
+        where: { id: existing.id },
+        data: {
+          completed:        true,
+          difficultyRating: difficultyRating == null ? null : Number(difficultyRating),
+          notes:            notes === '' ? null : notes,
+          date:             checkInDate,
+        },
+      });
+    } else {
+      checkIn = await tx.habitCheckIn.create({
+        data: {
+          habitId,
+          date:             checkInDate,
+          completed:        true,
+          pointsEarned:     0, // updated below once we know the streak
+          difficultyRating: difficultyRating == null ? null : Number(difficultyRating),
+          notes:            notes === '' ? null : notes,
+        },
+      });
+    }
+
+    // 2. Compute new streak from prior completed check-ins
+    let newStreak               = habit.currentStreak;
+    let newProbationPeriodStart = habit.streakProbationPeriodStart;
+    let streakBroke             = false;
+
+    const priorCheckIns = await tx.habitCheckIn.findMany({
+      where: { habitId, completed: true, date: { lt: checkInDate } },
+      orderBy: { date: 'desc' },
+    });
+    const priorDates    = priorCheckIns.map((c) => new Date(c.date));
+    const lastCompleted = priorDates[0] ?? null;
+
+    if (habit.frequency === 'DAILY') {
+      const r = computeDailyCheckIn(
+        habit.currentStreak,
+        habit.streakProbationPeriodStart,
+        lastCompleted,
+        checkInDate,
+      );
+      newStreak               = r.newStreak;
+      newProbationPeriodStart = r.newStreakProbationPeriodStart;
+      streakBroke             = r.streakBroke;
+    } else if (habit.frequency === 'WEEKLY') {
+      const r = computeWeeklyCheckIn(habit.currentStreak, priorDates, checkInDate);
+      newStreak               = r.newStreak;
+      streakBroke             = r.streakBroke;
+      newProbationPeriodStart = null;
+    }
+
+    const pointsEarned = computePointsEarned(newStreak);
+
+    // Store pointsEarned on the check-in row so we can reverse it on uncheck
+    await tx.habitCheckIn.update({
+      where: { id: checkIn.id },
+      data:  { pointsEarned },
+    });
+
+    // 3. Write streak back to Habit
+    await tx.habit.update({
+      where: { id: habitId },
+      data: {
+        currentStreak:              newStreak,
+        streakProbationPeriodStart: newProbationPeriodStart,
+      },
+    });
+
+    // 4. Award points to User
+    const updatedUser = await tx.user.update({
+      where: { id: userId },
+      data: { points: { increment: pointsEarned } },
+      select: {
+        points:   true,
+        creation: true,
+        badges:   { select: { badgeId: true } },
+      },
+    });
+
+    // 5. Evaluate badges
+    const allUserHabits = await tx.habit.findMany({
+      where:  { userId, active: true },
+      select: {
+        id:               true,
+        frequency:        true,
+        currentStreak:    true,
+        consistencyScore: true,
+        createdAt:        true,
+      },
+    });
+
+    const badgeContext = {
+      accountAgeDays: diffDays(new Date(), new Date(updatedUser.creation)),
+      totalPoints:    updatedUser.points,
+      habits: allUserHabits.map((h) => ({
+        id:               h.id,
+        frequency:        h.frequency,
+        currentStreak:    h.currentStreak,
+        consistencyScore: h.consistencyScore,
+        habitAgeDays:     diffDays(new Date(), new Date(h.createdAt)),
+      })),
+    };
+
+    const alreadyEarned  = new Set(updatedUser.badges.map((b) => b.badgeId));
+    const newBadgeIds    = evaluateNewBadges(badgeContext, alreadyEarned);
+
+    if (newBadgeIds.length > 0) {
+      await tx.userBadge.createMany({
+        data:            newBadgeIds.map((badgeId) => ({ userId, badgeId })),
+        skipDuplicates:  true,
+      });
+    }
+
+    const newBadgeDetails = newBadgeIds.map((id) => {
+      const def = BADGE_DEFINITIONS.find((b) => b.id === id);
+      return { id: def.id, name: def.name, emoji: def.emoji, description: def.description };
+    });
+
+    return {
+      checkIn,
+      pointsEarned,
+      newStreak,
+      streakBroke,
+      newBadges:   newBadgeDetails,
+      totalPoints: updatedUser.points,
+    };
+  });
+
+  return result;
+}
+
+// ─── Streak health at read time ───────────────────────────────────────────────
+
+/**
+ * Fetches a habit and lazily evaluates whether its streak has silently broken
+ * or entered probation since the last check-in. Writes any state changes back
+ * to the DB so the client always gets accurate data without a cron job.
+ *
+ * Call this from your GET /habits/:id handler and include `inProbationPeriod`
+ * in the response — habit-detail.tsx uses it to show the ⏰ banner.
+ *
+ * @param {string} habitId
+ * @returns {Promise<object>}  habit row + inProbationPeriod boolean
+ */
+async function getHabitWithStreakHealth(habitId) {
+  const habit = await prisma.habit.findUniqueOrThrow({
+    where:   { id: habitId },
+    include: {
+      checkIns: {
+        where:   { completed: true },
+        orderBy: { date: 'desc' },
+        take:    1,
       },
     },
   });
 
-  let checkIn;
-  if (existing) {
-    checkIn = await prisma.habitCheckIn.update({
-      where: { id: existing.id },
-      data: {
-        completed: Boolean(completed),
-        difficultyRating: difficultyRating == null ? null : Number(difficultyRating),
-        notes: notes === '' ? null : notes,
-        date: start,
-      },
-    });
-  } else {
-    checkIn = await prisma.habitCheckIn.create({
-      data: {
-        habitId,
-        date: start,
-        completed: Boolean(completed),
-        difficultyRating: difficultyRating == null ? null : Number(difficultyRating),
-        notes: notes === '' ? null : notes,
-      },
-    });
+  const lastCompleted = habit.checkIns[0]?.date ?? null;
+  const today         = new Date();
+  let   inProbationPeriod = false;
+  let   currentStreak     = habit.currentStreak;
+
+  if (habit.frequency === 'DAILY') {
+    const health = evaluateDailyStreakHealth(
+      habit.currentStreak,
+      habit.streakProbationPeriodStart,
+      lastCompleted,
+      today,
+    );
+
+    inProbationPeriod = health.inProbationPeriod;
+
+    const needsWrite =
+      health.streakBroken ||
+      (health.newStreakProbationPeriodStart !== null && habit.streakProbationPeriodStart === null);
+
+    if (needsWrite) {
+      if (health.streakBroken) {
+        currentStreak = 0;
+        await prisma.habit.update({
+          where: { id: habitId },
+          data:  { currentStreak: 0, streakProbationPeriodStart: null },
+        });
+      } else if (health.newStreakProbationPeriodStart) {
+        await prisma.habit.update({
+          where: { id: habitId },
+          data:  { streakProbationPeriodStart: health.newStreakProbationPeriodStart },
+        });
+      }
+    }
+
+  } else if (habit.frequency === 'WEEKLY') {
+    const health = evaluateWeeklyStreakHealth(habit.currentStreak, lastCompleted, today);
+    if (health.streakBroken) {
+      currentStreak = 0;
+      await prisma.habit.update({
+        where: { id: habitId },
+        data:  { currentStreak: 0 },
+      });
+    }
   }
 
-  // Recalculate and persist the streak after every check-in change
-  await recalculateStreak(habitId);
-
-  return checkIn;
+  // Return the habit without the nested checkIns array (client doesn't need it here)
+  const { checkIns: _, ...habitData } = habit;
+  return { ...habitData, currentStreak, inProbationPeriod };
 }
+
+// ─── Existing read functions (unchanged) ─────────────────────────────────────
 
 async function getCheckInsForMonth(userId, year, month) {
   const parsedYear  = Number(year);
@@ -138,7 +377,7 @@ async function getCheckInsForMonth(userId, year, month) {
   }
 
   const habits = await prisma.habit.findMany({
-    where: { userId },
+    where:  { userId },
     select: { id: true },
   });
 
@@ -150,10 +389,7 @@ async function getCheckInsForMonth(userId, year, month) {
   const checkins = await prisma.habitCheckIn.findMany({
     where: {
       habitId: { in: habitIds },
-      date: {
-        gte: start,
-        lt: nextMonth,
-      },
+      date:    { gte: start, lt: nextMonth },
     },
   });
 
@@ -180,26 +416,20 @@ async function getHabitCheckIns(userId, habitId) {
     throw { status: 400, message: 'habitId is required' };
   }
 
-  const habit = await prisma.habit.findUnique({
-    where: { id: habitId },
-  });
+  const habit = await prisma.habit.findUnique({ where: { id: habitId } });
 
-  if (!habit) {
-    throw { status: 404, message: 'Habit not found' };
-  }
-
-  if (habit.userId !== userId) {
-    throw { status: 403, message: 'Forbidden' };
-  }
+  if (!habit)                  throw { status: 404, message: 'Habit not found' };
+  if (habit.userId !== userId) throw { status: 403, message: 'Forbidden' };
 
   return prisma.habitCheckIn.findMany({
-    where: { habitId },
+    where:   { habitId },
     orderBy: { date: 'desc' },
   });
 }
 
 module.exports = {
   upsertHabitCheckIn,
+  getHabitWithStreakHealth,
   getCheckInsForMonth,
   getHabitCheckIns,
 };

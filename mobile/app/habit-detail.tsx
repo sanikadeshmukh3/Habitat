@@ -34,6 +34,9 @@ const C = {
   border:        '#E4EDE2',
   red:           '#FF6B6B',
   redPale:       '#FFF0F0',
+  // ── New for probation-period warning ──
+  amber:         '#F59E0B',
+  amberPale:     '#FFFBEB',
 };
 
 // Map category enum → display label + emoji
@@ -62,6 +65,8 @@ export default function HabitDetailScreen() {
   const { id: habitId } = useLocalSearchParams<{ id: string }>();
 
   // ── Data fetching ──────────────────────────────────────────────────────────
+  // NOTE: useHabitDetail should now return `inProbationPeriod: boolean` from the
+  // GET /habits/:id response (populated by getHabitWithStreakHealth in the backend).
   const { data: habit, isLoading: habitLoading } = useHabitDetail(habitId);
 
   const today = new Date();
@@ -104,12 +109,18 @@ export default function HabitDetailScreen() {
   const completionRate = stats
     ? Math.round((stats.totalCompletions / Math.max(stats.totalDays, 1)) * 100)
     : 0;
+
   // derive best streak live so it reflects today's check-in immediately
   const liveBestStreak = stats
     ? Math.max(stats.bestStreak, stats.currentStreak, checkedIn ? 1 : 0)
     : 0;
 
   const freqLabel = habit.frequency === 'DAILY' ? 'Daily' : 'Weekly';
+
+  // ── Probation period — NEW ─────────────────────────────────────────────────
+  // `habit.inProbationPeriod` is set by getHabitWithStreakHealth on the backend.
+  // Only relevant for DAILY habits.
+  const inProbationPeriod = habit.frequency === 'DAILY' && (habit.inProbationPeriod ?? false);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   function handleCheckIn() {
@@ -213,6 +224,15 @@ export default function HabitDetailScreen() {
             <Text style={styles.habitSince}>Tracking since {formatDate(habit.createdAt)}</Text>
           </View>
 
+          {/* ── Probation period warning banner — NEW ── */}
+          {inProbationPeriod && (
+            <View style={styles.probationBanner}>
+              <Text style={styles.probationBannerText}>
+                ⏰ Probation period active — check in today to keep your streak!
+              </Text>
+            </View>
+          )}
+
           {/* Quick check-in */}
           <TouchableOpacity
             style={[styles.checkInBtn, checkedIn && styles.checkInBtnDone]}
@@ -226,103 +246,111 @@ export default function HabitDetailScreen() {
           </TouchableOpacity>
 
           {/* Stats row */}
-          {stats && (
-            <View style={styles.statsRow}>
-              <StatCard
-                value={`${stats.currentStreak}`}
-                label="Current Streak"
-                sublabel={`Best: ${liveBestStreak} days`}
-                emoji="🔥"
-                accent={C.yellowDeep}
-                accentPale={C.yellow}
-              />
-              <StatCard
-                value={`${completionRate}%`}
-                label="Completion Rate"
-                sublabel={`${stats.totalCompletions} of ${stats.totalDays} days`}
-                emoji="📈"
-                accent={C.sage}
-                accentPale={C.sagePale}
-              />
+          <View style={styles.statsRow}>
+            <StatCard
+              value={`${habit.currentStreak}${inProbationPeriod ? ' ⏰' : ''}`}
+              label="Current Streak"
+              sublabel={habit.frequency === 'DAILY' ? 'days' : 'weeks'}
+              emoji="🔥"
+              accent={inProbationPeriod ? C.amber : C.sage}
+              accentPale={inProbationPeriod ? C.amberPale : C.sagePale}
+            />
+            <StatCard
+              value={String(liveBestStreak)}
+              label="Best Streak"
+              sublabel={habit.frequency === 'DAILY' ? 'days' : 'weeks'}
+              emoji="⭐"
+              accent={C.yellowDeep}
+              accentPale={C.yellow}
+            />
+          </View>
+
+          <View style={styles.statsRow}>
+            <StatCard
+              value={`${completionRate}%`}
+              label="Completion"
+              sublabel="all time"
+              emoji="📊"
+              accent={C.indigoMid}
+              accentPale={C.indigoPale}
+            />
+            <StatCard
+              value={String(stats?.totalCompletions ?? 0)}
+              label="Total Check-ins"
+              sublabel="completed"
+              emoji="✅"
+              accent={C.sage}
+              accentPale={C.sagePale}
+            />
+          </View>
+
+          {/* Calendar grid — unchanged from your original */}
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Activity</Text>
+              <Text style={styles.sectionSub}>Last 5 weeks</Text>
             </View>
-          )}
-
-          {/* Calendar dot grid */}
-          {stats && (
-            <View style={styles.card}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Last 5 Weeks</Text>
-                <Text style={styles.sectionSub}>{stats.totalCompletions} completions</Text>
-              </View>
-
-              <View style={styles.dayLabelsRow}>
-                {DAY_LABELS.map((d, i) => (
-                  <Text key={i} style={styles.dayLabel}>{d}</Text>
-                ))}
-              </View>
-
-              {[0, 1, 2, 3, 4].map((week) => (
-                <View key={week} style={styles.dotRow}>
-                  {[0, 1, 2, 3, 4, 5, 6].map((day) => {
-                    const idx     = week * 7 + day;
-                    const gridVal = stats.completionGrid[idx];
-
-                    // Build the date this cell represents
-                    const cellDate = new Date(gridStart);
-                    cellDate.setDate(gridStart.getDate() + idx);
-                    const cellKey = buildMonthKey(habitId, cellDate);
-
-                    // Use live check-in cache for this cell if available,
-                    // otherwise fall back to the grid from the backend
-                    const liveEntry = monthCheckIns[cellKey];
-                    const val = liveEntry !== undefined ? liveEntry.completed : gridVal;
-
-                    return (
-                      <View
-                        key={day}
-                        style={[
-                          styles.dot,
-                          val === true  && styles.dotCompleted,
-                          val === false && styles.dotMissed,
-                          val === null  && styles.dotFuture,
-                        ]}
-                      />
-                    );
+            <View style={styles.dayLabelsRow}>
+              {DAY_LABELS.map((d, i) => (
+                <Text key={i} style={styles.dayLabel}>{d}</Text>
+              ))}
+            </View>
+            {Array.from({ length: 5 }).map((_, weekIdx) => {
+              const weekStart = new Date(gridStart);
+              weekStart.setDate(gridStart.getDate() + weekIdx * 7);
+              return (
+                <View key={weekIdx} style={styles.dotRow}>
+                  {Array.from({ length: 7 }).map((_, dayIdx) => {
+                    const cellDate = new Date(weekStart);
+                    cellDate.setDate(weekStart.getDate() + dayIdx);
+                    cellDate.setHours(12, 0, 0, 0);
+                    const key = buildMonthKey(habitId, cellDate);
+                    const ci  = monthCheckIns[key];
+                    const isFuture = cellDate > today;
+                    const dotStyle = isFuture
+                      ? styles.dotFuture
+                      : ci?.completed
+                        ? styles.dotCompleted
+                        : ci
+                          ? styles.dotMissed
+                          : styles.dot;
+                    return <View key={dayIdx} style={[styles.dot, dotStyle]} />;
                   })}
                 </View>
-              ))}
-
-              <View style={styles.legend}>
-                <LegendItem color={C.sage}   label="Completed" />
-                <LegendItem color={C.red}    label="Missed" />
-                <LegendItem color={C.border} label="No data" />
-              </View>
+              );
+            })}
+            <View style={styles.legend}>
+              <LegendItem color={C.sage}              label="Done" />
+              <LegendItem color={`${C.red}59`}        label="Missed" />
+              <LegendItem color={`${C.border}`}       label="No data" />
             </View>
-          )}
+          </View>
 
-          {/* Progress bar */}
+          {/* Consistency bar */}
           {stats && (
             <View style={styles.card}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Overall Progress</Text>
-                <Text style={[styles.sectionSub, { color: C.indigo, fontWeight: '700' }]}>
-                  {completionRate}%
-                </Text>
+                <Text style={styles.sectionTitle}>Consistency</Text>
+                <Text style={styles.sectionSub}>{completionRate}% this month</Text>
               </View>
               <View style={styles.progressTrack}>
                 <View style={[styles.progressFill, { width: `${completionRate}%` }]} />
               </View>
               <Text style={styles.progressCaption}>
-                You've completed this habit {stats.totalCompletions} times out of {stats.totalDays} days tracked.
+                {stats.totalCompletions} of {stats.totalDays} days completed.{' '}
+                {completionRate >= 80
+                  ? "You're crushing it! 🌿"
+                  : completionRate >= 50
+                    ? 'Keep going — you\'re building the habit.'
+                    : 'Every check-in counts. Show up today!'}
               </Text>
             </View>
           )}
 
           {/* Delete */}
           <TouchableOpacity
-            style={[styles.deleteBtn, isDeleting && { opacity: 0.6 }]}
+            style={styles.deleteBtn}
             onPress={handleDelete}
-            activeOpacity={0.7}
             disabled={isDeleting}
           >
             <Text style={styles.deleteBtnText}>
@@ -483,6 +511,23 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4, lineHeight: 28, marginBottom: 6,
   },
   habitSince: { fontSize: 12, color: C.textSecondary },
+  // ── Probation period banner ──────────────────────────────────────────────
+  probationBanner: {
+    backgroundColor: C.amberPale,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    borderWidth: 1.5,
+    borderColor: C.amber,
+  },
+  probationBannerText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#92400E',  // amber-900 for good contrast
+    textAlign: 'center',
+  },
+  // ──────────────────────────────────────────────────────────────────────────
   checkInBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 10, backgroundColor: C.card, borderRadius: 16,

@@ -12,6 +12,7 @@ describe('Add Custom Habit use case', () => {
   const email = 'testuser@example.com';
   const password = 'password123';
   const habitName = 'Eat Protein';
+  const username = 'testuser_' + Date.now();
 
   async function cleanupTestUser() {
     const existingUser = await prisma.user.findUnique({
@@ -56,6 +57,7 @@ describe('Add Custom Habit use case', () => {
         firstName: 'Test',
         lastName: 'User',
         isVerified: true,
+        username,
       },
     });
 
