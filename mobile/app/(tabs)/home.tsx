@@ -4,7 +4,7 @@ import StackingStatusCard from "@/components/StackingStatusCard";
 import api from "@/lib/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useMemo } from "react";
 import {
   Alert,
   Animated,
@@ -17,6 +17,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { useTheme, FontSize, Radius, Spacing} from "@/constants/theme";
 
 // for now I am hardcoding the habits to get a glimpse of how it would look like
 // ALPHA RELEASE - no features
@@ -42,10 +43,6 @@ type ActivationSuggestion = {
   completedHabitName: string;
 };
 
-const COLORS = {
-  forest: "#234B3A",
-};
-
 const { width } = Dimensions.get("window");
 
 const CARD_WIDTH = 260;
@@ -65,6 +62,9 @@ export default function HomeScreen() {
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   const [points, setPoints] = useState<number>(0);
+
+  const { Colors } = useTheme();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
 
   // stacking state
   const [enrollmentId, setEnrollmentId] = useState<string | null>(null);
@@ -208,14 +208,14 @@ export default function HomeScreen() {
         style={[
           styles.overlay,
           {
-            shadowColor: "#9BE7A0",
-            shadowRadius: 40,
+            shadowColor: Colors.lightGreen,
+            shadowRadius: Radius.xl,
           },
         ]}
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
+          contentContainerStyle={{ padding: Spacing.lg, paddingBottom: 120 }}
         >
           {/* TOP NAV */}
           <View style={styles.topNav}>
@@ -247,7 +247,7 @@ export default function HomeScreen() {
               <Ionicons
                 name="person-circle-outline"
                 size={34}
-                color="#2E6F40"
+                color={Colors.primaryGreen}
               />
             </TouchableOpacity>
           </View>
@@ -269,7 +269,7 @@ export default function HomeScreen() {
             decelerationRate="fast"
             snapToAlignment="center"
             contentContainerStyle={{
-              paddingHorizontal: 20,
+              paddingHorizontal: Spacing.lg,
             }}
             onScroll={Animated.event(
               [{ nativeEvent: { contentOffset: { x: scrollX } } }],
@@ -366,7 +366,7 @@ export default function HomeScreen() {
               style={{
                 flexDirection: "row",
                 justifyContent: "space-between",
-                marginBottom: 12,
+                marginBottom: Spacing.ms,
               }}
             >
               <Text style={styles.sectionTitle2}>Network</Text>
@@ -416,7 +416,7 @@ export default function HomeScreen() {
             {/* SCROLLABLE LIST AREA */}
             <ScrollView
               style={{ flex: 1 }}
-              contentContainerStyle={{ paddingBottom: 10 }}
+              contentContainerStyle={{ paddingBottom: Spacing.sm }}
               nestedScrollEnabled={true}
               showsVerticalScrollIndicator={true}
             >
@@ -424,8 +424,8 @@ export default function HomeScreen() {
                 <Text
                   style={{
                     textAlign: "center",
-                    padding: 20,
-                    fontSize: 18,
+                    padding: Spacing.lg,
+                    fontSize: FontSize.lg,
                     color: "#1B4332",
                   }}
                 >
@@ -455,21 +455,21 @@ export default function HomeScreen() {
                       <Text style={styles.friendName}>{item.name}</Text>
                     </TouchableOpacity>
                   ) : (
-                    <View key={item.id} style={{ marginBottom: 12 }}>
+                    <View key={item.id} style={{ marginBottom: Spacing.ms  }}> 
                       <Text style={{ color: "#2E6F40" }}>{item.name}</Text>
 
                       <View
-                        style={{ flexDirection: "row", gap: 10, marginTop: 6 }}
+                        style={{ flexDirection: "row", gap: 10, marginTop: Spacing.xs }}
                       >
                         <TouchableOpacity
                           onPress={() => acceptRequest(item.id)}
                           style={{
-                            backgroundColor: "#2E6F40",
-                            padding: 6,
-                            borderRadius: 6,
+                            backgroundColor: Colors.primaryGreen,
+                            padding: Spacing.xs,
+                            borderRadius: Radius.sm,
                           }}
                         >
-                          <Text style={{ color: "white" }}>Accept</Text>
+                          <Text style={{ color: Colors.white }}>Accept</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -478,8 +478,8 @@ export default function HomeScreen() {
                           style={{
                             backgroundColor:
                               processingId === item.id ? "#aaa" : "#ccc",
-                            padding: 6,
-                            borderRadius: 6,
+                            padding: Spacing.xs,
+                            borderRadius: Radius.sm,
                           }}
                         >
                           <Text style={{ color: "#333" }}>
@@ -529,106 +529,106 @@ export default function HomeScreen() {
 }
 
 // CSS and UI - might need to be changed after testing
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
+StyleSheet.create({
   background: {
     flex: 1,
-    backgroundColor: "#EAF6E8",
+    backgroundColor: Colors.pageBg,
   },
   overlay: {
     flex: 1,
-    padding: 20,
+    padding: Spacing.md,
   },
   topNav: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: Spacing.md,
   },
   navText: {
-    fontSize: 16,
+    fontSize: FontSize.md,
     fontWeight: "600",
-    color: "#355E3B",
+    color: Colors.primaryGreen,
   },
   welcome: {
-    fontSize: 26,
+    fontSize: FontSize.xxl, // changed 26 --> 28
     fontWeight: "600",
     textAlign: "center",
-    color: "#2F4F2F",
+    color: Colors.primaryGreen,
   },
   pointsLabel: {
     textAlign: "center",
-    marginTop: 10,
-    color: "#4F7942",
+    marginTop: Spacing.sm,
+    color: Colors.midGreen,
   },
   pointsBox: {
-    marginTop: 20,
+    marginTop: Spacing.md,
     alignSelf: "center",
-    paddingVertical: 25,
-    paddingHorizontal: 40,
-    borderRadius: 25,
-    backgroundColor: "#2E6F40",
-    shadowColor: "#000",
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.primaryGreen,
+    shadowColor: Colors.overlay,
     shadowOpacity: 0.15,
     shadowRadius: 10,
     elevation: 6,
   },
   points: {
-    fontSize: 40,
+    fontSize: FontSize.big,
     fontWeight: "700",
-    color: "white",
+    color: Colors.white,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: FontSize.lg,
     fontWeight: "600",
-    marginTop: 30,
-    marginBottom: 20,
-    color: "#355E3B",
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.md,
+    color: Colors.primaryGreen,
   },
   habitTitleNew: {
-    fontSize: 20,
+    fontSize: FontSize.lg,
     fontWeight: "700",
-    color: "white",
+    color: Colors.white,
     textAlign: "center",
-    marginBottom: 10,
+    marginBottom: Spacing.sm,
   },
 
   habitCategory: {
-    fontSize: 14,
-    color: "#B7E4C7",
+    fontSize: FontSize.sm,
+    color: Colors.lightGreen,
     fontWeight: "500",
   },
   habitCard: {
     width: 280,
-    backgroundColor: "#2E6F40", // darker eco green
-    borderRadius: 18,
-    padding: 20,
-    marginRight: 15,
+    backgroundColor: Colors.primaryGreen,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    marginRight: Spacing.sm,
   },
   habitCardNew: {
     width: CARD_WIDTH,
     height: 180,
-    backgroundColor: "#2E6F40",
-    borderRadius: 24,
+    backgroundColor: Colors.primaryGreen,
+    borderRadius: Radius.lg,
     padding: 0,
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
 
-    // 🌿 iOS shadow (soft + spread)
-    shadowColor: "#000",
+    shadowColor: Colors.overlay,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
     shadowRadius: 20,
 
-    elevation: 12,
+    elevation: Spacing.ms,
     borderWidth: 1,
-    borderColor: "rgba(183, 228, 199, 0.4)",
+    borderColor: Colors.border,
   },
   habitTitle: {
-    fontSize: 18,
+    fontSize: FontSize.lg,
     fontWeight: "600",
-    color: "white",
-    marginBottom: 10,
+    color: Colors.white,
+    marginBottom: Spacing.sm,
   },
   cardOverlay: {
     position: "absolute",
@@ -637,8 +637,8 @@ const styles = StyleSheet.create({
     right: 0,
     height: "50%",
     backgroundColor: "rgba(255,255,255,0.12)",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: Radius.lg,
+    borderTopRightRadius: Radius.lg,
   },
   bottomOverlay: {
     position: "absolute",
@@ -647,187 +647,187 @@ const styles = StyleSheet.create({
     right: 0,
     height: "35%",
     backgroundColor: "rgba(0,0,0,0.15)",
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    borderBottomLeftRadius: Radius.lg,
+    borderBottomRightRadius: Radius.lg,
   },
   progressBackground: {
     height: 10,
-    backgroundColor: "#4C9A67",
-    borderRadius: 6,
+    backgroundColor: Colors.midGreen,
+    borderRadius: Radius.sm,
     overflow: "hidden",
-    marginVertical: 10,
+    marginVertical: Spacing.sm,
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#95D5B2",
+    backgroundColor: Colors.lightGreen,
   },
   habitButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 15,
+    marginTop: Spacing.sm,
   },
   smallButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    backgroundColor: "#B7E4C7",
-    borderRadius: 8,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    backgroundColor: Colors.lightGreen,
+    borderRadius: Radius.sm,
   },
   largeButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    backgroundColor: "#B7E4C7",
-    borderRadius: 10,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.lightGreen,
+    borderRadius: Radius.md,
   },
   buttonText: {
-    color: "#1B4332",
+    color: Colors.darkBrown,
     fontWeight: "500",
   },
 
   sectionCard: {
-    backgroundColor: "#CDECCD",
-    borderRadius: 20,
-    padding: 25,
-    marginTop: 18,
-    shadowColor: "#000",
+    backgroundColor: Colors.paleGreen,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    marginTop: Spacing.md,
+    shadowColor: Colors.overlay,
     shadowOpacity: 0.08,
     shadowRadius: 10,
     elevation: 4,
   },
 
   sectionTitle2: {
-    fontSize: 18,
+    fontSize: FontSize.lg,
     fontWeight: "700",
-    color: "#1B4332",
-    marginBottom: 15,
+    color: Colors.darkBrown,
+    marginBottom: Spacing.sm,
   },
   friendContainer: {
-    marginBottom: 20,
+    marginBottom: Spacing.md,
   },
   friendText: {
-    color: "#355E3B",
-    marginBottom: 6,
+    color: Colors.primaryGreen,
+    marginBottom: Spacing.xs,
     fontWeight: "500",
   },
   friendRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
-    padding: 12,
+    marginBottom: Spacing.sm,
+    padding: Spacing.sm,
     backgroundColor: "rgba(255,255,255,0.7)",
-    borderRadius: 16,
+    borderRadius: Radius.md,
   },
 
   friendAvatar: {
     width: 45,
     height: 45,
-    borderRadius: 22,
-    backgroundColor: "#2E6F40",
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primaryGreen,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: Spacing.sm,
   },
 
   friendAvatarText: {
-    color: "white",
+    color: Colors.white,
     fontWeight: "600",
   },
   friendName: {
-    fontSize: 15,
+    fontSize: FontSize.md,
     fontWeight: "600",
-    color: "#2E6F40",
-    marginBottom: 5,
+    color: Colors.primaryGreen,
+    marginBottom: Spacing.xs,
   },
   fabWrapper: {
     alignItems: "flex-end",
-    marginTop: 10,
-    marginBottom: 20,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   fab: {
     width: 60,
     height: 60,
-    borderRadius: 30,
-    backgroundColor: "#2E6F40",
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primaryGreen,
     justifyContent: "center",
     alignItems: "center",
     elevation: 4,
   },
   fabText: {
-    color: "white",
-    fontSize: 28,
+    color: Colors.white,
+    fontSize: FontSize.xxl,
     fontWeight: "bold",
   },
   popupContainer: {
-    marginBottom: 10,
-    backgroundColor: "#74C69D",
-    borderRadius: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    marginBottom: Spacing.sm,
+    backgroundColor: Colors.lightGreen,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
     width: 200,
-    shadowColor: "#000",
+    shadowColor: Colors.overlay,
     shadowOpacity: 0.15,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
   },
   popupButton: {
-    paddingVertical: 10,
+    paddingVertical: Spacing.sm,
   },
   popupText: {
-    color: "white",
+    color: Colors.white,
     fontWeight: "600",
-    fontSize: 14,
+    fontSize: FontSize.sm,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: Colors.overlay,
     justifyContent: "center",
     alignItems: "center",
   },
 
   modalContent: {
     width: "85%",
-    backgroundColor: "#EAF6E8",
-    borderRadius: 24,
-    padding: 25,
+    backgroundColor: Colors.pageBg,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
     elevation: 10,
   },
 
   modalTitle: {
-    fontSize: 22,
+    fontSize: FontSize.xl,
     fontWeight: "600",
-    color: "#2E6F40",
-    marginBottom: 15,
+    color: Colors.primaryGreen,
+    marginBottom: Spacing.sm,
     textAlign: "center",
   },
 
   modalDescription: {
-    fontSize: 14,
-    color: "#355E3B",
-    marginBottom: 15,
+    fontSize: FontSize.sm,
+    color: Colors.primaryGreen,
+    marginBottom: Spacing.sm,
     textAlign: "center",
   },
   modalProgress: {
-    fontSize: 16,
+    fontSize: FontSize.md,
     fontWeight: "500",
     textAlign: "center",
-    marginBottom: 20,
-    color: "#1B4332",
+    marginBottom: Spacing.md,
+    color: Colors.darkBrown,
   },
 
   closeButton: {
-    backgroundColor: "#2E6F40",
-    paddingVertical: 12,
-    borderRadius: 14,
+    backgroundColor: Colors.primaryGreen,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.md,
     alignItems: "center",
   },
 
   closeText: {
-    color: "white",
+    color: Colors.white,
     fontWeight: "600",
   },
   navButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.md,
     backgroundColor: "rgba(46, 111, 64, 0.08)",
   },
   welcomeRow: {
@@ -838,50 +838,50 @@ const styles = StyleSheet.create({
 
   profileButton: {
     backgroundColor: "rgba(46,111,64,0.08)",
-    padding: 6,
-    borderRadius: 30,
+    padding: Spacing.xs,
+    borderRadius: Radius.full,
   },
 
   addBtn: {
-    marginTop: 10,
-    backgroundColor: COLORS.forest,
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 999,
+    marginTop: Spacing.sm,
+    backgroundColor: Colors.darkBrown,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.full,
     alignSelf: "center",
   },
 
   addText: {
-    color: "white",
-    fontSize: 14,
+    color: Colors.white,
+    fontSize: FontSize.sm,
     fontWeight: "600",
   },
   tabContainer: {
     flexDirection: "row",
-    backgroundColor: "rgba(46, 111, 64, 0.15)", // subtle transparent green
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 20,
+    backgroundColor: "rgba(46, 111, 64, 0.15)",
+    borderRadius: Radius.md,
+    padding: Spacing.xs,
+    marginBottom: Spacing.md,
   },
   tab: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: Spacing.xs,
     alignItems: "center",
-    borderRadius: 10,
+    borderRadius: Radius.sm,
   },
   activeTab: {
-    backgroundColor: "#2E6F40",
-    shadowColor: "#000",
+    backgroundColor: Colors.primaryGreen,
+    shadowColor: Colors.overlay,
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: FontSize.sm,
     fontWeight: "600",
-    color: "#2E6F40",
+    color: Colors.primaryGreen,
   },
   activeTabText: {
-    color: "#FFF",
+    color: Colors.white,
   },
 });

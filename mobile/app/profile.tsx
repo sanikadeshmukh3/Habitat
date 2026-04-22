@@ -17,7 +17,7 @@ import {
   Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useTheme, FontSize, Radius, Spacing } from '@/constants/theme';
+import { useTheme, FontSize, Radius, Spacing, createSharedStyles } from '@/constants/theme';
 import { useUserProfile, useUpdateUserProfile } from '../hooks/use-user';
 import { useQueryClient } from "@tanstack/react-query";
 import { badgeLabel } from '../types/user';
@@ -129,6 +129,7 @@ export default function ProfileScreen() {
   };
 
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
+  const sharedStyles = createSharedStyles(Colors);
 
   const pickPhoto = async () => {
     try {
@@ -162,8 +163,8 @@ export default function ProfileScreen() {
     return (
       <View style={styles.centred}>
         <Text style={styles.errorText}>Could not load profile. Please try again.</Text>
-        <TouchableOpacity style={styles.backBtn} onPress={goBack}>
-          <Text style={styles.backBtnText}>← Back</Text>
+        <TouchableOpacity style={sharedStyles.backBtn} onPress={goBack}>
+          <Text style={sharedStyles.backBtnText}>← Back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -177,8 +178,8 @@ export default function ProfileScreen() {
     >
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
 
-        <TouchableOpacity style={styles.backBtn} onPress={goBack}>
-          <Text style={styles.backBtnText}>← Back</Text>
+        <TouchableOpacity style={sharedStyles.backBtn} onPress={goBack}>
+          <Text style={sharedStyles.backBtnText}>← Back</Text>
         </TouchableOpacity>
 
         {/* ── Top row: avatar + info ─────────────────────────────────────── */}
@@ -299,7 +300,6 @@ export default function ProfileScreen() {
 
           <View style={styles.badgesCard}>
             <Text style={styles.cardTitle}>Badges</Text>
-            {/* ── UPDATED: real badges from profile ── */}
             {profileLoading ? (
               <ActivityIndicator color={Colors.primaryGreen} />
             ) : badges.length === 0 ? (
@@ -373,7 +373,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
   bg:        { flex: 1, backgroundColor: Colors.pageBg },
   centred:   { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.pageBg, gap: Spacing.md },
   errorText: { color: Colors.lightBrown, fontSize: FontSize.sm, textAlign: 'center', paddingHorizontal: Spacing.lg },
-  container: { paddingTop: Spacing.lg * 2, paddingHorizontal: Spacing.md, paddingBottom: Spacing.xl },
+  container: { paddingTop: Spacing.top_margin, paddingHorizontal: Spacing.md, paddingBottom: Spacing.xl },
 
   backBtn:     { marginBottom: Spacing.md, alignSelf: 'flex-start', paddingVertical: Spacing.xs, paddingHorizontal: Spacing.sm, backgroundColor: Colors.paleGreen, borderRadius: Radius.sm },
   backBtnText: { color: Colors.primaryGreen, fontWeight: '600', fontSize: FontSize.md },

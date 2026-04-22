@@ -3,8 +3,11 @@ import { View, Text, TextInput, Button, TouchableOpacity } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import api from "@/lib/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTheme, FontSize, Spacing, Radius } from "@/constants/theme";
 
 export default function Verify() {
+  const { Colors } = useTheme();
+
   const { email } = useLocalSearchParams();
   const [code, setCode] = useState("");
   const [codeExpired, setCodeExpired] = useState(false);
@@ -51,8 +54,8 @@ export default function Verify() {
   };
 
   return (
-    <View style={{ flex: 1, padding: 40, justifyContent: "center" }}>
-      <Text style={{ fontSize: 20, marginBottom: 20 }}>
+    <View style={{ flex: 1, padding: Spacing.xl, justifyContent: "center" }}>
+      <Text style={{ fontSize: FontSize.lg, marginBottom: Spacing.md }}>
         Enter Verification Code
       </Text>
 
@@ -60,7 +63,7 @@ export default function Verify() {
         placeholder="Code"
         value={code}
         onChangeText={setCode}
-        style={{ borderWidth: 1, padding: 10, marginBottom: 20 }}
+        style={{ borderWidth: 1, padding: Spacing.ms, marginBottom: Spacing.md }}
         keyboardType="numeric"
       />
 
@@ -68,7 +71,7 @@ export default function Verify() {
 
       {codeExpired && (
         <>
-          <Text style={{marginTop: 20, textAlign: "center", color: "red"}}>
+          <Text style={{marginTop: Spacing.lg, textAlign: "center", color: "red"}}>
           Code Expired
           </Text>
 
@@ -86,10 +89,10 @@ export default function Verify() {
             }
           }}
           style={{
-            marginTop: 10,
-            paddingVertical: 12,
-            backgroundColor: "#2d6a4f",
-            borderRadius: 8,
+            marginTop: Spacing.ms,
+            paddingVertical: Spacing.ms,
+            backgroundColor: Colors.primaryGreen,
+            borderRadius: Radius.sm,
             alignItems: "center",
           }}
           >

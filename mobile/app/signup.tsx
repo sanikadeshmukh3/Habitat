@@ -3,8 +3,11 @@ import { router } from "expo-router";
 import { View, TextInput,  Text,  TouchableOpacity,  ActivityIndicator} from "react-native";
 import api from "@/lib/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTheme, FontSize, Radius, Spacing } from "@/constants/theme";
 
 export default function Signup() {
+  const { Colors } = useTheme();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -68,18 +71,18 @@ export default function Signup() {
   };
 
   return (
-    <View style={{ flex: 1, padding: 40, backgroundColor: "#74c69d" }}>
+    <View style={{ flex: 1, padding: Spacing.xl, backgroundColor: "#74c69d" }}>
 
       <TouchableOpacity
         onPress={() => router.back()}
-        style={{ position: "absolute", top: 60, left: 20, paddingVertical: 6, paddingHorizontal: 10, backgroundColor: "#EAF6E8", borderRadius: 8,
+        style={{ position: "absolute", top: Spacing.top_margin, left: Spacing.lg, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md, backgroundColor: Colors.pageBg, borderRadius: Radius.sm,
         }}
       >
-        <Text style={{ color: "#2d6a4f", fontWeight: "600" }}>← Back</Text>
+        <Text style={{ color: Colors.primaryGreen, fontWeight: "600" }}>← Back</Text>
       </TouchableOpacity>
 
       <Text
-        style={{fontSize: 24, marginBottom: 30, marginTop: 180, color: "#EAF6E8", fontWeight: "bold",
+        style={{fontSize: FontSize.xl, marginBottom: Spacing.lg, marginTop: 180, color: Colors.pageBg, fontWeight: "bold",
         }}
       >
         Sign Up
@@ -90,7 +93,7 @@ export default function Signup() {
         placeholderTextColor="#ccc"
         value={firstName}
         onChangeText={setFirstName}
-        style={{ borderWidth: 1, borderColor: "#EAF6E8",padding: 12, marginBottom: 10,borderRadius: 8, color: "#052e17",
+        style={{ borderWidth: 1, borderColor: Colors.pageBg, padding: Spacing.ms, marginBottom: Spacing.sm, borderRadius: Radius.sm, color: Colors.darkBrown,
         }}
         autoCorrect={false}
       />
@@ -100,7 +103,7 @@ export default function Signup() {
         placeholderTextColor="#ccc"
         value={lastName}
         onChangeText={setLastName}
-        style={{ borderWidth: 1, borderColor: "#EAF6E8", padding: 12, marginBottom: 10, borderRadius: 8, color: "#052e17",
+        style={{ borderWidth: 1, borderColor: Colors.pageBg, padding: Spacing.ms, marginBottom: Spacing.sm, borderRadius: Radius.sm, color: Colors.darkBrown,
         }}
         autoCorrect={false}
       />
@@ -110,7 +113,7 @@ export default function Signup() {
         placeholderTextColor="#ccc"
         value={email}
         onChangeText={setEmail}
-        style={{ borderWidth: 1, borderColor: "#EAF6E8", padding: 12, marginBottom: 10, borderRadius: 8, color: "#052e17",
+        style={{ borderWidth: 1, borderColor: Colors.pageBg, padding: Spacing.ms, marginBottom: Spacing.sm, borderRadius: Radius.sm, color: Colors.darkBrown,
         }}
         autoCapitalize="none"
         autoCorrect={false}
@@ -122,7 +125,7 @@ export default function Signup() {
         secureTextEntry
         value={password}
         onChangeText={setPassword}
-        style={{ borderWidth: 1, borderColor: "#EAF6E8", padding: 12, marginBottom: 10, borderRadius: 8, color: "#052e17",
+        style={{ borderWidth: 1, borderColor: Colors.pageBg, padding: Spacing.ms, marginBottom: Spacing.sm, borderRadius: Radius.sm, color: Colors.darkBrown,
         }}
         autoCapitalize="none"
         autoCorrect={false}
@@ -134,7 +137,7 @@ export default function Signup() {
         secureTextEntry
         value={confirmPassword}
         onChangeText={setConfirmPassword}
-        style={{ borderWidth: 1, borderColor: "#EAF6E8",padding: 12, marginBottom: 25,borderRadius: 8, color: "#052e17",
+        style={{ borderWidth: 1, borderColor: Colors.pageBg, padding: Spacing.ms, marginBottom: Spacing.lg, borderRadius: Radius.sm, color: Colors.darkBrown,
         }}
         autoCapitalize="none"
         autoCorrect={false}
@@ -143,7 +146,7 @@ export default function Signup() {
       <TouchableOpacity
         onPress={handlePress}
         disabled={loading}
-        style={{ backgroundColor: loading ? "#95d5b2" : "#2d6a4f",paddingVertical: 14, borderRadius: 10, alignItems: "center",
+        style={{ backgroundColor: loading ? Colors.lightGreen : Colors.primaryGreen, paddingVertical: Spacing.md, borderRadius: Radius.sm, alignItems: "center",
         }}
       >
         {loading ? (
@@ -157,3 +160,5 @@ export default function Signup() {
     </View>
   );
 }
+
+//TODO: signup could probably benefit from a style sheet, I saw a lot of duplicated code

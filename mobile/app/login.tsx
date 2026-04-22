@@ -4,8 +4,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import api from '@/lib/api';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme, FontSize, Radius, Spacing } from '@/constants/theme';
+
 
 export default function Login() {
+  const { Colors } = useTheme();
+
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -101,18 +105,18 @@ export default function Login() {
 
       return (
         <ImageBackground source={require("../assets/images/background.png")} style={{ flex: 1, padding: 40 }}>
-          <View style={{ flex: 1, padding: 40 }}>
-            <Text style={{ fontSize: 26, marginBottom: 20, marginTop: 180, color: "#2d6a4f" }}>Habitat</Text>
+          <View style={{ flex: 1, padding: Spacing.top_margin }}>
+            <Text style={{ fontSize: FontSize.xl, marginBottom: Spacing.lg, marginTop: 180, color: "#2d6a4f" }}>Habitat</Text>
     
             <TextInput
               placeholder="Email"
               value={email}
               onChangeText={setEmail}
-              style={{ borderWidth: 1, padding: 10, marginBottom: 10, borderRadius: 8 }}
+              style={{ borderWidth: 1, padding: Spacing.sm, marginBottom: Spacing.sm, borderRadius: Radius.sm }}
               autoCapitalize="none"
               autoCorrect={false}
             />
-<View style={{ position: "relative", marginBottom: 20 }}>
+<View style={{ position: "relative", marginBottom: Spacing.lg }}>
   <TextInput
     placeholder="Password"
     secureTextEntry={!showPassword}
@@ -120,9 +124,9 @@ export default function Login() {
     onChangeText={setPassword}
     style={{
       borderWidth: 1,
-      padding: 10,
-      borderRadius: 8,
-      paddingRight: 40, // space for icon
+      padding: Spacing.sm,
+      borderRadius: Radius.sm,
+      paddingRight: Spacing.xl, // space for icon
     }}
     autoCapitalize="none"
     autoCorrect={false}
@@ -132,8 +136,8 @@ export default function Login() {
     onPress={() => setShowPassword(prev => !prev)}
     style={{
       position: "absolute",
-      right: 10,
-      top: 12,
+      right: Spacing.sm,
+      top: Spacing.ms,
     }}
   >
     <Ionicons
@@ -147,21 +151,21 @@ export default function Login() {
             <TouchableOpacity
               onPress={handleLogin}
               disabled={loading} 
-              style={{  backgroundColor: loading ? "#95d5b2" : "#2d6a4f",  paddingVertical: 14,  borderRadius: 10,  alignItems: "center",
+              style={{  backgroundColor: loading ? Colors.lightGreen : Colors.primaryGreen,  paddingVertical: Spacing.md,  borderRadius: Radius.sm,  alignItems: "center",
               }}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>Login</Text>
+                <Text style={{ color: "#fff", fontWeight: "bold", fontSize: FontSize.md }}>Login</Text>
               )}
             </TouchableOpacity>
     
-            <TouchableOpacity style={{ marginTop: 20 }} onPress={() => router.push("/signup")}>
+            <TouchableOpacity style={{ marginTop: Spacing.lg }} onPress={() => router.push("/signup")}>
               <Text>Create Account</Text>
             </TouchableOpacity>
     
-            <TouchableOpacity style={{ marginTop: 10 }} onPress={() => router.push("/forgot-password")}>
+            <TouchableOpacity style={{ marginTop: Spacing.sm }} onPress={() => router.push("/forgot-password")}>
               <Text>Forgot Password?</Text>
             </TouchableOpacity>
           </View>

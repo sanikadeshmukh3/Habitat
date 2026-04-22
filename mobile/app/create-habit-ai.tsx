@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import api from '@/lib/api';
 import {
   ActivityIndicator,
@@ -15,23 +15,23 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTheme, Spacing, FontSize, Radius, createSharedStyles } from '@/constants/theme';
 
 // Palette
 const C = {
-  bg:           '#F7FAF5',
-  card:         '#FFFFFF',
-  sage:         '#7BAE7F',
-  sageMid:      '#A8C5A0',
-  sagePale:     '#E3F0E1',
+  pageBg:           '#F7FAF5',
+  cardBg:         '#FFFFFF',
+  midGreen:         '#7BAE7F',
+  lightGreen:      '#A8C5A0',
+  paleGreen: '#CDECCD',
   yellow:       '#F5E6A3',
   yellowDeep:   '#E8C84A',
-  indigo:       '#3D3B8E',
-  indigoPale:   '#EEEDF8',
-  indigoMid:    '#6C63FF',
-  textPrimary:  '#2B2D42',
-  textSecondary:'#6B7280',
+  primaryIndigo: '#3D3B8E',
+  paleIndigo:   '#EEEDF8',
+  midIndigo:    '#6C63FF',
+  darkBrown:  '#2B2D42',
+  lightBrown:'#6B7280',
   border:       '#E4EDE2',
-  shadow:       'rgba(61, 59, 142, 0.08)',
 };
 
 // Mock AI suggestions
@@ -93,6 +93,10 @@ type Stage = 'input' | 'loading' | 'results';
 
 // Component
 export default function CreateHabitAIScreen() {
+  const { Colors } = useTheme();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
+  const sharedStyles = createSharedStyles(Colors);
+
   const router = useRouter();
 
   const [goal, setGoal]               = useState('');
@@ -153,8 +157,8 @@ export default function CreateHabitAIScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.push('/(tabs)/home')} activeOpacity={0.7}>
-          <Text style={styles.backArrow}>←</Text>
+        <TouchableOpacity style={sharedStyles.backBtn} onPress={() => router.push('/(tabs)/home')} activeOpacity={0.7}>
+          <Text style={sharedStyles.backBtnText}>← Back</Text>
         </TouchableOpacity>
 
         <View style={styles.headerCenter}>
@@ -187,7 +191,7 @@ export default function CreateHabitAIScreen() {
             <TextInput
               style={styles.input}
               placeholder="e.g. I want to feel less stressed and sleep better"
-              placeholderTextColor={C.textSecondary}
+              placeholderTextColor={Colors.lightBrown}
               value={goal}
               onChangeText={setGoal}
               multiline
@@ -238,7 +242,7 @@ export default function CreateHabitAIScreen() {
         {/* Loading */}
         {stage === 'loading' && (
           <View style={styles.loadingCard}>
-            <ActivityIndicator size="large" color={C.indigoMid} />
+            <ActivityIndicator size="large" color={Colors.midIndigo} />
             <Text style={styles.loadingTitle}>Building your habit plan…</Text>
             <Text style={styles.loadingSub}>Habitat AI is personalizing suggestions for you</Text>
           </View>
@@ -331,7 +335,8 @@ export default function CreateHabitAIScreen() {
 }
 
 // Styles
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
+StyleSheet.create({
   background: {
     flex: 1,
     backgroundColor: '#EAF6E8',
@@ -345,64 +350,64 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 16 : 8,
-    paddingBottom: 16,
-    backgroundColor: C.bg,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.top_margin,
+    paddingBottom: Spacing.md,
+    backgroundColor: Colors.pageBg,
   },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: C.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backArrow: {
-    fontSize: 18,
-    color: C.indigo,
-    fontWeight: '600',
-  },
+  // backBtn: {
+  //   width: 38,
+  //   height: 38,
+  //   borderRadius: Radius.md,
+  //   backgroundColor: Colors.cardBg,
+  //   alignItems: 'center',
+  //   justifyContent: 'center',
+  // },
+  // backArrow: {
+  //   fontSize: FontSize.lg,
+  //   color: Colors.primaryIndigo,
+  //   fontWeight: '600',
+  // },
   headerCenter: {
     flex: 1,
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: FontSize.xl,
     fontWeight: '700',
-    color: C.indigo,
+    color: Colors.primaryIndigo,
     letterSpacing: -0.3,
   },
   headerSub: {
-    fontSize: 12,
-    color: C.indigoMid,
+    fontSize: FontSize.xs,
+    color: Colors.midIndigo,
     marginTop: 1,
   },
   aiBadge: {
     width: 38,
     height: 38,
-    borderRadius: 12,
-    backgroundColor: C.indigoPale,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.paleIndigo,
     alignItems: 'center',
     justifyContent: 'center',
   },
   aiBadgeText: {
-    fontSize: 18,
-    color: C.indigoMid,
+    fontSize: FontSize.lg,
+    color: Colors.midIndigo,
   },
 
   // Scroll
   scroll: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.sm,
   },
 
   // Goal input card
   card: {
-    backgroundColor: C.card,
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 14,
+    backgroundColor: Colors.cardBg,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
     overflow: 'hidden',
   },
   accentBar: {
@@ -410,255 +415,255 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 4,
-    backgroundColor: C.yellow,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    height: Spacing.xs,
+    backgroundColor: Colors.paleGreen,
+    borderTopLeftRadius: Radius.lg,
+    borderTopRightRadius: Radius.lg,
   },
   goalPrompt: {
-    fontSize: 18,
+    fontSize: FontSize.lg,
     fontWeight: '700',
-    color: C.indigo,
-    marginTop: 10,
-    marginBottom: 6,
+    color: Colors.primaryIndigo,
+    marginTop: Spacing.ms,
+    marginBottom: Spacing.sm,
   },
   goalHint: {
-    fontSize: 13,
-    color: C.textSecondary,
+    fontSize: FontSize.sm,
+    color: Colors.lightBrown,
     lineHeight: 18,
-    marginBottom: 14,
+    marginBottom: Spacing.md,
   },
   inputWrapper: {
-    backgroundColor: C.bg,
-    borderRadius: 14,
+    backgroundColor: Colors.pageBg,
+    borderRadius: Radius.md,
     borderWidth: 1.5,
-    borderColor: C.border,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 12,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.ms,
+    marginBottom: Spacing.sm,
   },
   input: {
-    fontSize: 15,
-    color: C.textPrimary,
+    fontSize: FontSize.md,
+    color: Colors.darkBrown,
     minHeight: 64,
     textAlignVertical: 'top',
   },
   charCount: {
-    fontSize: 11,
-    color: C.textSecondary,
+    fontSize: FontSize.xs,
+    color: Colors.lightBrown,
     textAlign: 'right',
-    marginTop: 4,
+    marginTop: Spacing.xs,
   },
 
   // Example chips
   examplesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   exampleChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
     borderRadius: 50,
-    backgroundColor: C.yellow,
+    backgroundColor: Colors.paleGreen,
   },
   exampleChipText: {
-    fontSize: 12,
+    fontSize: FontSize.xs,
     fontWeight: '600',
-    color: C.indigo,
+    color: Colors.primaryIndigo,
   },
 
   // Generate button
   generateBtn: {
-    backgroundColor: C.indigo,
-    borderRadius: 14,
-    paddingVertical: 15,
+    backgroundColor: Colors.primaryIndigo,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.ms,
     alignItems: 'center',
   },
   generateBtnDisabled: {
-    backgroundColor: C.sageMid,
+    backgroundColor: Colors.lightGreen,
   },
   generateBtnText: {
-    fontSize: 15,
+    fontSize: FontSize.md,
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.3,
   },
 
-  // Goal preview (after generation)
+  // Goal preview
   goalPreview: {
-    marginTop: 4,
-    padding: 12,
-    backgroundColor: C.indigoPale,
-    borderRadius: 12,
+    marginTop: Spacing.xs,
+    padding: Spacing.sm,
+    backgroundColor: Colors.paleIndigo,
+    borderRadius: Radius.md,
   },
   goalPreviewLabel: {
-    fontSize: 11,
+    fontSize: FontSize.xs,
     fontWeight: '700',
-    color: C.indigoMid,
+    color: Colors.midIndigo,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
-    marginBottom: 4,
+    marginBottom: Spacing.xs,
   },
   goalPreviewText: {
-    fontSize: 14,
-    color: C.indigo,
+    fontSize: FontSize.sm,
+    color: Colors.primaryIndigo,
     fontStyle: 'italic',
-    marginBottom: 8,
+    marginBottom: Spacing.xs,
   },
   resetLink: {
-    fontSize: 12,
-    color: C.indigoMid,
+    fontSize: FontSize.xs,
+    color: Colors.midIndigo,
     fontWeight: '600',
     textDecorationLine: 'underline',
   },
 
   // Loading
   loadingCard: {
-    backgroundColor: C.card,
-    borderRadius: 20,
-    padding: 32,
+    backgroundColor: Colors.cardBg,
+    borderRadius: Radius.lg,
+    padding: Spacing.xl,
     alignItems: 'center',
-    marginBottom: 14,
-    gap: 12,
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
   },
   loadingTitle: {
-    fontSize: 16,
+    fontSize: FontSize.md,
     fontWeight: '700',
-    color: C.indigo,
+    color: Colors.primaryIndigo,
   },
   loadingSub: {
-    fontSize: 13,
-    color: C.textSecondary,
+    fontSize: FontSize.sm,
+    color: Colors.lightBrown,
     textAlign: 'center',
   },
 
-  // Results header
+  // Results
   resultsHeader: {
-    marginBottom: 12,
+    marginBottom: Spacing.sm,
     paddingHorizontal: 2,
   },
   resultsTitle: {
-    fontSize: 16,
+    fontSize: FontSize.md,
     fontWeight: '700',
-    color: C.indigo,
+    color: Colors.primaryIndigo,
   },
   resultsSub: {
-    fontSize: 13,
-    color: C.textSecondary,
-    marginTop: 2,
+    fontSize: FontSize.sm,
+    color: Colors.lightBrown,
+    marginTop: Spacing.xs,
   },
 
   // Suggestion cards
   suggestionCard: {
-    backgroundColor: C.card,
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 10,
+    backgroundColor: Colors.cardBg,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: Spacing.sm,
     borderWidth: 1.5,
     borderColor: 'transparent',
   },
   suggestionCardActive: {
-    borderColor: C.indigo,
-    backgroundColor: C.indigoPale,
+    borderColor: Colors.primaryIndigo,
+    backgroundColor: Colors.paleIndigo,
   },
   selectCircle: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: Radius.md,
     borderWidth: 2,
-    borderColor: C.border,
-    backgroundColor: C.bg,
+    borderColor: Colors.border,
+    backgroundColor: Colors.pageBg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
+    marginTop: Spacing.xs,
     flexShrink: 0,
   },
   selectCircleActive: {
-    backgroundColor: C.indigo,
-    borderColor: C.indigo,
+    backgroundColor: Colors.primaryIndigo,
+    borderColor: Colors.primaryIndigo,
   },
   checkmark: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: FontSize.sm,
     fontWeight: '700',
   },
   suggestionBody: {
     flex: 1,
-    gap: 6,
+    gap: Spacing.xs,
   },
   suggestionMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: Spacing.sm,
   },
   suggestionEmoji: {
-    fontSize: 14,
+    fontSize: FontSize.sm,
   },
   suggestionCategory: {
-    fontSize: 11,
+    fontSize: FontSize.xs,
     fontWeight: '700',
-    color: C.textSecondary,
+    color: Colors.lightBrown,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   freqBadge: {
-    backgroundColor: C.sagePale,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 20,
+    backgroundColor: Colors.pageBg,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.lg,
   },
   freqBadgeText: {
-    fontSize: 10,
+    fontSize: FontSize.xs,
     fontWeight: '700',
-    color: C.sage,
+    color: Colors.midGreen,
   },
   suggestionName: {
-    fontSize: 15,
+    fontSize: FontSize.md,
     fontWeight: '600',
-    color: C.textPrimary,
+    color: Colors.darkBrown,
     lineHeight: 20,
   },
   suggestionNameActive: {
-    color: C.indigo,
+    color: Colors.primaryIndigo,
   },
   suggestionReason: {
-    fontSize: 12,
-    color: C.textSecondary,
+    fontSize: FontSize.xs,
+    color: Colors.lightBrown,
     lineHeight: 17,
   },
 
   // Add button
   addBtn: {
-    backgroundColor: C.indigo,
-    borderRadius: 18,
-    paddingVertical: 17,
+    backgroundColor: Colors.primaryIndigo,
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.ms,
     alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 12,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.ms,
   },
   addBtnDisabled: {
-    backgroundColor: C.sageMid,
+    backgroundColor: Colors.lightGreen,
   },
   addBtnText: {
-    fontSize: 16,
+    fontSize: FontSize.md,
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.3,
   },
 
-  // Manual fallback link
+  // Manual link
   manualLink: {
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: Spacing.sm,
   },
   manualLinkText: {
-    fontSize: 13,
-    color: C.indigoMid,
+    fontSize: FontSize.sm,
+    color: Colors.midIndigo,
     fontWeight: '600',
   },
 });

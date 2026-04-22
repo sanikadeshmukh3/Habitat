@@ -1,4 +1,4 @@
-import { Colors, FontSize, Radius, Spacing } from '@/constants/oldtheme';
+import { useTheme, FontSize, Radius, Spacing, Colors } from '@/constants/theme';
 import { router } from 'expo-router';
 import React, { useMemo, useRef, useState } from 'react';
 import {
@@ -57,18 +57,18 @@ const CARD_WIDTH = SCREEN_WIDTH - SIDE_SPACER * 2 - CARD_GAP;
 const SNAP_INTERVAL = CARD_WIDTH + CARD_GAP;
 const HORIZONTAL_PADDING = SIDE_SPACER - CARD_GAP / 2;
 
-const COLORS = {
-    forest: '#234B3A',
-    moss: '#5F7A61',
-    sage: '#AFC3A2',
-    cream: '#F7F1E8',
-    tan: '#D9C2A3',
-    brown: '#6B4F3A',
-    bark: '#4D3A2D',
-    softWhite: 'rgba(255,255,255,0.82)',
-    glass: 'rgba(255,255,255,0.72)',
-    chip: 'rgba(255,255,255,0.68)',
-};
+// const COLORS = {
+//     forest: '#234B3A',
+//     moss: '#5F7A61',
+//     sage: '#AFC3A2',
+//     cream: '#F7F1E8',
+//     tan: '#D9C2A3',
+//     brown: '#6B4F3A',
+//     bark: '#4D3A2D',
+//     softWhite: 'rgba(255,255,255,0.82)',
+//     glass: 'rgba(255,255,255,0.72)',
+//     chip: 'rgba(255,255,255,0.68)',
+// };
 
 export const ANIMAL_IMAGE_BY_ANIMAL: Record<Animal, ImageSourcePropType> = {
   Wolf: require('@/assets/images/animals/wolf.png'),
@@ -88,7 +88,7 @@ export const ANIMAL_IMAGE_BY_ANIMAL: Record<Animal, ImageSourcePropType> = {
 } as const;
 
 
-function DayChip({ item }: { item: WeekdayItem }) {
+function DayChip({ item, styles }: { item: WeekdayItem, styles: ReturnType<typeof makeStyles> }) {
     return (
         <View style={styles.dayChip}>
             <Text style={[styles.dateNumber, item.isToday && styles.dateNumberToday]}>
@@ -126,10 +126,12 @@ function SnapshotCardView({
   card,
   index,
   scrollX,
+  styles,
 }: {
   card: SnapshotCard;
   index: number;
   scrollX: Animated.Value;
+  styles: ReturnType<typeof makeStyles>;
 }) {
   const inputRange = [
     (index - 1) * SNAP_INTERVAL,
@@ -176,7 +178,7 @@ function SnapshotCardView({
         <View
           style={[
             styles.snapshotAccent,
-            { backgroundColor: card.accent ?? COLORS.moss },
+            { backgroundColor: card.accent ?? Colors.midGreen },
           ]}
         />
 
@@ -186,7 +188,7 @@ function SnapshotCardView({
   );
 }
 
-function MiniBarChart({ values }: { values: number[] }) {
+function MiniBarChart({ values, styles }: { values: number[]; styles: ReturnType<typeof makeStyles> }) {
   return (
     <View style={styles.chartWrap}>
       {values.map((h, i) => (
@@ -201,9 +203,11 @@ function MiniBarChart({ values }: { values: number[] }) {
 function StatsBlock({
   completionPercent,
   consistencyPercent,
+  styles,
 }: {
   completionPercent: number;
   consistencyPercent: number;
+  styles: ReturnType<typeof makeStyles>;
 }) {
   return (
     <View style={styles.statsBlock}>
@@ -220,7 +224,10 @@ function StatsBlock({
 }
 
 export default function RecapScreen() {
-    const scrollX = useRef(new Animated.Value(0)).current;
+  const { Colors } = useTheme();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);  
+  
+  const scrollX = useRef(new Animated.Value(0)).current;
     const [showInfoModal, setShowInfoModal] = useState(false);
     
     const { recap, isLoading, isFromCache, weekKey } = useRecap();
@@ -329,7 +336,7 @@ export default function RecapScreen() {
             <Text style={styles.cardBodySubtext}>
             {completionPulse.insight}
             </Text>
-            <StatsBlock
+            <StatsBlock styles={styles}
             completionPercent={completionPulse.percent}
             consistencyPercent={Math.round(recap.scores.streakScore * 100)}
             />
@@ -401,7 +408,7 @@ export default function RecapScreen() {
                 : `Needed support: ${rhythmCheck.weakestDay}`}
             </Text>
 
-            <MiniBarChart values={weekBarValues} />
+            <MiniBarChart values={weekBarValues} styles={styles} />
 
             <Text style={[styles.cardBodySubtext, { marginTop: 10 }]}>
             {rhythmCheck.insight}
@@ -544,7 +551,7 @@ export default function RecapScreen() {
                     data={weekItems}
                     keyExtractor={(i) => i.key}
                     horizontal
-                    renderItem={({ item }) => <DayChip item={item} />}
+                    renderItem={({ item }) => <DayChip item={item} styles={styles} />}
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.weekList}
                 />
@@ -574,7 +581,7 @@ export default function RecapScreen() {
             data={snapshotCards}
             keyExtractor={(i) => i.id}
             renderItem={({ item, index }) => (
-                <SnapshotCardView card={item} index={index} scrollX={scrollX} />
+                <SnapshotCardView card={item} index={index} scrollX={scrollX} styles={styles} />
             )}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.snapList}
@@ -644,758 +651,759 @@ export default function RecapScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-    backgroundColor: '#EEF6EC',
-  },
-
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(250,246,239,0.18)',
-  },
-
-  container: {
-    paddingTop: Dimensions.get('window').height * 0.055,
-    paddingHorizontal: SIDE_SPACER,
-    paddingBottom: 42,
-  },
-
-  topBar: {
-    marginBottom: 4,
-  },
-
-  titleWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  titleEyebrow: {
-    color: COLORS.moss,
-    fontSize: 12,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-    fontWeight: '700',
-  },
-
-  title: {
-    fontSize: 30,
-    color: COLORS.forest,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-    textAlign: 'center',
-  },
-
-  rightSpacer: {
-    width: 5,
-  },
-
-  subtitleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    marginTop: 14,
-    marginBottom: 24,
-    paddingHorizontal: 2,
-  },
-
-  helpPill: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.82)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(77,58,45,0.10)',
-    marginTop: 1,
-  },
-
-  helpText: {
-    color: COLORS.brown,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-
-  subtitle: {
-    flex: 1,
-    color: COLORS.bark,
-    fontSize: 15,
-    lineHeight: 23,
-  },
-
-  weekSection: {
-    marginBottom: 16,
-  },
-
-  sectionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    gap: 12,
-  },
-
-  sectionEyebrow: {
-    color: COLORS.moss,
-    fontSize: 12,
-    letterSpacing: 1.5,
-    fontWeight: '700',
-  },
-
-  weekKeyText: {
-    color: COLORS.brown,
-    fontSize: 12,
-  },
-
-  weekCard: {
-    marginTop: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.68)',
-    borderWidth: 1,
-    borderColor: 'rgba(77,58,45,0.08)',
-    alignItems: 'center',
-    shadowColor: '#5A4635',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
-  },
-
-  weekList: {
-    paddingRight: 10,
-    gap: 14,
-  },
-
-  dayChip: {
-    alignItems: 'center',
-    gap: 6,
-    minWidth: 38,
-  },
-
-  dateNumber: {
-    fontSize: 12,
-    color: COLORS.brown,
-    fontWeight: '600',
-  },
-
-  dateNumberToday: {
-    color: COLORS.forest,
-    fontWeight: '700',
-  },
-
-  circle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.86)',
-    borderWidth: 1.3,
-    borderColor: 'rgba(77,58,45,0.14)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  circleDone: {
-    backgroundColor: 'rgba(95,122,97,0.16)',
-    borderColor: 'rgba(35,75,58,0.24)',
-  },
-
-  circleToday: {
-    borderColor: COLORS.forest,
-    borderWidth: 1.9,
-    shadowColor: COLORS.forest,
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-
-  check: {
-    color: COLORS.forest,
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
-  futureDot: {
-    fontSize: 16,
-    color: COLORS.brown,
-  },
-
-  dayLabel: {
-    fontSize: 12,
-    color: COLORS.brown,
-    fontWeight: '500',
-  },
-
-  dayLabelToday: {
-    color: COLORS.forest,
-    fontWeight: '700',
-  },
-
-  sectionTitle: {
-    marginTop: 20,
-    fontSize: 24,
-    color: COLORS.forest,
-    fontWeight: '700',
-  },
-
-  animalCard: {
-    marginTop: 14,
-    borderRadius: 28,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.78)',
-    borderWidth: 1,
-    borderColor: 'rgba(77,58,45,0.08)',
-    shadowColor: '#4B3A2F',
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 5,
-  },
-
-  animalImage: {
-    width: '100%',
-    height: 230,
-    backgroundColor: 'rgba(175,195,162,0.12)',
-  },
-
-  animalTextWrap: {
-    paddingHorizontal: 18,
-    paddingTop: 16,
-    paddingBottom: 20,
-  },
-
-  animalEyebrow: {
-    color: COLORS.moss,
-    fontSize: 11,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
-    fontWeight: '700',
-  },
-
-  animalType: {
-    marginTop: 6,
-    fontSize: 30,
-    color: COLORS.bark,
-    fontWeight: '700',
-  },
-
-  animalDescription: {
-    marginTop: 10,
-    fontSize: 15,
-    lineHeight: 23,
-    color: COLORS.brown,
-  },
-
-  snapHeaderRow: {
-    marginTop: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-  },
-
-  snapHint: {
-    color: COLORS.brown,
-    fontSize: 12,
-  },
-
-  snapList: {
-    paddingTop: 16,
-    paddingBottom: 10,
-    paddingHorizontal: HORIZONTAL_PADDING,
-  },
-
-  snapshotCardWrap: {
-    width: SNAP_INTERVAL,
-  },
-
-  snapshotCard: {
-    width: CARD_WIDTH,
-    padding: 18,
-    borderRadius: 26,
-    backgroundColor: 'rgba(255,255,255,0.78)',
-    borderWidth: 1,
-    borderColor: 'rgba(77,58,45,0.08)',
-    shadowColor: '#5A4635',
-    shadowOpacity: 0.11,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4,
-  },
-
-  snapshotHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-
-  snapshotTitle: {
-    color: COLORS.bark,
-    fontSize: 18,
-    fontWeight: '700',
-    flex: 1,
-  },
-
-  snapshotSubtitle: {
-    color: COLORS.forest,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-
-  snapshotAccent: {
-    marginTop: 12,
-    width: 48,
-    height: 6,
-    borderRadius: 999,
-  },
-
-  snapshotBody: {
-    marginTop: 18,
-    minHeight: 168,
-    justifyContent: 'flex-start',
-  },
-
-  cardBodyHeadline: {
-    fontSize: 20,
-    color: COLORS.forest,
-    fontWeight: '700',
-    lineHeight: 26,
-  },
-
-  cardBodySubtext: {
-    marginTop: 8,
-    color: COLORS.brown,
-    fontSize: 14,
-    lineHeight: 21,
-  },
-
-  chartWrap: {
-    marginTop: 18,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    height: 94,
-    gap: 8,
-    paddingHorizontal: 2,
-  },
-
-  barColumn: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-
-  bar: {
-    width: '100%',
-    borderRadius: 999,
-    backgroundColor: COLORS.moss,
-    opacity: 0.92,
-  },
-
-  moodEmoji: {
-    fontSize: 34,
-    marginBottom: 6,
-  },
-
-  moodEmojiWrap: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.75)',
-    borderWidth: 1,
-    borderColor: 'rgba(77,58,45,0.08)',
-    marginBottom: 12,
-  },
-
-  statsBlock: {
-    marginTop: 18,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(255,255,255,0.66)',
-    borderRadius: 20,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(77,58,45,0.05)',
-  },
-
-  statsBig: {
-    fontSize: 28,
-    color: COLORS.bark,
-    fontWeight: '700',
-  },
-
-  statsLabel: {
-    marginTop: 4,
-    color: COLORS.brown,
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-
-  summaryCard: {
-    marginTop: 22,
-    padding: 20,
-    borderRadius: 26,
-    backgroundColor: 'rgba(255,255,255,0.72)',
-    borderWidth: 1,
-    borderColor: 'rgba(77,58,45,0.08)',
-    shadowColor: '#5A4635',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
-  },
-
-  summaryEyebrow: {
-    color: COLORS.moss,
-    fontSize: 11,
-    letterSpacing: 1.3,
-    textTransform: 'uppercase',
-    fontWeight: '700',
-  },
-
-  summaryHeadline: {
-    marginTop: 8,
-    fontSize: 24,
-    color: COLORS.forest,
-    fontWeight: '700',
-  },
-
-  summaryText: {
-    marginTop: 10,
-    fontSize: 14,
-    lineHeight: 22,
-    color: COLORS.brown,
-  },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(28,34,28,0.24)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
-
-  modalCard: {
-    width: '100%',
-    borderRadius: 28,
-    backgroundColor: 'rgba(250,245,236,0.98)',
-    padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(77,58,45,0.10)',
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 6,
-  },
-
-  modalTitle: {
-    fontSize: 24,
-    color: COLORS.forest,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
-
-  modalText: {
-    fontSize: 14,
-    lineHeight: 22,
-    color: COLORS.brown,
-    marginBottom: 12,
-  },
-
-  modalButton: {
-    marginTop: 8,
-    alignSelf: 'flex-end',
-    backgroundColor: COLORS.forest,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: 999,
-  },
-
-  modalButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-
-  loadingWrap: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: Dimensions.get('window').height,
-    paddingHorizontal: 24,
-  },
-
-  loadingText: {
-    color: COLORS.forest,
-    fontSize: 17,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-
-  statusRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-
-  cacheText: {
-    color: COLORS.moss,
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-
-  space: {
-    marginBottom: 8,
-  },
-
-  backBtn: {
-    marginBottom: Spacing.md,
-    alignSelf: 'flex-start',
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-    backgroundColor: Colors.paleGreen,
-    borderRadius: Radius.sm,
-  },
-
-  backBtnText: {
-    color: Colors.primaryGreen,
-    fontWeight: '600',
-    fontSize: FontSize.md,
-  },
-
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.chip,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(77,58,45,0.10)',
-  },
-
-  topIcon: {
-    fontSize: 18,
-    color: COLORS.forest,
-  },
-
-  morePill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: COLORS.chip,
-    borderWidth: 1,
-    borderColor: 'rgba(77,58,45,0.10)',
-  },
-
-  moreText: {
-    color: COLORS.brown,
-    fontSize: 12,
-  },
-
-  pagination: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 4,
-    gap: 8,
-  },
-
-  paginationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: 'rgba(77,58,45,0.18)',
-  },
-
-  paginationDotActive: {
-    width: 20,
-    backgroundColor: COLORS.forest,
-  },
-
-  categoryHero: {
-    marginTop: 4,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: 'rgba(142,110,83,0.10)',
-    borderWidth: 1,
-    borderColor: 'rgba(142,110,83,0.16)',
-    alignItems: 'flex-start',
-  },
-
-  categoryHeroLabel: {
-    fontSize: 11,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    color: COLORS.brown,
-    marginBottom: 6,
-    fontWeight: '700',
-  },
-
-  categoryHeroName: {
-    fontSize: 24,
-    color: COLORS.bark,
-    fontWeight: '700',
-    lineHeight: 30,
-  },
-
-  categoryHeroPercent: {
-    marginTop: 6,
-    fontSize: 16,
-    color: COLORS.forest,
-    fontWeight: '700',
-  },
-
-  categorySupportBox: {
-    marginTop: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.60)',
-    borderWidth: 1,
-    borderColor: 'rgba(77,58,45,0.06)',
-  },
-
-  categorySupportText: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: COLORS.brown,
-  },
-
-  categoryCompareRow: {
-    marginTop: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.60)',
-    borderWidth: 1,
-    borderColor: 'rgba(77,58,45,0.06)',
-    gap: 12,
-  },
-
-  categoryCompareTextWrap: {
-    flex: 1,
-  },
-
-  categoryCompareLabel: {
-    fontSize: 11,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    color: COLORS.brown,
-    marginBottom: 4,
-    fontWeight: '700',
-  },
-
-  categoryCompareName: {
-    fontSize: 15,
-    color: COLORS.bark,
-    fontWeight: '600',
-  },
-
-  categoryComparePercentPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: 'rgba(95,122,97,0.12)',
-  },
-
-  categoryComparePercent: {
-    fontSize: 13,
-    color: COLORS.forest,
-    fontWeight: '700',
-  },
-
-  moodHero: {
-    marginTop: 4,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: 'rgba(95,122,97,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(95,122,97,0.18)',
-  },
-
-  moodLabel: {
-    fontSize: 11,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    color: COLORS.brown,
-    marginBottom: 4,
-    fontWeight: '700',
-  },
-
-  moodName: {
-    fontSize: 22,
-    color: COLORS.bark,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-
-  moodDifficultyRow: {
-    marginTop: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  moodDifficultyLabel: {
-    fontSize: 13,
-    color: COLORS.brown,
-  },
-
-  moodDifficultyValue: {
-    fontSize: 14,
-    color: COLORS.forest,
-    fontWeight: '700',
-  },
-
-  moodBarTrack: {
-    marginTop: 10,
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: 'rgba(77,58,45,0.08)',
-    overflow: 'hidden',
-  },
-
-  moodBarFill: {
-    height: '100%',
-    borderRadius: 999,
-    backgroundColor: COLORS.moss,
-  },
-
-  refreshButton: {
-    marginTop: 16,
-    alignSelf: 'flex-start',
-    backgroundColor: COLORS.forest,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: 999,
-  },
-
-  refreshButtonDisabled: {
-    opacity: 0.5,
-  },
-
-  refreshButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-});
+const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
+  StyleSheet.create({
+    background: {
+      flex: 1,
+      backgroundColor: '#EEF6EC',
+    },
+
+    overlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(250,246,239,0.18)',
+    },
+
+    container: {
+      paddingTop: Spacing.top_margin,
+      paddingHorizontal: Spacing.lg,
+      paddingBottom: 42,
+    },
+
+    topBar: {
+      marginBottom: Spacing.xs,
+    },
+
+    titleWrap: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    titleEyebrow: {
+      color: Colors.midGreen,
+      fontSize: FontSize.xs,
+      letterSpacing: 2,
+      textTransform: 'uppercase',
+      marginBottom: Spacing.sm,
+      fontWeight: '700',
+    },
+
+    title: {
+      fontSize: 30, // intentionally left raw (no xl token available close enough)
+      color: Colors.primaryGreen,
+      fontWeight: '700',
+      letterSpacing: 0.3,
+      textAlign: 'center',
+    },
+
+    rightSpacer: {
+      width: Spacing.xs,
+    },
+
+    subtitleRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: Spacing.sm,
+      marginTop: Spacing.ms,
+      marginBottom: Spacing.lg,
+      paddingHorizontal: Spacing.xs,
+    },
+
+    helpPill: {
+      width: 28,
+      height: 28,
+      borderRadius: Radius.md,
+      backgroundColor: 'rgba(255,255,255,0.82)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(77,58,45,0.10)',
+      marginTop: Spacing.xs,
+    },
+
+    helpText: {
+      color: Colors.midBrown,
+      fontSize: FontSize.sm,
+      fontWeight: '700',
+    },
+
+    subtitle: {
+      flex: 1,
+      color: Colors.darkBrown,
+      fontSize: FontSize.md,
+      lineHeight: 23,
+    },
+
+    weekSection: {
+      marginBottom: Spacing.md,
+    },
+
+    sectionRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-end',
+      gap: Spacing.sm,
+    },
+
+    sectionEyebrow: {
+      color: Colors.midGreen,
+      fontSize: FontSize.xs,
+      letterSpacing: 1.5,
+      fontWeight: '700',
+    },
+
+    weekKeyText: {
+      color: Colors.midBrown,
+      fontSize: FontSize.xs,
+    },
+
+    weekCard: {
+      marginTop: Spacing.sm,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.sm,
+      borderRadius: Radius.xl,
+      backgroundColor: 'rgba(255,255,255,0.68)',
+      borderWidth: 1,
+      borderColor: 'rgba(77,58,45,0.08)',
+      alignItems: 'center',
+      shadowColor: '#5A4635',
+      shadowOpacity: 0.08,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 3,
+    },
+
+    weekList: {
+      paddingRight: Spacing.sm,
+      gap: Spacing.sm,
+    },
+
+    dayChip: {
+      alignItems: 'center',
+      gap: Spacing.xs,
+      minWidth: 38,
+    },
+
+    dateNumber: {
+      fontSize: FontSize.xs,
+      color: Colors.midBrown,
+      fontWeight: '600',
+    },
+
+    dateNumberToday: {
+      color: Colors.primaryGreen,
+      fontWeight: '700',
+    },
+
+    circle: {
+      width: 34,
+      height: 34,
+      borderRadius: Radius.lg,
+      backgroundColor: 'rgba(255,255,255,0.86)',
+      borderWidth: 1.3,
+      borderColor: 'rgba(77,58,45,0.14)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    circleDone: {
+      backgroundColor: 'rgba(95,122,97,0.16)',
+      borderColor: 'rgba(35,75,58,0.24)',
+    },
+
+    circleToday: {
+      borderColor: Colors.primaryGreen,
+      borderWidth: 1.9,
+      shadowColor: Colors.primaryGreen,
+      shadowOpacity: 0.12,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 2,
+    },
+
+    check: {
+      color: Colors.primaryGreen,
+      fontSize: FontSize.sm,
+      fontWeight: '900',
+    },
+
+    futureDot: {
+      fontSize: 16, // no close token
+      color: Colors.midBrown,
+    },
+
+    dayLabel: {
+      fontSize: FontSize.xs,
+      color: Colors.midBrown,
+      fontWeight: '500',
+    },
+
+    dayLabelToday: {
+      color: Colors.primaryGreen,
+      fontWeight: '700',
+    },
+
+    sectionTitle: {
+      marginTop: Spacing.lg,
+      fontSize: 24,
+      color: Colors.primaryGreen,
+      fontWeight: '700',
+    },
+
+    animalCard: {
+      marginTop: Spacing.sm,
+      borderRadius: Radius.xl,
+      overflow: 'hidden',
+      backgroundColor: 'rgba(255,255,255,0.78)',
+      borderWidth: 1,
+      borderColor: 'rgba(77,58,45,0.08)',
+      shadowColor: '#4B3A2F',
+      shadowOpacity: 0.12,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 5,
+    },
+
+    animalImage: {
+      width: '100%',
+      height: 230,
+      backgroundColor: 'rgba(175,195,162,0.12)',
+    },
+
+    animalTextWrap: {
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.md,
+      paddingBottom: Spacing.lg,
+    },
+
+    animalEyebrow: {
+      color: Colors.midGreen,
+      fontSize: FontSize.xs,
+      letterSpacing: 1.4,
+      textTransform: 'uppercase',
+      fontWeight: '700',
+    },
+
+    animalType: {
+      marginTop: Spacing.xs,
+      fontSize: 30,
+      color: Colors.darkBrown,
+      fontWeight: '700',
+    },
+
+    animalDescription: {
+      marginTop: Spacing.sm,
+      fontSize: FontSize.md,
+      lineHeight: 23,
+      color: Colors.midBrown,
+    },
+
+    snapHeaderRow: {
+      marginTop: Spacing.xs,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-end',
+    },
+
+    snapHint: {
+      color: Colors.midBrown,
+      fontSize: FontSize.xs,
+    },
+
+    snapList: {
+      paddingTop: Spacing.md,
+      paddingBottom: Spacing.sm,
+      paddingHorizontal: Spacing.lg,
+    },
+
+    snapshotCardWrap: {
+      width: SNAP_INTERVAL,
+    },
+
+    snapshotCard: {
+      width: CARD_WIDTH,
+      padding: Spacing.md,
+      borderRadius: Radius.xl,
+      backgroundColor: 'rgba(255,255,255,0.78)',
+      borderWidth: 1,
+      borderColor: 'rgba(77,58,45,0.08)',
+      shadowColor: '#5A4635',
+      shadowOpacity: 0.11,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 4,
+    },
+
+    snapshotHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: Spacing.sm,
+    },
+
+    snapshotTitle: {
+      color: Colors.darkBrown,
+      fontSize: FontSize.lg,
+      fontWeight: '700',
+      flex: 1,
+    },
+
+    snapshotSubtitle: {
+      color: Colors.primaryGreen,
+      fontSize: FontSize.md,
+      fontWeight: '700',
+    },
+
+    snapshotAccent: {
+      marginTop: Spacing.sm,
+      width: 48,
+      height: Spacing.xs,
+      borderRadius: Radius.full,
+    },
+
+    snapshotBody: {
+      marginTop: Spacing.md,
+      minHeight: 168,
+      justifyContent: 'flex-start',
+    },
+
+    cardBodyHeadline: {
+      fontSize: FontSize.xl,
+      color: Colors.primaryGreen,
+      fontWeight: '700',
+      lineHeight: 26,
+    },
+
+    cardBodySubtext: {
+      marginTop: Spacing.sm,
+      color: Colors.midBrown,
+      fontSize: FontSize.sm,
+      lineHeight: 21,
+    },
+
+    chartWrap: {
+      marginTop: Spacing.md,
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      justifyContent: 'space-between',
+      height: 94,
+      gap: Spacing.sm,
+      paddingHorizontal: Spacing.xs,
+    },
+
+    barColumn: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+    },
+
+    bar: {
+      width: '100%',
+      borderRadius: Radius.full,
+      backgroundColor: Colors.midGreen,
+      opacity: 0.92,
+    },
+
+    moodEmoji: {
+      fontSize: 34,
+      marginBottom: Spacing.xs,
+    },
+
+    moodEmojiWrap: {
+      width: 60,
+      height: 60,
+      borderRadius: Radius.lg,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(255,255,255,0.75)',
+      borderWidth: 1,
+      borderColor: 'rgba(77,58,45,0.08)',
+      marginBottom: Spacing.sm,
+    },
+
+    statsBlock: {
+      marginTop: Spacing.md,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      backgroundColor: 'rgba(255,255,255,0.66)',
+      borderRadius: Radius.lg,
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+      borderWidth: 1,
+      borderColor: 'rgba(77,58,45,0.05)',
+    },
+
+    statsBig: {
+      fontSize: 28,
+      color: Colors.darkBrown,
+      fontWeight: '700',
+    },
+
+    statsLabel: {
+      marginTop: Spacing.xs,
+      color: Colors.midBrown,
+      fontSize: FontSize.xs,
+      textTransform: 'uppercase',
+      letterSpacing: 0.8,
+    },
+
+    summaryCard: {
+      marginTop: Spacing.lg,
+      padding: Spacing.md,
+      borderRadius: Radius.xl,
+      backgroundColor: 'rgba(255,255,255,0.72)',
+      borderWidth: 1,
+      borderColor: 'rgba(77,58,45,0.08)',
+      shadowColor: '#5A4635',
+      shadowOpacity: 0.08,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 3,
+    },
+
+    summaryEyebrow: {
+      color: Colors.midGreen,
+      fontSize: FontSize.xs,
+      letterSpacing: 1.3,
+      textTransform: 'uppercase',
+      fontWeight: '700',
+    },
+
+    summaryHeadline: {
+      marginTop: Spacing.sm,
+      fontSize: 24,
+      color: Colors.primaryGreen,
+      fontWeight: '700',
+    },
+
+    summaryText: {
+      marginTop: Spacing.sm,
+      fontSize: FontSize.sm,
+      lineHeight: 22,
+      color: Colors.midBrown,
+    },
+
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(28,34,28,0.24)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: Spacing.lg,
+    },
+
+    modalCard: {
+      width: '100%',
+      borderRadius: Radius.xl,
+      backgroundColor: 'rgba(250,245,236,0.98)',
+      padding: Spacing.lg,
+      borderWidth: 1,
+      borderColor: 'rgba(77,58,45,0.10)',
+      shadowColor: '#000',
+      shadowOpacity: 0.12,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 10 },
+      elevation: 6,
+    },
+
+    modalTitle: {
+      fontSize: 24,
+      color: Colors.primaryGreen,
+      fontWeight: '700',
+      marginBottom: Spacing.sm,
+    },
+
+    modalText: {
+      fontSize: FontSize.sm,
+      lineHeight: 22,
+      color: Colors.midBrown,
+      marginBottom: Spacing.sm,
+    },
+
+    modalButton: {
+      marginTop: Spacing.xs,
+      alignSelf: 'flex-end',
+      backgroundColor: Colors.primaryGreen,
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.ms,
+      borderRadius: Radius.full,
+    },
+
+    modalButtonText: {
+      color: '#FFFFFF',
+      fontSize: FontSize.sm,
+      fontWeight: '700',
+    },
+
+    loadingWrap: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      minHeight: Dimensions.get('window').height,
+      paddingHorizontal: Spacing.lg,
+    },
+
+    loadingText: {
+      color: Colors.primaryGreen,
+      fontSize: 17,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+
+    statusRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.sm,
+    },
+
+    cacheText: {
+      color: Colors.midGreen,
+      fontSize: FontSize.xs,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+    },
+
+    space: {
+      marginBottom: Spacing.xs,
+    },
+
+    // backBtn: {
+    //   marginBottom: Spacing.md,
+    //   alignSelf: 'flex-start',
+    //   paddingVertical: Spacing.xs,
+    //   paddingHorizontal: Spacing.sm,
+    //   backgroundColor: Colors.paleGreen,
+    //   borderRadius: Radius.sm,
+    // },
+
+    // backBtnText: {
+    //   color: Colors.primaryGreen,
+    //   fontWeight: '600',
+    //   fontSize: FontSize.md,
+    // },
+
+    iconButton: {
+      width: 40,
+      height: 40,
+      borderRadius: Radius.full,
+      backgroundColor: Colors.white,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(77,58,45,0.10)',
+    },
+
+    topIcon: {
+      fontSize: FontSize.lg,
+      color: Colors.primaryGreen,
+    },
+
+    morePill: {
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: Spacing.xs,
+      borderRadius: Radius.lg,
+      backgroundColor: Colors.white,
+      borderWidth: 1,
+      borderColor: 'rgba(77,58,45,0.10)',
+    },
+
+    moreText: {
+      color: Colors.midBrown,
+      fontSize: FontSize.xs,
+    },
+
+    pagination: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: Spacing.xs,
+      marginBottom: Spacing.xs,
+      gap: Spacing.sm,
+    },
+
+    paginationDot: {
+      width: 8,
+      height: 8,
+      borderRadius: Radius.full,
+      backgroundColor: 'rgba(77,58,45,0.18)',
+    },
+
+    paginationDotActive: {
+      width: 20,
+      backgroundColor: Colors.primaryGreen,
+    },
+
+    categoryHero: {
+      marginTop: Spacing.xs,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.md,
+      borderRadius: Radius.lg,
+      backgroundColor: 'rgba(142,110,83,0.10)',
+      borderWidth: 1,
+      borderColor: 'rgba(142,110,83,0.16)',
+      alignItems: 'flex-start',
+    },
+
+    categoryHeroLabel: {
+      fontSize: FontSize.xs,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      color: Colors.midBrown,
+      marginBottom: Spacing.xs,
+      fontWeight: '700',
+    },
+
+    categoryHeroName: {
+      fontSize: 24,
+      color: Colors.darkBrown,
+      fontWeight: '700',
+      lineHeight: 30,
+    },
+
+    categoryHeroPercent: {
+      marginTop: Spacing.xs,
+      fontSize: FontSize.md,
+      color: Colors.primaryGreen,
+      fontWeight: '700',
+    },
+
+    categorySupportBox: {
+      marginTop: Spacing.sm,
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+      borderRadius: Radius.md,
+      backgroundColor: 'rgba(255,255,255,0.60)',
+      borderWidth: 1,
+      borderColor: 'rgba(77,58,45,0.06)',
+    },
+
+    categorySupportText: {
+      fontSize: FontSize.sm,
+      lineHeight: 19,
+      color: Colors.midBrown,
+    },
+
+    categoryCompareRow: {
+      marginTop: Spacing.sm,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+      borderRadius: Radius.md,
+      backgroundColor: 'rgba(255,255,255,0.60)',
+      borderWidth: 1,
+      borderColor: 'rgba(77,58,45,0.06)',
+      gap: Spacing.sm,
+    },
+
+    categoryCompareTextWrap: {
+      flex: 1,
+    },
+
+    categoryCompareLabel: {
+      fontSize: FontSize.xs,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      color: Colors.midBrown,
+      marginBottom: Spacing.xs,
+      fontWeight: '700',
+    },
+
+    categoryCompareName: {
+      fontSize: FontSize.md,
+      color: Colors.darkBrown,
+      fontWeight: '600',
+    },
+
+    categoryComparePercentPill: {
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: Spacing.xs,
+      borderRadius: Radius.full,
+      backgroundColor: 'rgba(95,122,97,0.12)',
+    },
+
+    categoryComparePercent: {
+      fontSize: FontSize.sm,
+      color: Colors.primaryGreen,
+      fontWeight: '700',
+    },
+
+    moodHero: {
+      marginTop: Spacing.xs,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.md,
+      borderRadius: Radius.lg,
+      backgroundColor: 'rgba(95,122,97,0.12)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(95,122,97,0.18)',
+    },
+
+    moodLabel: {
+      fontSize: FontSize.xs,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      color: Colors.midBrown,
+      marginBottom: Spacing.xs,
+      fontWeight: '700',
+    },
+
+    moodName: {
+      fontSize: FontSize.xl,
+      color: Colors.darkBrown,
+      fontWeight: '700',
+      textAlign: 'center',
+    },
+
+    moodDifficultyRow: {
+      marginTop: Spacing.sm,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+
+    moodDifficultyLabel: {
+      fontSize: FontSize.sm,
+      color: Colors.midBrown,
+    },
+
+    moodDifficultyValue: {
+      fontSize: FontSize.md,
+      color: Colors.primaryGreen,
+      fontWeight: '700',
+    },
+
+    moodBarTrack: {
+      marginTop: Spacing.sm,
+      height: 10,
+      borderRadius: Radius.full,
+      backgroundColor: 'rgba(77,58,45,0.08)',
+      overflow: 'hidden',
+    },
+
+    moodBarFill: {
+      height: '100%',
+      borderRadius: Radius.full,
+      backgroundColor: Colors.midGreen,
+    },
+
+    refreshButton: {
+      marginTop: Spacing.md,
+      alignSelf: 'flex-start',
+      backgroundColor: Colors.primaryGreen,
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.ms,
+      borderRadius: Radius.full,
+    },
+
+    refreshButtonDisabled: {
+      opacity: 0.5,
+    },
+
+    refreshButtonText: {
+      color: '#FFFFFF',
+      fontSize: FontSize.sm,
+      fontWeight: '700',
+    },
+  });
