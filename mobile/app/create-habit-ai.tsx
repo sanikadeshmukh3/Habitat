@@ -18,21 +18,21 @@ import {
 import { useTheme, Spacing, FontSize, Radius, createSharedStyles } from '@/constants/theme';
 
 // Palette
-const C = {
-  pageBg:           '#F7FAF5',
-  cardBg:         '#FFFFFF',
-  midGreen:         '#7BAE7F',
-  lightGreen:      '#A8C5A0',
-  paleGreen: '#CDECCD',
-  yellow:       '#F5E6A3',
-  yellowDeep:   '#E8C84A',
-  primaryIndigo: '#3D3B8E',
-  paleIndigo:   '#EEEDF8',
-  midIndigo:    '#6C63FF',
-  darkBrown:  '#2B2D42',
-  lightBrown:'#6B7280',
-  border:       '#E4EDE2',
-};
+// const C = {
+//   pageBg:           '#F7FAF5',
+//   cardBg:         '#FFFFFF',
+//   midGreen:         '#7BAE7F',
+//   lightGreen:      '#A8C5A0',
+//   paleGreen: '#CDECCD',
+//   yellow:       '#F5E6A3',
+//   yellowDeep:   '#E8C84A',
+//   primaryIndigo: '#3D3B8E',
+//   paleIndigo:   '#EEEDF8',
+//   midIndigo:    '#6C63FF',
+//   darkBrown:  '#2B2D42',
+//   lightBrown:'#6B7280',
+//   border:       '#E4EDE2',
+// };
 
 // Mock AI suggestions
 /*const MOCK_SUGGESTIONS = [
@@ -339,7 +339,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
 StyleSheet.create({
   background: {
     flex: 1,
-    backgroundColor: '#EAF6E8',
+    backgroundColor: Colors.pageBg,
   },
   safe: {
     flex: 1,
@@ -487,7 +487,7 @@ StyleSheet.create({
   generateBtnText: {
     fontSize: FontSize.md,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.3,
   },
 
@@ -588,7 +588,7 @@ StyleSheet.create({
     borderColor: Colors.primaryIndigo,
   },
   checkmark: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: FontSize.sm,
     fontWeight: '700',
   },
@@ -652,7 +652,7 @@ StyleSheet.create({
   addBtnText: {
     fontSize: FontSize.md,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.3,
   },
 

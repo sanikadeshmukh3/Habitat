@@ -1,5 +1,5 @@
 import api from '@/lib/api';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTheme, FontSize, Radius, Spacing } from '@/constants/theme';
 
 const colors = {
   bg:            '#F7FAF5',
@@ -43,6 +44,9 @@ export default function StackingActivationModal({
   onActivated,
   onSnoozed,
 }: Props) {
+  const { Colors } = useTheme();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
+
   const [loading, setLoading] = useState(false);
 
   // calls POST /stacking/accept to activate the next habit in the queue
@@ -109,7 +113,7 @@ export default function StackingActivationModal({
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color={colors.card} />
+                <ActivityIndicator color={Colors.cardBg} />
               ) : (
                 <Text style={styles.activateButtonText}>
                   Activate {nextHabitName}
@@ -134,72 +138,72 @@ export default function StackingActivationModal({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'flex-end',
   },
   card: {
-    backgroundColor: colors.card,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    backgroundColor: Colors.cardBg,
+    borderTopLeftRadius: Radius.lg,
+    borderTopRightRadius: Radius.lg,
     overflow: 'hidden',
     shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 1,
-    shadowRadius: 20,
+    shadowRadius: Radius.lg,
     elevation: 10,
   },
   accentBar: {
     height: 5,
-    backgroundColor: colors.yellowDeep,
+    backgroundColor: Colors.badgeGold,
     width: '30%',
     alignSelf: 'center',
-    borderRadius: 10,
-    marginTop: 12,
+    borderRadius: Radius.sm,
+    marginTop: Spacing.ms,
   },
   content: {
-    padding: 28,
-    paddingBottom: 40,
+    padding: Spacing.lg,
+    paddingBottom: Spacing.xl,
   },
   headline: {
-    fontSize: 22,
+    fontSize: FontSize.xl,
     fontWeight: '700',
-    color: colors.indigo,
+    color: Colors.primaryIndigo,
     textAlign: 'center',
-    marginBottom: 14,
+    marginBottom: Spacing.ms,
   },
   subtext: {
-    fontSize: 15,
-    color: colors.textPrimary,
+    fontSize: FontSize.sm,
+    color: Colors.darkBrown,
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 28,
+    marginBottom: Spacing.lg,
   },
   habitNameHighlight: {
     fontWeight: '700',
-    color: colors.indigo,
+    color: Colors.primaryIndigo,
   },
   activateButton: {
-    backgroundColor: colors.sage,
-    paddingVertical: 16,
-    borderRadius: 16,
+    backgroundColor: Colors.midGreen,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.md,
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: Spacing.ms,
   },
   activateButtonText: {
-    color: colors.card,
-    fontSize: 16,
+    color: Colors.cardBg,
+    fontSize: FontSize.md,
     fontWeight: '700',
   },
   snoozeButton: {
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: Spacing.sm,
   },
   snoozeButtonText: {
-    color: colors.indigoMid,
-    fontSize: 15,
+    color: Colors.midIndigo,
+    fontSize: FontSize.sm,
     fontWeight: '600',
   },
 });

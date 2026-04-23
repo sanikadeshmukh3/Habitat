@@ -52,12 +52,6 @@ export default function SettingsScreen() {
   const habitStacking = settings?.habitStacking ?? false;
   const notifications = settings?.notifications ?? false;
 
-  useEffect(() => {
-    AsyncStorage.getItem(THEME_STORAGE_KEY).then(saved => {
-      if (saved) setTheme(saved as ThemeName);
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── Save a single settings key immediately on change ────────────────────
   const saveSetting = (patch: UpdateSettingsPayload) => {
     updateSettings(patch, {

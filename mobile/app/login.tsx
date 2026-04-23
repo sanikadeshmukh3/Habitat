@@ -106,7 +106,7 @@ export default function Login() {
       return (
         <ImageBackground source={require("../assets/images/background.png")} style={{ flex: 1, padding: 40 }}>
           <View style={{ flex: 1, padding: Spacing.top_margin }}>
-            <Text style={{ fontSize: FontSize.xl, marginBottom: Spacing.lg, marginTop: 180, color: "#2d6a4f" }}>Habitat</Text>
+            <Text style={{ fontSize: FontSize.xl, marginBottom: Spacing.lg, marginTop: 180, color: Colors.primaryGreen }}>Habitat</Text>
     
             <TextInput
               placeholder="Email"

@@ -372,7 +372,7 @@ export default function HomeScreen() {
               <Text style={styles.sectionTitle2}>Network</Text>
 
               <TouchableOpacity onPress={() => router.push("/search")}>
-                <Ionicons name="person-add-outline" size={24} color="#2E6F40" />
+                <Ionicons name="person-add-outline" size={24} color={Colors.primaryGreen} />
               </TouchableOpacity>
             </View>
 
@@ -426,7 +426,7 @@ export default function HomeScreen() {
                     textAlign: "center",
                     padding: Spacing.lg,
                     fontSize: FontSize.lg,
-                    color: "#1B4332",
+                    color: Colors.primaryGreen,
                   }}
                 >
                   {activeTab === "friends"
@@ -456,7 +456,7 @@ export default function HomeScreen() {
                     </TouchableOpacity>
                   ) : (
                     <View key={item.id} style={{ marginBottom: Spacing.ms  }}> 
-                      <Text style={{ color: "#2E6F40" }}>{item.name}</Text>
+                      <Text style={{ color: Colors.primaryGreen }}>{item.name}</Text>
 
                       <View
                         style={{ flexDirection: "row", gap: 10, marginTop: Spacing.xs }}

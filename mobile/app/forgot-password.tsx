@@ -69,7 +69,7 @@ import api from "@/lib/api";
             fontSize: FontSize.xl,
             marginBottom: Spacing.xl,
             marginTop: 180,
-            color: "#EAF6E8",
+            color: Colors.pageBg,
             fontWeight: "bold",
           }}
         >

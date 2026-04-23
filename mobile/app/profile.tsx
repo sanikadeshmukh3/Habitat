@@ -410,13 +410,13 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
   badgeText:     { fontSize: FontSize.sm, color: Colors.primaryGreen, fontWeight: '600' },
   noBadgesText:  { fontSize: FontSize.sm, color: Colors.lightBrown, marginTop: Spacing.xs, fontStyle: 'italic' },
 
-  logOutBtn:     { marginTop: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: Radius.md, borderWidth: 1.5, borderColor: '#d9534f', alignItems: 'center' },
-  logOutBtnText: { color: '#d9534f', fontWeight: '700', fontSize: FontSize.md },
+  logOutBtn:     { marginTop: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.danger, alignItems: 'center' },
+  logOutBtnText: { color: Colors.danger, fontWeight: '700', fontSize: FontSize.md },
 
   modalOverlay:  { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.lg },
   modalCard:     { width: '100%', backgroundColor: Colors.cardBg, borderRadius: Radius.md, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.border, gap: Spacing.xs },
   modalTitle:    { fontSize: FontSize.lg, fontWeight: '700', color: Colors.darkBrown, marginBottom: 2 },
   modalSubtitle: { fontSize: FontSize.sm, color: Colors.lightBrown, marginBottom: Spacing.sm },
-  modalError:    { fontSize: FontSize.xs, color: '#d9534f', marginTop: 2 },
+  modalError:    { fontSize: FontSize.xs, color: Colors.danger, marginTop: 2 },
   modalBtnRow:   { flexDirection: 'row', gap: Spacing.xs, marginTop: Spacing.sm },
 });

@@ -219,7 +219,7 @@ export default function CreateHabitScreen() {
                   value={habit.visibility}
                   onValueChange={(value) => updateHabitField('visibility', value)}
                   trackColor={{ false: Colors.border, true: Colors.lightGreen }}
-                  thumbColor={habit.visibility ? Colors.midGreen : '#f0f0f0'}
+                  thumbColor={habit.visibility ? Colors.midGreen : Colors.white}
                   ios_backgroundColor={Colors.border}
                 />
               </View>
@@ -343,7 +343,7 @@ function SectionLabel({
 }
 
 const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet.create({
-  background: { flex: 1, backgroundColor: '#EAF6E8' },
+  background: { flex: 1, backgroundColor: Colors.pageBg },
   safe:       { flex: 1, backgroundColor: 'transparent' },
   header: {
     flexDirection: 'row', alignItems: 'center',
@@ -391,7 +391,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
   pillActive:      { backgroundColor: Colors.primaryIndigo, borderColor: Colors.primaryIndigo },
   pillEmoji:       { fontSize: FontSize.sm },
   pillLabel:       { fontSize: FontSize.sm, fontWeight: '600', color: Colors.lightBrown },
-  pillLabelActive: { color: '#FFFFFF' },
+  pillLabelActive: { color: Colors.white },
   segmentedControl: {
     flexDirection: 'row', backgroundColor: Colors.pageBg, borderRadius: Radius.md,
     borderWidth: 1.5, borderColor: Colors.border, padding: Spacing.xs, gap: 4,
@@ -402,7 +402,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
     shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: Radius.sm, elevation: 2,
   },
   segmentLabel:       { fontSize: FontSize.sm, fontWeight: '600', color: Colors.lightBrown },
-  segmentLabelActive: { color: '#FFFFFF' },
+  segmentLabelActive: { color: Colors.white },
   toggleRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   toggleText: { flex: 1, gap: 3 },
   toggleSub:  { fontSize: FontSize.xs, color: Colors.lightBrown, marginTop: Spacing.xs },
@@ -420,15 +420,15 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
   },
   submitBtnDisabled: { backgroundColor: Colors.lightGreen, shadowOpacity: 0.1 },
   submitLeaf:        { fontSize: FontSize.lg },
-  submitLabel:       { fontSize: FontSize.md, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.3 },
+  submitLabel:       { fontSize: FontSize.md, fontWeight: '700', color: Colors.white, letterSpacing: 0.3 },
   errorBanner: {
-    marginTop: Spacing.sm, backgroundColor: '#FFF0F0', borderWidth: 1.5,
-    borderColor: '#F5C2C2', borderRadius: Radius.md, paddingVertical: Spacing.ms, paddingHorizontal: Spacing.md,
+    marginTop: Spacing.sm, backgroundColor: Colors.white, borderWidth: 1.5,
+    borderColor: Colors.danger, borderRadius: Radius.md, paddingVertical: Spacing.ms, paddingHorizontal: Spacing.md,
   },
-  errorBannerText: { fontSize: FontSize.sm, color: '#C0392B', fontWeight: '600', textAlign: 'center' },
+  errorBannerText: { fontSize: FontSize.sm, color: Colors.danger, fontWeight: '600', textAlign: 'center' },
   aiNudge: {
     marginTop: Spacing.md, borderRadius: Radius.md, borderWidth: 1.5,
-    borderColor: Colors.midIndigo, backgroundColor: '#FEFDF5', padding: Spacing.md,
+    borderColor: Colors.midIndigo, backgroundColor: Colors.pageBg, padding: Spacing.md,
   },
   aiNudgeInner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.ms },
   aiNudgeIcon:  { fontSize: FontSize.xl, color: Colors.midIndigo },
@@ -457,7 +457,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
     shadowColor: Colors.primaryIndigo, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3, shadowRadius: Radius.sm, elevation: 5,
   },
-  modalPrimaryLabel:   { color: '#FFFFFF', fontSize: FontSize.md, fontWeight: '700', letterSpacing: 0.2 },
+  modalPrimaryLabel:   { color: Colors.white, fontSize: FontSize.md, fontWeight: '700', letterSpacing: 0.2 },
   modalSecondaryBtn: {
     width: '85%', borderWidth: 1.5, borderColor: Colors.border,
     borderRadius: Radius.md, paddingVertical: Spacing.ms, alignItems: 'center',

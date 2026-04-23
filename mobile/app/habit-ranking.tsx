@@ -1,6 +1,6 @@
 import api from '@/lib/api';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
     ActivityIndicator,
     SafeAreaView,
@@ -14,6 +14,7 @@ import DraggableFlatList, {
     ScaleDecorator,
 } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useTheme, FontSize, Radius, Spacing } from '@/constants/theme';
 
 const colors = {
   bg:            '#F7FAF5',
@@ -47,6 +48,9 @@ type ActiveEntryItem = {
 };
 
 export default function HabitRankingScreen() {
+  const { Colors } = useTheme();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
+
   const router = useRouter();
 
   // mode is passed as a route param:
@@ -100,9 +104,9 @@ export default function HabitRankingScreen() {
   };
 
   const tierColor = (tier: string) => {
-    if (tier === 'TIER_2') return colors.yellowDeep;
-    if (tier === 'TIER_3') return colors.indigoMid;
-    return colors.sageMid;
+    if (tier === 'TIER_2') return Colors.badgeGold;
+    if (tier === 'TIER_3') return Colors.midIndigo;
+    return Colors.lightGreen;
   };
 
   const handleConfirm = async () => {
@@ -168,7 +172,7 @@ export default function HabitRankingScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.sage} />
+        <ActivityIndicator size="large" color={Colors.midGreen} />
       </View>
     );
   }
@@ -249,7 +253,7 @@ export default function HabitRankingScreen() {
             disabled={submitting}
           >
             {submitting ? (
-              <ActivityIndicator color={colors.card} />
+              <ActivityIndicator color={Colors.cardBg} />
             ) : (
               <Text style={styles.confirmButtonText}>
                 {isReorderMode ? 'Save Order' : 'Start Habit Stacking'}
@@ -263,188 +267,188 @@ export default function HabitRankingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: Colors.pageBg,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.bg,
+    backgroundColor: Colors.pageBg,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
   },
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.indigoPale,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.paleIndigo,
     justifyContent: 'center',
     alignItems: 'center',
   },
   backArrow: {
-    fontSize: 20,
-    color: colors.indigo,
+    fontSize: FontSize.lg,
+    color: Colors.primaryIndigo,
     fontWeight: '600',
   },
   title: {
-    fontSize: 20,
+    fontSize: Spacing.lg,
     fontWeight: '700',
-    color: colors.indigo,
+    color: Colors.primaryIndigo,
     textAlign: 'center',
     flex: 1,
   },
   subtitle: {
-    fontSize: 14,
-    color: colors.textPrimary,
+    fontSize: FontSize.sm,
+    color: Colors.darkBrown,
     textAlign: 'center',
-    paddingHorizontal: 28,
-    marginBottom: 24,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.lg,
     lineHeight: 20,
   },
   section: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
     flex: 1,
   },
   sectionLabel: {
-    fontSize: 13,
+    fontSize: FontSize.xs,
     fontWeight: '700',
-    color: colors.indigo,
+    color: Colors.primaryIndigo,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-    marginBottom: 10,
+    marginBottom: Spacing.sm,
   },
   lockedCard: {
-    backgroundColor: colors.sagePale,
-    borderRadius: 14,
-    padding: 16,
+    backgroundColor: Colors.paleGreen,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: Spacing.ms,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: Colors.border,
   },
   lockedCardName: {
-    fontSize: 15,
+    fontSize: FontSize.md,
     fontWeight: '600',
-    color: colors.textPrimary,
+    color: Colors.darkBrown,
     flex: 1,
   },
   masteredBadge: {
-    backgroundColor: colors.sage,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 20,
+    backgroundColor: Colors.midGreen,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.ms,
+    borderRadius: Radius.lg,
   },
   masteredBadgeText: {
-    color: colors.card,
-    fontSize: 12,
+    color: Colors.cardBg,
+    fontSize: FontSize.xs,
     fontWeight: '600',
   },
   activeCard: {
-    backgroundColor: colors.indigoPale,
-    borderRadius: 14,
-    padding: 16,
+    backgroundColor: Colors.paleIndigo,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: Spacing.ms,
     borderWidth: 1,
-    borderColor: colors.indigoMid,
+    borderColor: Colors.midIndigo,
   },
   activeCardName: {
-    fontSize: 15,
+    fontSize: FontSize.md,
     fontWeight: '600',
-    color: colors.indigo,
+    color: Colors.primaryIndigo,
     flex: 1,
   },
   activeBadge: {
-    backgroundColor: colors.indigo,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 20,
+    backgroundColor: Colors.primaryIndigo,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.ms,
+    borderRadius: Radius.lg,
   },
   activeBadgeText: {
-    color: colors.card,
-    fontSize: 12,
+    color: Colors.cardBg,
+    fontSize: FontSize.xs,
     fontWeight: '600',
   },
   habitCard: {
-    backgroundColor: colors.card,
-    borderRadius: 14,
-    padding: 16,
+    backgroundColor: Colors.cardBg,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: Spacing.ms,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: Colors.border,
     shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,
-    shadowRadius: 8,
+    shadowRadius: Radius.sm,
     elevation: 2,
   },
   habitCardActive: {
-    backgroundColor: colors.indigoPale,
-    borderColor: colors.indigoMid,
+    backgroundColor: Colors.paleIndigo,
+    borderColor: Colors.midIndigo,
     shadowOpacity: 0.3,
     elevation: 8,
   },
   dragHandle: {
-    marginRight: 12,
+    marginRight: Spacing.ms,
   },
   dragHandleText: {
     fontSize: 20,
-    color: colors.sageMid,
+    color: Colors.lightGreen,
   },
   habitCardContent: {
     flex: 1,
   },
   habitCardName: {
-    fontSize: 15,
+    fontSize: FontSize.md,
     fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 2,
+    color: Colors.darkBrown,
+    marginBottom: Spacing.xs,
   },
   habitCardScore: {
-    fontSize: 13,
-    color: colors.textPrimary,
+    fontSize: FontSize.sm,
+    color: Colors.darkBrown,
   },
   tierBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 20,
-    marginLeft: 10,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.ms,
+    borderRadius: Radius.lg,
+    marginLeft: Spacing.sm,
   },
   tierBadgeText: {
-    color: colors.card,
-    fontSize: 12,
+    color: Colors.cardBg,
+    fontSize: FontSize.xs,
     fontWeight: '600',
   },
   footer: {
-    padding: 20,
-    paddingBottom: 36,
-    backgroundColor: colors.bg,
+    padding: Spacing.md,
+    paddingBottom: Spacing.xl,
+    backgroundColor: Colors.pageBg,
   },
   confirmButton: {
-    backgroundColor: colors.sage,
-    paddingVertical: 16,
-    borderRadius: 16,
+    backgroundColor: Colors.midGreen,
+    paddingVertical: Spacing.md,
+    borderRadius: Spacing.md,
     alignItems: 'center',
   },
   confirmButtonText: {
-    color: colors.card,
-    fontSize: 16,
+    color: Colors.cardBg,
+    fontSize: FontSize.md,
     fontWeight: '700',
   },
 });

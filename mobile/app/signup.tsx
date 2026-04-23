@@ -71,7 +71,7 @@ export default function Signup() {
   };
 
   return (
-    <View style={{ flex: 1, padding: Spacing.xl, backgroundColor: "#74c69d" }}>
+    <View style={{ flex: 1, padding: Spacing.xl, backgroundColor: Colors.midGreen }}>
 
       <TouchableOpacity
         onPress={() => router.back()}

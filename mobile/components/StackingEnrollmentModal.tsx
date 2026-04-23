@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Modal,
   StyleSheet,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTheme, FontSize, Radius, Spacing } from '@/constants/theme';
 
 const colors = {
   bg:           '#F7FAF5',
@@ -37,6 +38,9 @@ export default function StackingEnrollmentModal({
   onEnroll,
   onDismiss,
 }: Props) {
+  const { Colors } = useTheme();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
+
   const formatHabitNames = (names: string[]) => {
     if (names.length === 0) return 'some of your habits';
     if (names.length === 1) return names[0];
@@ -103,72 +107,72 @@ export default function StackingEnrollmentModal({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'flex-end',
   },
   card: {
-    backgroundColor: colors.card,
+    backgroundColor: Colors.cardBg,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     overflow: 'hidden',
     shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 1,
-    shadowRadius: 20,
+    shadowRadius: Radius.lg,
     elevation: 10,
   },
   accentBar: {
     height: 5,
-    backgroundColor: colors.yellow,
+    backgroundColor: Colors.badgeGold,
     width: '30%',
     alignSelf: 'center',
-    borderRadius: 10,
-    marginTop: 12,
+    borderRadius: Radius.sm,
+    marginTop: Spacing.ms,
   },
   content: {
-    padding: 28,
-    paddingBottom: 40,
+    padding: Spacing.lg,
+    paddingBottom: Spacing.xl,
   },
   headline: {
-    fontSize: 22,
+    fontSize: FontSize.xl,
     fontWeight: '700',
-    color: colors.indigo,
+    color: Colors.primaryIndigo,
     textAlign: 'center',
-    marginBottom: 14,
+    marginBottom: Spacing.ms,
   },
   subtext: {
-    fontSize: 15,
-    color: colors.textPrimary,
+    fontSize: FontSize.md,
+    color: Colors.darkBrown,
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 28,
+    marginBottom: Spacing.lg,
   },
   habitNameHighlight: {
     fontWeight: '700',
-    color: colors.indigo,
+    color: Colors.primaryIndigo,
   },
   enrollButton: {
-    backgroundColor: colors.sage,
-    paddingVertical: 16,
-    borderRadius: 16,
+    backgroundColor: Colors.midGreen,
+    paddingVertical: Spacing.md,
+    borderRadius: Spacing.md,
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: Spacing.ms,
   },
   enrollButtonText: {
-    color: colors.card,
-    fontSize: 16,
+    color: Colors.cardBg,
+    fontSize: FontSize.md,
     fontWeight: '700',
   },
   dismissButton: {
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: Spacing.sm,
   },
   dismissButtonText: {
-    color: colors.indigoMid,
-    fontSize: 15,
+    color: Colors.midIndigo,
+    fontSize: FontSize.md,
     fontWeight: '600',
   },
 });

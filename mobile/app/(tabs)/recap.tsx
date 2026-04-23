@@ -327,7 +327,7 @@ export default function RecapScreen() {
         id: 'completion-pulse',
         title: 'Completion Pulse',
         subtitle: `${completionPulse.percent}%`,
-        accent: '#6E8B62',
+        accent: Colors.midGreen,
         body: (
         <View>
             <Text style={styles.cardBodyHeadline}>
@@ -347,7 +347,7 @@ export default function RecapScreen() {
         id: 'category-leader',
         title: 'Category Leader',
         subtitle: categoryLeader.topCategory,
-        accent: '#8E6E53',
+        accent: Colors.lightBrown,
         body: (
             <View>
             <View style={styles.categoryHero}>
@@ -395,7 +395,7 @@ export default function RecapScreen() {
         id: 'rhythm-check',
         title: 'Rhythm Check',
         subtitle: `${rhythmCheck.strongDays} strong day${rhythmCheck.strongDays === 1 ? '' : 's'}`,
-        accent: '#7B8F6A',
+        accent: Colors.midGreen,
         body: (
         <View>
             <Text style={styles.cardBodyHeadline}>
@@ -420,7 +420,7 @@ export default function RecapScreen() {
         id: 'mood-board',
         title: 'Mood Board',
         subtitle: moodBoard.label,
-        accent: '#5F7A61',
+        accent: Colors.midGreen,
         body: (
             <View>
             {/* HERO MOOD */}
@@ -655,7 +655,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
   StyleSheet.create({
     background: {
       flex: 1,
-      backgroundColor: '#EEF6EC',
+      backgroundColor: Colors.pageBg,
     },
 
     overlay: {
@@ -765,7 +765,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
       borderWidth: 1,
       borderColor: 'rgba(77,58,45,0.08)',
       alignItems: 'center',
-      shadowColor: '#5A4635',
+      shadowColor: Colors.midBrown,
       shadowOpacity: 0.08,
       shadowRadius: 16,
       shadowOffset: { width: 0, height: 6 },
@@ -856,7 +856,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
       backgroundColor: 'rgba(255,255,255,0.78)',
       borderWidth: 1,
       borderColor: 'rgba(77,58,45,0.08)',
-      shadowColor: '#4B3A2F',
+      shadowColor: Colors.midBrown,
       shadowOpacity: 0.12,
       shadowRadius: 18,
       shadowOffset: { width: 0, height: 8 },
@@ -926,7 +926,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
       backgroundColor: 'rgba(255,255,255,0.78)',
       borderWidth: 1,
       borderColor: 'rgba(77,58,45,0.08)',
-      shadowColor: '#5A4635',
+      shadowColor: Colors.midBrown,
       shadowOpacity: 0.11,
       shadowRadius: 16,
       shadowOffset: { width: 0, height: 8 },
@@ -1053,7 +1053,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
       backgroundColor: 'rgba(255,255,255,0.72)',
       borderWidth: 1,
       borderColor: 'rgba(77,58,45,0.08)',
-      shadowColor: '#5A4635',
+      shadowColor: Colors.midBrown,
       shadowOpacity: 0.08,
       shadowRadius: 16,
       shadowOffset: { width: 0, height: 6 },
@@ -1128,7 +1128,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
     },
 
     modalButtonText: {
-      color: '#FFFFFF',
+      color: Colors.white,
       fontSize: FontSize.sm,
       fontWeight: '700',
     },
@@ -1402,7 +1402,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
     },
 
     refreshButtonText: {
-      color: '#FFFFFF',
+      color: Colors.white,
       fontSize: FontSize.sm,
       fontWeight: '700',
     },

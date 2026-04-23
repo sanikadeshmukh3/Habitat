@@ -5,9 +5,10 @@ import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '@/constants/theme'
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const { Colors } = useTheme();
 
   return (
     <Tabs
@@ -15,14 +16,14 @@ export default function TabLayout() {
         headerShown: false,
 
         tabBarStyle: {
-          backgroundColor: '#EAF6E8',
+          backgroundColor: Colors.pageBg,
           borderTopWidth: 0,
           height: 70,
           paddingBottom: 10,
         },
 
-        tabBarActiveTintColor: "#2E6F40",
-        tabBarInactiveTintColor: "#2E6F40",
+        tabBarActiveTintColor: Colors.primaryGreen,
+        tabBarInactiveTintColor: Colors.primaryGreen,
 
         tabBarLabelStyle: {
           fontWeight: 600,
