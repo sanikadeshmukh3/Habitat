@@ -139,6 +139,7 @@ function SnapshotCardView({
   card: SnapshotCard;
   index: number;
   scrollX: Animated.Value;
+  styles: ReturnType<typeof makeStyles>;
   onInfoPress: (info: SnapshotCard['info']) => void;
 }) {
   const inputRange = [
@@ -606,6 +607,7 @@ Think of it as a calm, visual recap of your routines — your own Habitat Wrappe
                 card={item}
                 index={index}
                 scrollX={scrollX}
+                styles={styles}
                 onInfoPress={setSnapshotInfoModal}
               />
             )}
