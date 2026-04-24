@@ -22,6 +22,7 @@ import { useUserProfile } from '@/hooks/use-user';
 import { useWeeklySummary } from '@/hooks/use-weekly-summary';
 import { useRegenerateWeeklySummary } from '@/hooks/use-regenerate-weekly-summary';
 import type { Animal, WeekdayItem } from '@/lib/recap-utility';
+import InfoModal from '@/components/info-modal';
 
 //Weekly Summary helpers
 
@@ -48,6 +49,10 @@ type SnapshotCard = {
     subtitle?: string;
     accent?: string;
     body: React.ReactNode;
+    info: {
+      title: string;
+      description: string;
+    }
 };
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -100,9 +105,11 @@ function DayChip({ item, styles }: { item: WeekdayItem, styles: ReturnType<typeo
                     styles.circle,
                     item.done && styles.circleDone,
                     item.isToday && styles.circleToday,
+                    !item.done && !item.isFuture && styles.circleIncomplete,
                     item.isFuture && { opacity: 0.4 },
                 ]}
             >
+                {!item.done && !item.isFuture && <Text style={styles.incompleteDash}>––</Text> }
                 {item.done && <Text style={styles.check}>✓</Text>}
                 {item.isFuture && <Text style={styles.futureDot}>·</Text>}
             </View>
@@ -127,11 +134,13 @@ function SnapshotCardView({
   index,
   scrollX,
   styles,
+  onInfoPress,
 }: {
   card: SnapshotCard;
   index: number;
   scrollX: Animated.Value;
   styles: ReturnType<typeof makeStyles>;
+  onInfoPress: (info: SnapshotCard['info']) => void;
 }) {
   const inputRange = [
     (index - 1) * SNAP_INTERVAL,
@@ -169,10 +178,17 @@ function SnapshotCardView({
         ]}
       >
         <View style={styles.snapshotHeader}>
-          <Text style={styles.snapshotTitle}>{card.title}</Text>
-          {!!card.subtitle && (
-            <Text style={styles.snapshotSubtitle}>{card.subtitle}</Text>
-          )}
+          <View style={{ flex: 1 }}>
+            <Text style={styles.snapshotTitle}>{card.title}</Text>
+          </View>
+
+          <Pressable
+            style={styles.helpPill}
+            onPress={() => onInfoPress(card.info)}
+            hitSlop={10}
+          >
+            <Text style={styles.helpText}>i</Text>
+          </Pressable>
         </View>
 
         <View
@@ -229,6 +245,8 @@ export default function RecapScreen() {
   
   const scrollX = useRef(new Animated.Value(0)).current;
     const [showInfoModal, setShowInfoModal] = useState(false);
+    const [snapshotInfoModal, setSnapshotInfoModal] =
+      useState<SnapshotCard['info'] | null>(null);
     
     const { recap, isLoading, isFromCache, weekKey } = useRecap();
     const [activeIndex, setActiveIndex] = useState(0);
@@ -322,6 +340,7 @@ export default function RecapScreen() {
     const sameBestAndWorstDay =
     !rhythmCheck.weakestDay || rhythmCheck.bestDay === rhythmCheck.weakestDay;
 
+
     const snapshotCards: SnapshotCard[] = [
     {
         id: 'completion-pulse',
@@ -342,6 +361,11 @@ export default function RecapScreen() {
             />
         </View>
         ),
+        info: {
+          title: 'Completion Pulse',
+          description:
+            'This shows your overall habit completion for the week. It compares how many habits you completed against how many were available to complete.',
+        },
     },
     {
         id: 'category-leader',
@@ -390,6 +414,11 @@ export default function RecapScreen() {
             </Text>
             </View>
         ),
+        info: {
+          title: 'Category Leader',
+          description:
+            'This shows the habit category where you made the strongest progress this week. It also highlights an opportunity area when one category falls behind.',
+        },
     },
     {
         id: 'rhythm-check',
@@ -415,6 +444,11 @@ export default function RecapScreen() {
             </Text>
         </View>
         ),
+        info: {
+          title: 'Rhythm Check',
+          description:
+            'This looks at your weekly pattern by comparing stronger and weaker days. It helps show whether your habits were steady or uneven throughout the week.',
+        },
     },
     {
         id: 'mood-board',
@@ -465,6 +499,11 @@ export default function RecapScreen() {
             </Text>
             </View>
         ),
+        info: {
+          title: 'Mood Board',
+          description:
+            'This summarizes how your check-ins felt this week using your difficulty ratings and reflections.',
+        },
     },
     ];
 
@@ -487,38 +526,14 @@ export default function RecapScreen() {
             >
             </View>
 
-            <Modal
-            visible={showInfoModal}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setShowInfoModal(false)}
-            >
-            <View style={styles.modalOverlay}>
-                <View style={styles.modalCard}>
-                <Text style={styles.modalTitle}>About Habitat Wrapped</Text>
-
-                <Text style={styles.modalText}>
-                    This screen is your weekly reflection space. It highlights how consistently
-                    you showed up, which areas led the week, and the overall rhythm behind your habits.
-                </Text>
-
-                <Text style={styles.modalText}>
-                    Think of it as a calm, visual recap of your routines — your own Habitat Wrapped.
-                </Text>
-
-                <Text style={styles.modalText}>
-                    You’ll also see a personalized AI summary here as more weekly patterns become available.
-                </Text>
-
-                <Pressable
-                    style={styles.modalButton}
-                    onPress={() => setShowInfoModal(false)}
-                >
-                    <Text style={styles.modalButtonText}>Got it</Text>
-                </Pressable>
-                </View>
-            </View>
-            </Modal>
+            <InfoModal
+              visible={showInfoModal}
+              title="About Habitat Wrapped"
+              description={`This screen is your weekly reflection space. It highlights how consistently you showed up, which areas led the week, and the overall rhythm behind your habits.
+                
+Think of it as a calm, visual recap of your routines — your own Habitat Wrapped. You’ll also see a personalized AI summary here as more weekly patterns become available.`}
+              onClose={() => setShowInfoModal(false)}
+            />
 
             <View style={styles.topBar}>
                 <View style={styles.titleWrap}>
@@ -576,12 +591,25 @@ export default function RecapScreen() {
             <Text style={styles.snapHint}>Swipe to see more</Text>
             </View>
 
+            <InfoModal
+              visible={snapshotInfoModal !== null}
+              title={snapshotInfoModal?.title ?? ''}
+              description={snapshotInfoModal?.description ?? ''}
+              onClose={() => setSnapshotInfoModal(null)}
+            />
+
             <Animated.FlatList
             horizontal
             data={snapshotCards}
             keyExtractor={(i) => i.id}
             renderItem={({ item, index }) => (
-                <SnapshotCardView card={item} index={index} scrollX={scrollX} styles={styles} />
+              <SnapshotCardView
+                card={item}
+                index={index}
+                scrollX={scrollX}
+                styles={styles}
+                onInfoPress={setSnapshotInfoModal}
+              />
             )}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.snapList}
@@ -1406,4 +1434,14 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
       fontSize: FontSize.sm,
       fontWeight: '700',
     },
-  });
+  
+  incompleteDash: {
+    color: Colors.overlay,
+    fontSize: 12,
+  },
+
+  circleIncomplete: {
+    backgroundColor: Colors.overlay,
+    borderColor: Colors.white,
+  }
+});
