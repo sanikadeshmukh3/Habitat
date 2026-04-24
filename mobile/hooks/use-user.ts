@@ -66,13 +66,14 @@ async function patchUserSettings(
 /**
  * useUserProfile
  *
- * Fetches the full profile for a given user.  Both profile.tsx and any other
- * screen that needs the user's email, tag, or avatar should use this hook.
+ * Fetches the full profile for the authenticated user.  Both profile.tsx and
+ * any other screen that needs the user's email, name, or avatar should use
+ * this hook.
  *
  * @example
- * const { data: profile, isLoading } = useUserProfile(currentUserId);
- * const email    = profile?.email;
- * const photoUri = profile?.settings.photoUri;
+ * const { data: profile, isLoading } = useUserProfile();
+ * const email     = profile?.email;
+ * const firstName = profile?.firstName;
  */
 export function useUserProfile(
 ): UseQueryResult<UserProfile, AxiosError> {
@@ -94,7 +95,7 @@ export function useUserProfile(
  * is made.
  *
  * @example
- * const { data: settings, isLoading } = useUserSettings(currentUserId);
+ * const { data: settings, isLoading } = useUserSettings();
  * const theme = settings?.theme ?? 'light';
  */
 export function useUserSettings(
@@ -121,9 +122,13 @@ export function useUserSettings(
  * Patches the user's profile with optimistic updates.
  * Call this from profile.tsx's saveEdit() instead of managing local state.
  *
+ * Profile-level fields (email, firstName, lastName) are applied directly to
+ * the cached UserProfile.  Settings-level fields (isPublic) are deep-merged
+ * into the settings slice of both the profile and settings caches.
+ *
  * @example
- * const { mutate: saveProfile, isPending } = useUpdateUserProfile(currentUserId);
- * saveProfile({ email: 'new@email.com', publicTag: '@newhandle' });
+ * const { mutate: saveProfile, isPending } = useUpdateUserProfile();
+ * saveProfile({ email: 'new@email.com', firstName: 'Jane', lastName: 'Smith' });
  */
 export function useUpdateUserProfile(
 ): UseMutationResult<UserProfile, AxiosError, UpdateProfilePayload> {
@@ -140,13 +145,23 @@ export function useUpdateUserProfile(
       const prevProfile  = queryClient.getQueryData<UserProfile>(userKeys.profile());
       const prevSettings = queryClient.getQueryData<UserSettings>(userKeys.settings());
 
-      // Extract settings-backed fields from the payload
-      const { email, password, ...settingsFields } = payload;
+      // Separate profile-level fields from settings-level fields.
+      // password / currentPassword are write-only — never applied to cache.
+      const {
+        email,
+        password:        _password,
+        currentPassword: _currentPassword,
+        firstName,
+        lastName,
+        ...settingsFields
+      } = payload;
 
       if (prevProfile) {
         queryClient.setQueryData<UserProfile>(userKeys.profile(), {
           ...prevProfile,
-          ...(email ? { email } : {}),
+          ...(email     !== undefined ? { email }     : {}),
+          ...(firstName !== undefined ? { firstName } : {}),
+          ...(lastName  !== undefined ? { lastName }  : {}),
           settings: { ...prevProfile.settings, ...settingsFields },
         });
       }
@@ -191,7 +206,7 @@ export function useUpdateUserProfile(
  * profile.tsx always reflects the latest values without an extra fetch.
  *
  * @example
- * const { mutate: saveSettings } = useUpdateUserSettings(currentUserId);
+ * const { mutate: saveSettings } = useUpdateUserSettings();
  * saveSettings({ theme: 'dark' });
  * saveSettings({ habitStacking: true });
  * saveSettings({ notifications: false });

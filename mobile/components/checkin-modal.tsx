@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   Platform,
   StyleSheet,
 } from 'react-native';
-import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { useTheme, FontSize, Radius, Spacing } from '@/constants/theme';
 
 export type CheckInModalValue = {
   difficultyRating: number | null;
@@ -31,6 +31,9 @@ export default function CheckInModal({
   onClose,
   onSave,
 }: Props) {
+  const { Colors } = useTheme();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
+
   const [difficultyRating, setDifficultyRating] = useState<number | null>(initialDifficultyRating);
   const [notes, setNotes] = useState(initialNotes);
 
@@ -122,7 +125,7 @@ export default function CheckInModal({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet.create({
   modalBackdrop: {
     flex: 1,
     backgroundColor: Colors.overlay,
@@ -168,7 +171,7 @@ const styles = StyleSheet.create({
   },
   moodLabel: {
     fontSize: FontSize.xs,
-    color: Colors.medBrown,
+    color: Colors.midBrown,
     fontWeight: '600',
   },
   notesInput: {

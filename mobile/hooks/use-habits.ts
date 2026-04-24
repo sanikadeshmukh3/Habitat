@@ -137,7 +137,7 @@ export function useCreateHabit(): UseMutationResult<
   return useMutation({
     mutationFn: (payload: CreateHabitPayload) => createHabit(payload),
 
-    onSuccess: (newHabit) => {
+    onSuccess: async (newHabit) => {
       // Inject the new habit at the top of the cached list immediately
       // (avoids a full refetch round-trip for a snappier UX).
       queryClient.setQueryData<Habit[]>(habitKeys.list(), (old = []) => [
@@ -151,6 +151,18 @@ export function useCreateHabit(): UseMutationResult<
         habitKeys.detail(newHabit.id),
         { ...newHabit, stats: undefined } as unknown as HabitDetail,
       );
+
+      // habit stacking — if the user has an active stacking enrollment,
+      // this queues the new habit at the end of the pending schedule and
+      // deactivates it until the habits ahead of it have proven themselves.
+      // if there is no active enrollment the server returns a 200 with no side effects.
+      try {
+        await api.post('/stacking/add-habit', { habitId: newHabit.id });
+      } catch (err) {
+        // non-fatal — stacking enrollment check failing should never block
+        // the habit from being created successfully
+        console.warn('[useCreateHabit] stacking add-habit check failed:', err);
+      }
     },
 
     onError: (error) => {

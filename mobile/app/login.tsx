@@ -3,11 +3,17 @@ import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import api from '@/lib/api';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme, FontSize, Radius, Spacing } from '@/constants/theme';
+
 
 export default function Login() {
+  const { Colors } = useTheme();
+
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
 
   // useEffect(() => {
@@ -28,29 +34,68 @@ export default function Login() {
     setLoading(true);
   
     try {
+      await AsyncStorage.multiRemove(["token", "userId"]);
       // POST login using your centralized API instance
       const { data } = await api.post("/login", {
         email: email.trim(),
         password,
       });
+      console.log("RAW LOGIN RESPONSE FROM SERVER:", JSON.stringify(data, null, 2));
   
       // `data` should contain { message, token? }
+      // if (data.token) {
+      //   // SAVE BOTH THE TOKEN AND THE USER ID
+      //   await AsyncStorage.setItem("token", data.token);
+        
+      //   if (data.user && data.user.id) {
+      //     await AsyncStorage.setItem("userId", data.user.id);
+      //   } else if (data.id) {
+      //     // Check if your backend sends it as .id or .userId
+      //     await AsyncStorage.setItem("userId", data.id);
+      //   }
+
+      //   router.push("/(tabs)/home");
+      // }
       if (data.token) {
         await AsyncStorage.setItem("token", data.token);
-        router.push("/(tabs)/home");
-      } else {
-        alert(data.message || "Login failed");
+        
+        api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+
+        console.log("LOGIN DATA:", data);
+        // This part looks good, but let's make it robust:
+        const idToStore = data.user?.id || data.id || data.userId;
+        if (idToStore) {
+          await AsyncStorage.setItem("userId", idToStore);
+        }
+
+        // --- CHANGE THIS FROM push TO replace ---
+        // 'replace' prevents the user from clicking 'back' into the old session
+        router.replace("/(tabs)/home"); 
       }
     } catch (error: any) {
-      console.log(error.response.data);
-      if (error.response?.status === 403) { // specifically for the situation in which a user is created but not verified
+      console.log("FULL ERROR:", error);
+    
+      if (error.response) {
+        //console.log("Server error:", error.response.data);
+    
+        if (error.response.status === 403) {
+          await api.post("/resend-code", { email });
+
         router.push({
-          pathname: "/verify",
-          params: { email },
-        });
+            pathname: "/verify",
+            params: { email },
+          });
+        } else {
+          alert(error.response.data?.message || "Server error");
+        }
+    
+      } else if (error.request) {
+        console.log("No response received:", error.request);
+        alert("Cannot connect to server");
+    
       } else {
-        console.error("Login error:", error);
-        alert(error?.response?.data?.message || "Network or server error");
+       // console.log("Unexpected error:", error.message);
+        alert("Something went wrong");
       }
     } finally {
       setLoading(false);
@@ -60,45 +105,67 @@ export default function Login() {
 
       return (
         <ImageBackground source={require("../assets/images/background.png")} style={{ flex: 1, padding: 40 }}>
-          <View style={{ flex: 1, padding: 40 }}>
-            <Text style={{ fontSize: 24, marginBottom: 20, marginTop: 180, color: "green" }}>Habitat</Text>
+          <View style={{ flex: 1, padding: Spacing.top_margin }}>
+            <Text style={{ fontSize: FontSize.xl, marginBottom: Spacing.lg, marginTop: 180, color: Colors.primaryGreen }}>Habitat</Text>
     
             <TextInput
               placeholder="Email"
               value={email}
               onChangeText={setEmail}
-              style={{ borderWidth: 1, padding: 10, marginBottom: 10 }}
+              style={{ borderWidth: 1, padding: Spacing.sm, marginBottom: Spacing.sm, borderRadius: Radius.sm }}
               autoCapitalize="none"
               autoCorrect={false}
             />
-            <TextInput
-              placeholder="Password"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-              style={{ borderWidth: 1, padding: 10, marginBottom: 20 }}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+<View style={{ position: "relative", marginBottom: Spacing.lg }}>
+  <TextInput
+    placeholder="Password"
+    secureTextEntry={!showPassword}
+    value={password}
+    onChangeText={setPassword}
+    style={{
+      borderWidth: 1,
+      padding: Spacing.sm,
+      borderRadius: Radius.sm,
+      paddingRight: Spacing.xl, // space for icon
+    }}
+    autoCapitalize="none"
+    autoCorrect={false}
+  />
+
+  <TouchableOpacity
+    onPress={() => setShowPassword(prev => !prev)}
+    style={{
+      position: "absolute",
+      right: Spacing.sm,
+      top: Spacing.ms,
+    }}
+  >
+    <Ionicons
+      name={showPassword ? "eye" : "eye-off"}
+      size={22}
+      color="gray"
+    />
+  </TouchableOpacity>
+</View>
     
             <TouchableOpacity
               onPress={handleLogin}
               disabled={loading} 
-              style={{  backgroundColor: loading ? "#95d5b2" : "#2d6a4f",  paddingVertical: 14,  borderRadius: 10,  alignItems: "center",
+              style={{  backgroundColor: loading ? Colors.lightGreen : Colors.primaryGreen,  paddingVertical: Spacing.md,  borderRadius: Radius.sm,  alignItems: "center",
               }}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={Colors.white} />
               ) : (
-                <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>Login</Text>
+                <Text style={{ color: Colors.white, fontWeight: "bold", fontSize: FontSize.md }}>Login</Text>
               )}
             </TouchableOpacity>
     
-            <TouchableOpacity style={{ marginTop: 20 }} onPress={() => router.push("/signup")}>
+            <TouchableOpacity style={{ marginTop: Spacing.lg }} onPress={() => router.push("/signup")}>
               <Text>Create Account</Text>
             </TouchableOpacity>
     
-            <TouchableOpacity style={{ marginTop: 10 }} onPress={() => router.push("/forgot-password")}>
+            <TouchableOpacity style={{ marginTop: Spacing.sm }} onPress={() => router.push("/forgot-password")}>
               <Text>Forgot Password?</Text>
             </TouchableOpacity>
           </View>

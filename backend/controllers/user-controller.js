@@ -3,7 +3,7 @@
  *
  * Handles all user-level operations:
  *   GET  /users/:id          → getUserProfile
- *   PATCH /users/:id         → updateUserProfile   (email, password, publicTag, isPublic, photoUri)
+ *   PATCH /users/:id         → updateUserProfile   (email, password, firstName, lastName, isPublic)
  *   GET  /users/:id/settings → getUserSettings
  *   PATCH /users/:id/settings → updateUserSettings (theme, habitStacking, notifications)
  *
@@ -29,18 +29,14 @@ const SALT_ROUNDS = 10;
 //   theme:         'light' | 'dark' | 'nature'
 //   habitStacking: boolean
 //   notifications: boolean
-//   publicTag:     string          ← display handle, e.g. "@greenleaf_user"
 //   isPublic:      boolean         ← profile visibility toggle
-//   photoUri:      string | null   ← avatar URL / local URI
 // }
 
 const DEFAULT_SETTINGS = {
   theme:         'light',
   habitStacking: false,
   notifications: false,
-  publicTag:     '',
   isPublic:      true,
-  photoUri:      null,
 };
 
 // ─── Ownership guard ──────────────────────────────────────────────────────────
@@ -64,11 +60,15 @@ async function getUserProfile(req, res, next) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
-        id:       true,
-        email:    true,
-        timezone: true,
-        creation: true,
-        settings: true,   // JSONB — contains publicTag, isPublic, photoUri, etc.
+        id:        true,
+        email:     true,
+        firstName: true,
+        lastName:  true,
+        timezone:  true,
+        creation:  true,
+        settings:  true,   // JSONB — contains isPublic, theme, etc.
+        points:    true,
+        badges:    true,
       },
     });
 
@@ -93,12 +93,12 @@ async function getUserProfile(req, res, next) {
  * Accepted body keys:
  *   email     - new email address (must be unique)
  *   password  - new plain-text password (will be hashed before storage)
- *   publicTag - display handle
- *   isPublic  - profile visibility
- *   photoUri  - avatar URI / URL
+ *   firstName - user's first name
+ *   lastName  - user's last name (optional, can be cleared with null)
+ *   isPublic  - profile visibility (stored in JSONB settings)
  *
- * Note: publicTag, isPublic, and photoUri are stored inside the JSONB
- *       settings field and deep-merged so other settings keys are preserved.
+ * Note: isPublic is stored inside the JSONB settings field and
+ *       deep-merged so other settings keys are preserved.
  */
 async function updateUserProfile(req, res, next) {
   try {
@@ -123,29 +123,49 @@ async function updateUserProfile(req, res, next) {
         res.status(400).json({ error: 'Password must be at least 8 characters' });
         return;
       }
+
+      // Require the current password whenever a new one is being set
+      if (!body.currentPassword) {
+        res.status(400).json({ error: 'Current password is required to set a new password.' });
+        return;
+      }
+
+      const existing = await prisma.user.findUnique({
+        where:  { id: userId },
+        select: { password: true },
+      });
+
+      const isMatch = await bcrypt.compare(body.currentPassword, existing.password);
+      if (!isMatch) {
+        res.status(401).json({ error: 'Current password is incorrect.' });
+        return;
+      }
+
       userUpdate.password = await bcrypt.hash(body.password, SALT_ROUNDS);
     }
 
-    // ── Settings-backed profile fields ─────────────────────────────────────
-    if (body.publicTag !== undefined) {
-      if (typeof body.publicTag !== 'string') {
-        res.status(400).json({ error: '`publicTag` must be a string' });
+    // ── First name ─────────────────────────────────────────────────────────
+    if (body.firstName !== undefined) {
+      if (typeof body.firstName !== 'string' || body.firstName.trim().length === 0) {
+        res.status(400).json({ error: '`firstName` must be a non-empty string' });
         return;
       }
-      settingsUpdate.publicTag = body.publicTag.trim();
+      userUpdate.firstName = body.firstName.trim();
     }
 
+    // ── Last name ──────────────────────────────────────────────────────────
+    if (body.lastName !== undefined) {
+      // null is valid — it clears the last name
+      userUpdate.lastName = body.lastName === null ? null : String(body.lastName).trim() || null;
+    }
+
+    // ── Settings-backed profile fields ─────────────────────────────────────
     if (body.isPublic !== undefined) {
       settingsUpdate.isPublic = Boolean(body.isPublic);
     }
 
-    if (body.photoUri !== undefined) {
-      // null is valid — it clears the avatar
-      settingsUpdate.photoUri = body.photoUri === null ? null : String(body.photoUri);
-    }
-
     // ── Nothing sent? ──────────────────────────────────────────────────────
-    const hasUserChanges    = Object.keys(userUpdate).length > 0;
+    const hasUserChanges     = Object.keys(userUpdate).length > 0;
     const hasSettingsChanges = Object.keys(settingsUpdate).length > 0;
 
     if (!hasUserChanges && !hasSettingsChanges) {
@@ -170,11 +190,15 @@ async function updateUserProfile(req, res, next) {
       where: { id: userId },
       data:  userUpdate,
       select: {
-        id:       true,
-        email:    true,
-        timezone: true,
-        creation: true,
-        settings: true,
+        id:        true,
+        email:     true,
+        firstName: true,
+        lastName:  true,
+        timezone:  true,
+        creation:  true,
+        settings:  true,
+        points:    true,
+        badges:    true,
       },
     });
 
@@ -228,9 +252,7 @@ async function getUserSettings(req, res, next) {
  *   theme         - 'light' | 'dark' | 'nature'
  *   habitStacking - boolean
  *   notifications - boolean
- *   publicTag     - string
  *   isPublic      - boolean
- *   photoUri      - string | null
  */
 async function updateUserSettings(req, res, next) {
   try {
@@ -253,10 +275,6 @@ async function updateUserSettings(req, res, next) {
     if (body.habitStacking !== undefined) incoming.habitStacking = Boolean(body.habitStacking);
     if (body.notifications !== undefined) incoming.notifications = Boolean(body.notifications);
     if (body.isPublic      !== undefined) incoming.isPublic      = Boolean(body.isPublic);
-
-    // ── Strings ────────────────────────────────────────────────────────────
-    if (body.publicTag !== undefined) incoming.publicTag = String(body.publicTag).trim();
-    if (body.photoUri  !== undefined) incoming.photoUri  = body.photoUri === null ? null : String(body.photoUri);
 
     if (Object.keys(incoming).length === 0) {
       res.status(400).json({ error: 'No settings fields provided' });

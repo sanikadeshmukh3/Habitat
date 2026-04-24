@@ -14,8 +14,9 @@ async function upsertCheckIn(req, res, next) {
 
     const { habitId } = req.body;
 
-    const checkIn = await upsertHabitCheckIn(userId, habitId, req.body);
-    return res.status(200).json({ data: checkIn });
+    const { checkIn, ...meta } = await upsertHabitCheckIn(userId, habitId, req.body);
+
+    return res.status(200).json({ data: checkIn, meta });
   } catch (err) {
     next(err);
   }

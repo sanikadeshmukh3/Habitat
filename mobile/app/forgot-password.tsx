@@ -1,9 +1,12 @@
 import { View, TextInput, Text, TouchableOpacity, ActivityIndicator} from "react-native";
   import { router } from "expo-router";
   import { useState } from "react";
+import { useTheme, FontSize, Radius, Spacing } from '@/constants/theme';
 import api from "@/lib/api";
   
   export default function ForgotPassword() {
+    const { Colors } = useTheme();
+
     const [email, setEmail] = useState("");
     const [loading, setLoading] = useState(false);
   
@@ -44,7 +47,7 @@ import api from "@/lib/api";
     };
   
     return (
-      <View style={{ flex: 1, padding: 40, backgroundColor: "#74c69d" }}>
+      <View style={{ flex: 1, padding: Spacing.top_margin, backgroundColor: Colors.pageBg }}>
   
         <TouchableOpacity
           onPress={() => router.back()}
@@ -52,43 +55,43 @@ import api from "@/lib/api";
             position: "absolute",
             top: 60,
             left: 20,
-            paddingVertical: 6,
-            paddingHorizontal: 10,
-            backgroundColor: "#EAF6E8",
-            borderRadius: 8,
+            paddingVertical: Spacing.sm,
+            paddingHorizontal: Spacing.md,
+            backgroundColor: Colors.white,
+            borderRadius: Radius.sm,
           }}
         >
-          <Text style={{ color: "#2d6a4f", fontWeight: "600" }}>← Back</Text>
+          <Text style={{ color: Colors.primaryGreen, fontWeight: "600" }}>← Back</Text>
         </TouchableOpacity>
   
         <Text
           style={{
-            fontSize: 24,
-            marginBottom: 30,
+            fontSize: FontSize.xl,
+            marginBottom: Spacing.xl,
             marginTop: 180,
-            color: "#EAF6E8",
+            color: Colors.darkBrown,
             fontWeight: "bold",
           }}
         >
           Forgot Password
         </Text>
   
-        <Text style={{ color: "#EAF6E8", marginBottom: 5 }}>
+        <Text style={{ color: Colors.darkBrown, marginBottom: Spacing.xs }}>
           Enter your email
         </Text>
   
         <TextInput
           placeholder="Email"
-          placeholderTextColor="#ccc"
+          placeholderTextColor={Colors.midBrown}
           value={email}
           onChangeText={setEmail}
           style={{
             borderWidth: 1,
-            borderColor: "#EAF6E8",
-            padding: 12,
-            marginBottom: 25,
-            borderRadius: 8,
-            color: "#fff",
+            borderColor: Colors.white,
+            padding: Spacing.ms,
+            marginBottom: Spacing.lg,
+            borderRadius: Radius.sm,
+            color: Colors.darkBrown,
           }}
           autoCapitalize="none"
         />
@@ -97,16 +100,16 @@ import api from "@/lib/api";
           onPress={handlePress}
           disabled={loading}
           style={{
-            backgroundColor: loading ? "#95d5b2" : "#2d6a4f",
-            paddingVertical: 14,
-            borderRadius: 10,
+            backgroundColor: loading ? Colors.lightGreen : Colors.primaryGreen,
+            paddingVertical: Spacing.md,
+            borderRadius: Radius.sm,
             alignItems: "center",
           }}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={Colors.white} />
           ) : (
-            <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>
+            <Text style={{ color: Colors.white, fontWeight: "bold", fontSize: FontSize.lg }}>
               Send Code
             </Text>
           )}

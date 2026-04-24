@@ -2,7 +2,7 @@ import CheckInModal from '@/components/checkin-modal';
 import { buildMonthKey, useCheckInsForMonth, useUpsertCheckIn } from '@/hooks/use-checkin';
 import { useDeleteHabit, useHabitDetail } from '@/hooks/use-habits';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,25 +16,26 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTheme, FontSize, Radius, Spacing, createSharedStyles } from '@/constants/theme'
 
-// Palette
-const C = {
-  bg:            '#F7FAF5',
-  card:          '#FFFFFF',
-  sage:          '#7BAE7F',
-  sageMid:       '#A8C5A0',
-  sagePale:      '#E3F0E1',
-  yellow:        '#F5E6A3',
-  yellowDeep:    '#E8C84A',
-  indigo:        '#3D3B8E',
-  indigoPale:    '#EEEDF8',
-  indigoMid:     '#6C63FF',
-  textPrimary:   '#2B2D42',
-  textSecondary: '#6B7280',
-  border:        '#E4EDE2',
-  red:           '#FF6B6B',
-  redPale:       '#FFF0F0',
-};
+// // Palette
+// const C = {
+//   // bg:            '#F7FAF5',
+//   // card:          '#FFFFFF',
+//   // sage:          '#7BAE7F',
+//   // sageMid:       '#A8C5A0',
+//   // sagePale:      '#E3F0E1',
+//   // yellow:        '#F5E6A3',
+//   // yellowDeep:    '#E8C84A',
+//   // indigo:        '#3D3B8E',
+//   // indigoPale:    '#EEEDF8',
+//   // indigoMid:     '#6C63FF',
+//   // textPrimary:   '#2B2D42',
+//   // textSecondary: '#6B7280',
+//   // border:        '#E4EDE2',
+//   // red:           '#FF6B6B',
+//   // redPale:       '#FFF0F0',
+// };
 
 // Map category enum → display label + emoji
 const CATEGORY_META: Record<string, { label: string; emoji: string }> = {
@@ -58,10 +59,16 @@ function formatDate(iso: string): string {
 }
 
 export default function HabitDetailScreen() {
+  const { Colors } = useTheme();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]); 
+  const sharedStyles = createSharedStyles(Colors);
+  
   const router = useRouter();
   const { id: habitId } = useLocalSearchParams<{ id: string }>();
 
   // ── Data fetching ──────────────────────────────────────────────────────────
+  // NOTE: useHabitDetail should now return `inProbationPeriod: boolean` from the
+  // GET /habits/:id response (populated by getHabitWithStreakHealth in the backend).
   const { data: habit, isLoading: habitLoading } = useHabitDetail(habitId);
 
   const today = new Date();
@@ -93,7 +100,7 @@ export default function HabitDetailScreen() {
   if (habitLoading || !habit) {
     return (
       <SafeAreaView style={[styles.safe, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={C.sage} />
+        <ActivityIndicator size="large" color={Colors.midGreen} />
       </SafeAreaView>
     );
   }
@@ -104,12 +111,18 @@ export default function HabitDetailScreen() {
   const completionRate = stats
     ? Math.round((stats.totalCompletions / Math.max(stats.totalDays, 1)) * 100)
     : 0;
+
   // derive best streak live so it reflects today's check-in immediately
   const liveBestStreak = stats
     ? Math.max(stats.bestStreak, stats.currentStreak, checkedIn ? 1 : 0)
     : 0;
 
   const freqLabel = habit.frequency === 'DAILY' ? 'Daily' : 'Weekly';
+
+  // ── Probation period — NEW ─────────────────────────────────────────────────
+  // `habit.inProbationPeriod` is set by getHabitWithStreakHealth on the backend.
+  // Only relevant for DAILY habits.
+  const inProbationPeriod = habit.frequency === 'DAILY' && (habit.inProbationPeriod ?? false);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   function handleCheckIn() {
@@ -174,11 +187,11 @@ export default function HabitDetailScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
-            style={styles.backBtn}
+            style={sharedStyles.backBtn}
             onPress={() => router.push('/(tabs)/home')}
             activeOpacity={0.7}
           >
-            <Text style={styles.backArrow}>←</Text>
+            <Text style={sharedStyles.backBtnText}>← Back</Text>
           </TouchableOpacity>
           <View style={{ flex: 1 }} />
           <TouchableOpacity style={styles.editBtn} onPress={handleEdit} activeOpacity={0.7}>
@@ -213,6 +226,15 @@ export default function HabitDetailScreen() {
             <Text style={styles.habitSince}>Tracking since {formatDate(habit.createdAt)}</Text>
           </View>
 
+          {/* ── Probation period warning banner — NEW ── */}
+          {inProbationPeriod && (
+            <View style={styles.probationBanner}>
+              <Text style={styles.probationBannerText}>
+                ⏰ Probation period active — check in today to keep your streak!
+              </Text>
+            </View>
+          )}
+
           {/* Quick check-in */}
           <TouchableOpacity
             style={[styles.checkInBtn, checkedIn && styles.checkInBtnDone]}
@@ -229,20 +251,22 @@ export default function HabitDetailScreen() {
           {stats && (
             <View style={styles.statsRow}>
               <StatCard
-                value={`${stats.currentStreak}`}
+                value={`${stats.currentStreak}${inProbationPeriod ? ' ⏰' : ''}`}
                 label="Current Streak"
                 sublabel={`Best: ${liveBestStreak} days`}
                 emoji="🔥"
-                accent={C.yellowDeep}
-                accentPale={C.yellow}
+                accent={Colors.midGreen}
+                accentPale={Colors.paleGreen}
+                styles={styles}
               />
               <StatCard
                 value={`${completionRate}%`}
                 label="Completion Rate"
                 sublabel={`${stats.totalCompletions} of ${stats.totalDays} days`}
                 emoji="📈"
-                accent={C.sage}
-                accentPale={C.sagePale}
+                accent={Colors.midGreen}
+                accentPale={Colors.paleGreen}
+                styles={styles}
               />
             </View>
           )}
@@ -293,9 +317,9 @@ export default function HabitDetailScreen() {
               ))}
 
               <View style={styles.legend}>
-                <LegendItem color={C.sage}   label="Completed" />
-                <LegendItem color={C.red}    label="Missed" />
-                <LegendItem color={C.border} label="No data" />
+                <LegendItem color={Colors.midGreen}   label="Completed" styles={styles} />
+                <LegendItem color={Colors.danger}    label="Missed" styles={styles} />
+                <LegendItem color={Colors.border} label="No data" styles={styles} />
               </View>
             </View>
           )}
@@ -305,7 +329,7 @@ export default function HabitDetailScreen() {
             <View style={styles.card}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Overall Progress</Text>
-                <Text style={[styles.sectionSub, { color: C.indigo, fontWeight: '700' }]}>
+                <Text style={[styles.sectionSub, { color: Colors.primaryIndigo, fontWeight: '700' }]}>
                   {completionRate}%
                 </Text>
               </View>
@@ -357,10 +381,11 @@ export default function HabitDetailScreen() {
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function StatCard({
-  value, label, sublabel, emoji, accent, accentPale,
+  value, label, sublabel, emoji, accent, accentPale, styles,
 }: {
   value: string; label: string; sublabel: string;
   emoji: string; accent: string; accentPale: string;
+  styles: ReturnType<typeof makeStyles> 
 }) {
   return (
     <View style={[styles.statCard, { borderTopColor: accent }]}>
@@ -374,7 +399,7 @@ function StatCard({
   );
 }
 
-function LegendItem({ color, label }: { color: string; label: string }) {
+function LegendItem({ color, label, styles }: { color: string; label: string, styles: ReturnType<typeof makeStyles>  }) {
   return (
     <View style={styles.legendItem}>
       <View style={[styles.legendDot, { backgroundColor: color }]} />
@@ -385,10 +410,10 @@ function LegendItem({ color, label }: { color: string; label: string }) {
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet.create({
   background: {
     flex: 1,
-    backgroundColor: '#EAF6E8',
+    backgroundColor: Colors.pageBg,
   },
   safe: {
     flex: 1,
@@ -397,155 +422,172 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 16 : 8,
-    paddingBottom: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.top_margin,
+    paddingBottom: Spacing.ms,
   },
   backBtn: {
     width: 38,
     height: 38,
-    borderRadius: 12,
-    backgroundColor: C.card,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.cardBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   backArrow: {
-    fontSize: 18,
-    color: C.indigo,
+    fontSize: FontSize.lg,
+    color: Colors.primaryIndigo,
     fontWeight: '600',
   },
   editBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 9,
-    borderRadius: 12,
-    backgroundColor: C.indigoPale,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.paleIndigo,
   },
   editBtnText: {
-    fontSize: 14,
+    fontSize: FontSize.sm,
     fontWeight: '700',
-    color: C.indigo,
+    color: Colors.primaryIndigo,
   },
   scroll: {
-    paddingHorizontal: 20,
-    paddingTop: 4,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xs,
   },
   heroCard: {
-    backgroundColor: C.card,
-    borderRadius: 22,
-    padding: 20,
-    marginBottom: 12,
+    backgroundColor: Colors.cardBg,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.ms,
     overflow: 'hidden',
   },
   heroAccent: {
     position: 'absolute',
     top: 0, left: 0, right: 0,
     height: 5,
-    backgroundColor: C.sage,
+    backgroundColor: Colors.midGreen,
   },
   heroTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginTop: 10,
-    marginBottom: 14,
+    gap: Spacing.ms,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   emojiCircle: {
-    width: 52, height: 52, borderRadius: 16,
-    backgroundColor: C.sagePale,
+    width: 52, height: 52, borderRadius: Radius.md,
+    backgroundColor: Colors.paleGreen,
     alignItems: 'center', justifyContent: 'center',
   },
-  heroEmoji:  { fontSize: 26 },
+  heroEmoji:  { fontSize: FontSize.xxl },
   heroBadges: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   categoryBadge: {
-    backgroundColor: C.sagePale, paddingHorizontal: 10,
-    paddingVertical: 4, borderRadius: 20,
+    backgroundColor: Colors.paleGreen, paddingHorizontal: Spacing.ms,
+    paddingVertical: Spacing.xs, borderRadius: Radius.lg,
   },
   categoryBadgeText: {
-    fontSize: 11, fontWeight: '700', color: C.sage,
+    fontSize: 11, fontWeight: '700', color: Colors.midGreen,
     textTransform: 'uppercase', letterSpacing: 0.4,
   },
   freqBadge: {
-    backgroundColor: C.indigoPale, paddingHorizontal: 10,
-    paddingVertical: 4, borderRadius: 20,
+    backgroundColor: Colors.paleIndigo, paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs, borderRadius: Radius.lg,
   },
   freqBadgeText: {
-    fontSize: 11, fontWeight: '700', color: C.indigoMid,
+    fontSize: 11, fontWeight: '700', color: Colors.midIndigo,
     textTransform: 'uppercase', letterSpacing: 0.4,
   },
-  visibilityBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  publicBadge:     { backgroundColor: C.sagePale },
-  privateBadge:    { backgroundColor: C.indigoPale },
+  visibilityBadge: { paddingHorizontal: Spacing.ms, paddingVertical: Spacing.xs, borderRadius: Radius.lg },
+  publicBadge:     { backgroundColor: Colors.paleGreen },
+  privateBadge:    { backgroundColor: Colors.paleIndigo },
   visibilityText:  { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
-  publicText:      { color: C.sage },
-  privateText:     { color: C.indigoMid },
+  publicText:      { color: Colors.midGreen },
+  privateText:     { color: Colors.midIndigo },
   habitName: {
-    fontSize: 22, fontWeight: '800', color: C.indigo,
-    letterSpacing: -0.4, lineHeight: 28, marginBottom: 6,
+    fontSize: FontSize.xl, fontWeight: '800', color: Colors.primaryIndigo,
+    letterSpacing: -0.4, lineHeight: 28, marginBottom: Spacing.sm,
   },
-  habitSince: { fontSize: 12, color: C.textSecondary },
+  habitSince: { fontSize: 12, color: Colors.lightBrown },
+  // ── Probation period banner ──────────────────────────────────────────────
+  probationBanner: {
+    backgroundColor: Colors.paleGreen,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.ms,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.ms,
+    borderWidth: 1.5,
+    borderColor: Colors.midGreen,
+  },
+  probationBannerText: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: Colors.lightBrown,
+    textAlign: 'center',
+  },
+  // ──────────────────────────────────────────────────────────────────────────
   checkInBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 10, backgroundColor: C.card, borderRadius: 16,
-    paddingVertical: 15, marginBottom: 12, borderWidth: 2, borderColor: C.border,
+    gap: Spacing.sm, backgroundColor: Colors.cardBg, borderRadius: Radius.md,
+    paddingVertical: Spacing.md, marginBottom: Spacing.ms, borderWidth: 2, borderColor: Colors.border,
   },
-  checkInBtnDone: { backgroundColor: C.sagePale, borderColor: C.sage },
-  checkInIcon:    { fontSize: 20, color: C.sage, fontWeight: '700' },
-  checkInLabel:   { fontSize: 15, fontWeight: '700', color: C.textPrimary },
-  statsRow:       { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  checkInBtnDone: { backgroundColor: Colors.paleGreen, borderColor: Colors.midGreen },
+  checkInIcon:    { fontSize: FontSize.xl, color: Colors.midGreen, fontWeight: '700' },
+  checkInLabel:   { fontSize: FontSize.md, fontWeight: '700', color: Colors.darkBrown },
+  statsRow:       { flexDirection: 'row', gap: Spacing.ms, marginBottom: Spacing.ms },
   statCard: {
-    flex: 1, backgroundColor: C.card, borderRadius: 18,
-    padding: 16, alignItems: 'center', borderTopWidth: 4, gap: 4,
+    flex: 1, backgroundColor: Colors.cardBg, borderRadius: Radius.lg,
+    padding: Spacing.md, alignItems: 'center', borderTopWidth: Spacing.xs, gap: Spacing.xs,
   },
   statIconCircle: {
-    width: 38, height: 38, borderRadius: 12,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+    width: 38, height: 38, borderRadius: Radius.md,
+    alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xs,
   },
-  statEmoji:  { fontSize: 18 },
-  statValue:  { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
+  statEmoji:  { fontSize: FontSize.lg },
+  statValue:  { fontSize: FontSize.xxl, fontWeight: '800', letterSpacing: -0.5 },
   statLabel: {
-    fontSize: 11, fontWeight: '700', color: C.textPrimary,
+    fontSize: FontSize.xs, fontWeight: '700', color: Colors.darkBrown,
     textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.4,
   },
-  statSub:  { fontSize: 11, color: C.textSecondary, textAlign: 'center' },
-  card:     { backgroundColor: C.card, borderRadius: 20, padding: 18, marginBottom: 12 },
+  statSub:  { fontSize: FontSize.xs, color: Colors.lightBrown, textAlign: 'center' },
+  card:     { backgroundColor: Colors.cardBg, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.ms },
   sectionHeader: {
     flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: 14,
+    alignItems: 'center', marginBottom: Spacing.ms,
   },
   sectionTitle: {
-    fontSize: 14, fontWeight: '700', color: C.indigo,
+    fontSize: FontSize.sm, fontWeight: '700', color: Colors.primaryIndigo,
     textTransform: 'uppercase', letterSpacing: 0.6,
   },
-  sectionSub:   { fontSize: 12, color: C.textSecondary },
+  sectionSub:   { fontSize: FontSize.xs, color: Colors.lightBrown },
   dayLabelsRow: {
     flexDirection: 'row', justifyContent: 'space-between',
-    marginBottom: 6, paddingHorizontal: 2,
+    marginBottom: Spacing.sm, paddingHorizontal: Spacing.xs,
   },
   dayLabel: {
-    width: 32, textAlign: 'center', fontSize: 11,
-    fontWeight: '600', color: C.textSecondary,
+    width: 32, textAlign: 'center', fontSize: FontSize.xs,
+    fontWeight: '600', color: Colors.lightBrown,
   },
   dotRow: {
     flexDirection: 'row', justifyContent: 'space-between',
-    marginBottom: 6, paddingHorizontal: 2,
+    marginBottom: Spacing.sm, paddingHorizontal: Spacing.xs,
   },
-  dot:          { width: 32, height: 32, borderRadius: 8, backgroundColor: C.border },
-  dotCompleted: { backgroundColor: C.sage },
-  dotMissed:    { backgroundColor: C.red, opacity: 0.35 },
-  dotFuture:    { backgroundColor: C.border, opacity: 0.4 },
-  legend:       { flexDirection: 'row', gap: 16, marginTop: 12, justifyContent: 'center' },
-  legendItem:   { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  dot:          { width: 32, height: 32, borderRadius: Radius.sm, backgroundColor: Colors.border },
+  dotCompleted: { backgroundColor: Colors.midGreen },
+  dotMissed:    { backgroundColor: Colors.danger, opacity: 0.35 },
+  dotFuture:    { backgroundColor: Colors.border, opacity: 0.4 },
+  legend:       { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.ms, justifyContent: 'center' },
+  legendItem:   { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   legendDot:    { width: 10, height: 10, borderRadius: 3 },
-  legendLabel:  { fontSize: 11, color: C.textSecondary, fontWeight: '500' },
+  legendLabel:  { fontSize: FontSize.xs, color: Colors.lightBrown, fontWeight: '500' },
   progressTrack: {
-    height: 10, backgroundColor: C.border, borderRadius: 10,
-    overflow: 'hidden', marginBottom: 10,
+    height: 10, backgroundColor: Colors.border, borderRadius: Radius.sm,
+    overflow: 'hidden', marginBottom: Spacing.ms,
   },
-  progressFill:    { height: '100%', backgroundColor: C.sage, borderRadius: 10 },
-  progressCaption: { fontSize: 12, color: C.textSecondary, lineHeight: 17 },
+  progressFill:    { height: '100%', backgroundColor: Colors.midGreen, borderRadius: Radius.sm },
+  progressCaption: { fontSize: FontSize.xs, color: Colors.lightBrown, lineHeight: 17 },
   deleteBtn: {
-    borderRadius: 16, paddingVertical: 14, alignItems: 'center',
-    backgroundColor: C.redPale, borderWidth: 1.5, borderColor: C.red, marginBottom: 4,
+    borderRadius: Radius.md, paddingVertical: Spacing.ms, alignItems: 'center',
+    backgroundColor: Colors.white, borderWidth: 1.5, borderColor: Colors.danger, marginBottom: Spacing.xs,
   },
-  deleteBtnText: { fontSize: 14, fontWeight: '700', color: C.red },
+  deleteBtnText: { fontSize: Spacing.md, fontWeight: '700', color: Colors.danger },
 });

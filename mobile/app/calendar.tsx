@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
   LayoutAnimation,
   UIManager,
 } from 'react-native';
-import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { useTheme, FontSize, Radius, Spacing, createSharedStyles } from '@/constants/theme';
 import api from '@/lib/api';
 import CheckInModal from '@/components/checkin-modal';
 import {
@@ -73,6 +73,10 @@ function completionRatio(
 
 
 export default function CalendarScreen() {
+  const { Colors } = useTheme();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
+  const sharedStyles = createSharedStyles(Colors);
+
   const today = new Date();
   const [year,  setYear]  = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -201,8 +205,8 @@ const [expandedHabits, setExpandedHabits] = useState<Record<string, boolean>>({}
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
 
         {/* Back button */}
-        <TouchableOpacity style={styles.backBtn} onPress={goBack}>
-          <Text style={styles.backBtnText}>← Back</Text>
+        <TouchableOpacity style={sharedStyles.backBtn} onPress={goBack}>
+          <Text style={sharedStyles.backBtnText}>← Back</Text>
         </TouchableOpacity>
 
         {/* ── Year navigator ─────────────────────────────────── */}
@@ -323,9 +327,9 @@ const [expandedHabits, setExpandedHabits] = useState<Record<string, boolean>>({}
                 [habit.id]: !prev[habit.id],
               }));
             }}
-            style={{ marginLeft: 12 }}
+            style={{ marginLeft: Spacing.sm }}
           >
-            <Text style={{ fontSize: 14, color: Colors.primaryGreen }}>
+            <Text style={{ fontSize: FontSize.sm, color: Colors.primaryGreen }}>
               {isExpanded ? 'Hide notes' : 'Show notes'}
             </Text>
           </TouchableOpacity>
@@ -374,13 +378,13 @@ const [expandedHabits, setExpandedHabits] = useState<Record<string, boolean>>({}
 }
 
 // ── Styles ────────────────────────────────────────────────────
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet.create({
   bg: {
     flex: 1,
     backgroundColor: Colors.pageBg,
   },
   container: {
-    paddingTop: Spacing.lg * 2,
+    paddingTop: Spacing.top_margin,
     paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.xl,
   },
@@ -417,7 +421,7 @@ const styles = StyleSheet.create({
   yearText: {
     fontSize: FontSize.md,
     fontWeight: '700',
-    color: Colors.medBrown,
+    color: Colors.midBrown,
     minWidth: 50,
     textAlign: 'center',
   },
@@ -576,7 +580,7 @@ const styles = StyleSheet.create({
   },
   moodLabel: {
     fontSize: FontSize.xs,
-    color: Colors.medBrown,
+    color: Colors.midBrown,
     fontWeight: '600',
   },
   notesInput: {

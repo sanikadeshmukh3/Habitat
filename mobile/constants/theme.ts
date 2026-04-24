@@ -1,102 +1,209 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
+import { createContext, useContext, useState, createElement } from 'react';
+import type { ReactNode } from 'react';
 import { Platform } from 'react-native';
+import { ViewStyle, TextStyle } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
-
-export const Colors = {
-  light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
-  },
-  dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
-  },
-
-  // --- Backgrounds ---
-  pageBg:        "#EAF6E8",   // very light green page background
-  cardBg:        "#FFFFFF",   // white cards / panels
-  inputBg:       "#F4FBF4",   // light-green input fields
-
-  // --- Brand greens ---
-  primaryGreen:  "#2E6F40",   // dark forest green  (buttons, headers)
-  midGreen:      "#4C9A67",   // medium green        (accents, borders)
-  lightGreen:    "#A8D5BA",   // soft green          (tags, toggles)
-  paleGreen:     "#CDECCD",   // very pale green     (points box, chips)
-
-  // --- Browns (text & borders) ---
-  darkBrown:     "#3B2A1A",   // darkest text
-  medBrown:      "#5C3D22",   // section titles, labels
-  lightBrown:    "#8B6344",   // secondary text, placeholders
-
-  // --- Utility ---
-  white:         "#FFFFFF",
-  danger:        "#C0392B",   // error / private badge
-  badgeGold:     "#D4AC0D",   // badge icon colour
-  overlay:       "rgba(0,0,0,0.35)",  // modal backdrop
-
-  // --- Borders ---
-  border:        "#C5E0C5",   // subtle dividers
+// ── Color palette type ─────────────────────────────────────────
+export type ColorScheme = {
+  pageBg:       string;
+  cardBg:       string;
+  inputBg:      string;
+  primaryGreen: string;
+  midGreen:     string;
+  lightGreen:   string;
+  paleGreen:    string;
+  darkBrown:    string;
+  midBrown:     string;
+  lightBrown:   string;
+  primaryIndigo:string;
+  midIndigo:    string;
+  paleIndigo:   string;
+  white:        string;
+  danger:       string;
+  badgeGold:    string;
+  overlay:      string;
+  border:       string;
 };
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-  },
+// ── Light theme ────────────────────────────────────────────────
+const lightColors: ColorScheme = {
+  pageBg:       '#EAF6E8',
+  cardBg:       '#FFFFFF',
+  inputBg:      '#F4FBF4',
+  primaryGreen: '#2E6F40',
+  midGreen:     '#4C9A67',
+  lightGreen:   '#A8D5BA',
+  paleGreen:    '#CDECCD',
+  darkBrown:    '#3B2A1A',
+  midBrown:     '#5C3D22',
+  lightBrown:   '#8B6344',
+  primaryIndigo:'#3D3B8E',
+  midIndigo:    '#6C63FF',
+  paleIndigo:   '#EEEDF8',
+  white:        '#FFFFFF',
+  danger:       '#C0392B',
+  badgeGold:    '#D4AC0D',
+  overlay:      'rgba(0,0,0,0.35)',
+  border:       '#C5E0C5',
+};
+
+// ── Dark theme ─────────────────────────────────────────────────
+const darkColors: ColorScheme = {
+  pageBg:       '#121A14',
+  cardBg:       '#1E2E21',
+  inputBg:      '#16231A',
+  primaryGreen: '#5DBE7A',
+  midGreen:     '#3D8A57',
+  lightGreen:   '#2A5C3A',
+  paleGreen:    '#1A3322',
+  darkBrown:    '#E8D5C0',
+  midBrown:     '#C4A882',
+  lightBrown:   '#8A7060',
+  primaryIndigo:'#6C63FF',
+  midIndigo:    '#3D3B8E',
+  paleIndigo:   '#EEEDF8',
+  white:        '#F0F0F0',
+  danger:       '#E05A4A',
+  badgeGold:    '#E8C43A',
+  overlay:      'rgba(0,0,0,0.6)',
+  border:       '#2A4A32',
+};
+
+// ── Nature theme ───────────────────────────────────────────────
+const natureColors: ColorScheme = {
+  pageBg:       '#F5F0E8',
+  cardBg:       '#FDFAF4',
+  inputBg:      '#F0EBE0',
+  primaryGreen: '#4A7C3F',
+  midGreen:     '#6B9E5E',
+  lightGreen:   '#B8CFA8',
+  paleGreen:    '#DDE8D0',
+  darkBrown:    '#2C1F0E',
+  midBrown:     '#6B4A2A',
+  lightBrown:   '#9C7A52',
+  primaryIndigo:'#5D3A9B',
+  midIndigo:    '#8A63C9',
+  paleIndigo:   '#F0EAF8',
+  white:        '#FDFAF4',
+  danger:       '#B84A30',
+  badgeGold:    '#C8960C',
+  overlay:      'rgba(20,10,0,0.40)',
+  border:       '#CCC5A8',
+};
+
+// ── Theme registry ─────────────────────────────────────────────
+// To add a new theme: add its ColorScheme object above, register
+// it here, and add its name to ThemeName below.
+export type ThemeName = 'light' | 'dark' | 'nature';
+
+const THEMES: Record<ThemeName, ColorScheme> = {
+  light:  lightColors,
+  dark:   darkColors,
+  nature: natureColors,
+};
+
+// ── Static fallback export ─────────────────────────────────────
+// Screens that haven't been wired to useTheme() yet can still
+// do `import { Colors } from './theme'` and get the light theme.
+// Replace that import with useTheme() per-screen as you go.
+export let Colors: ColorScheme = lightColors;
+
+// ── Context ────────────────────────────────────────────────────
+type ThemeContextType = {
+  theme:    ThemeName;
+  Colors:   ColorScheme;
+  setTheme: (t: ThemeName) => void;
+};
+
+const ThemeContext = createContext<ThemeContextType>({
+  theme:    'light',
+  Colors:   lightColors,
+  setTheme: () => {},
 });
 
+// ── ThemeProvider ──────────────────────────────────────────────
+// Place this once around your navigation root in App.tsx.
+// Note: uses createElement instead of JSX so this file stays .ts
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [theme, setThemeState] = useState<ThemeName>('light');
+
+  const setTheme = (t: ThemeName) => {
+    setThemeState(t);
+    console.log(`Theme set to ${t}`);
+    Colors = THEMES[t]; // keeps the static export in sync
+  };
+
+  return createElement(
+    ThemeContext.Provider,
+    { value: { theme, Colors: THEMES[theme], setTheme } },
+    children,
+  );
+}
+
+// ── useTheme hook ──────────────────────────────────────────────
+// Call inside any screen component to get the live Colors object
+// and the setTheme dispatcher.
+//
+//   const { Colors, theme, setTheme } = useTheme();
+//
+export function useTheme(): ThemeContextType {
+  return useContext(ThemeContext);
+}
+
+// ── Typography ─────────────────────────────────────────────────
+export const Fonts = Platform.select({
+  ios: {
+    sans:    'system-ui',
+    serif:   'ui-serif',
+    rounded: 'ui-rounded',
+    mono:    'ui-monospace',
+  },
+  default: {
+    sans:    'normal',
+    serif:   'serif',
+    rounded: 'normal',
+    mono:    'monospace',
+  },
+  web: {
+    sans:    "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    serif:   "Georgia, 'Times New Roman', serif",
+    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
+    mono:    "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+  },
+}) as { sans: string; serif: string; rounded: string; mono: string };
+
 export const FontSize = {
-  xs:   11,
-  sm:   13,
-  md:   15,
-  lg:   18,
-  xl:   22,
-  xxl:  28,
-};
+  xs:  12,
+  sm:  14,
+  md:  16,
+  lg:  18,
+  xl:  22,
+  xxl: 28,
+  big: 40,
+} as const;
 
 export const Radius = {
-  sm:  8,
-  md:  14,
-  lg:  20,
+  sm:   8,
+  md:   14,
+  lg:   20,
+  xl:   40,
   full: 999,
-};
+} as const;
 
 export const Spacing = {
-  xs:  4,
-  sm:  8,
-  md:  16,
-  lg:  24,
-  xl:  36,
-};
+  xs: 4,
+  sm: 8,
+  ms: 12,
+  md: 16,
+  lg: 24,
+  xl: 36,
+  top_margin: 48,
+} as const;
+
+export const createSharedStyles = (Colors: ColorScheme): {
+  backBtn: ViewStyle;
+  backBtnText: TextStyle;
+} => ({
+  backBtn:     { marginBottom: Spacing.md, alignSelf: 'flex-start', paddingVertical: Spacing.xs, paddingHorizontal: Spacing.sm, backgroundColor: Colors.paleGreen, borderRadius: Radius.sm },
+  backBtnText: { color: Colors.primaryGreen, fontWeight: '600', fontSize: FontSize.md },
+});

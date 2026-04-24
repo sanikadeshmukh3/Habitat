@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,9 +12,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { useTheme, FontSize, Radius, Spacing, createSharedStyles } from '@/constants/theme';
+import type { ThemeName } from '@/constants/theme';
 import { useUserSettings, useUpdateUserSettings } from '@/hooks/use-user';
 import type { AppTheme, UpdateSettingsPayload } from '@/types/user';
+
+const THEME_STORAGE_KEY = '@app_theme';
 
 // ── LOADING STRATEGY ─────────────────────────────────────────────────────────
 //
@@ -34,6 +37,9 @@ import type { AppTheme, UpdateSettingsPayload } from '@/types/user';
 
 export default function SettingsScreen() {
 
+  const { Colors, theme, setTheme } = useTheme();
+  const sharedStyles = createSharedStyles(Colors);
+
   // ── Remote data ─────────────────────────────────────────────────────────
   const {
     data:      settings,
@@ -43,13 +49,10 @@ export default function SettingsScreen() {
   const { mutate: updateSettings, isPending: isSaving } = useUpdateUserSettings();
 
   // ── Derived values with safe defaults while loading ──────────────────────
-  const theme         = settings?.theme         ?? 'light';
   const habitStacking = settings?.habitStacking ?? false;
   const notifications = settings?.notifications ?? false;
 
   // ── Save a single settings key immediately on change ────────────────────
-  // This is the standard pattern for settings screens — no Save button needed
-  // because each toggle/chip represents a discrete, self-contained preference.
   const saveSetting = (patch: UpdateSettingsPayload) => {
     updateSettings(patch, {
       onError: (err) => {
@@ -57,6 +60,12 @@ export default function SettingsScreen() {
         Alert.alert('Save failed', msg);
       },
     });
+  };
+
+  const handleThemeChange = async (t: ThemeName) => {
+    setTheme(t);                         
+    await AsyncStorage.setItem(THEME_STORAGE_KEY, t);
+    saveSetting({ theme: t });                       
   };
 
   const goBack = () => router.push('./(tabs)/home');
@@ -68,6 +77,8 @@ export default function SettingsScreen() {
     //      router.replace('./tutorial');
     Alert.alert('Tutorial', 'Replaying tutorial...');
   };
+  // ── Dynamic styles ───────────────────────────────────────────────────────
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
 
   return (
     <ImageBackground
@@ -77,12 +88,11 @@ export default function SettingsScreen() {
     >
       {/* ── Header ────────────────────────────────────────────── */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={goBack}>
-          <Text style={styles.backBtnText}>← Back</Text>
+        <TouchableOpacity style={sharedStyles.backBtn} onPress={goBack}>
+          <Text style={sharedStyles.backBtnText}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>App Settings</Text>
 
-        {/* Saving indicator — visible whenever any setting is being persisted */}
         <View style={styles.savingBadge}>
           {isSaving ? (
             <>
@@ -90,7 +100,6 @@ export default function SettingsScreen() {
               <Text style={styles.savingText}>Saving…</Text>
             </>
           ) : (
-            // Empty box keeps the header height stable
             <Text style={styles.savedText}>{settings ? '✓ Saved' : ''}</Text>
           )}
         </View>
@@ -103,8 +112,6 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {settingsLoading && !settings ? (
-          // Only show the full-screen spinner on the very first load.
-          // On subsequent opens the cache fills instantly so this never shows.
           <View style={styles.loadingRow}>
             <ActivityIndicator size="large" color={Colors.primaryGreen} />
           </View>
@@ -119,9 +126,7 @@ export default function SettingsScreen() {
                   <TouchableOpacity
                     key={t}
                     style={[styles.themeChip, theme === t && styles.themeChipActive]}
-                    onPress={() => saveSetting({ theme: t })}
-                    // Disable taps while any save is in-flight to prevent
-                    // conflicting patches hitting the server simultaneously.
+                    onPress={() => handleThemeChange(t)}
                     disabled={isSaving}
                   >
                     <Text style={[styles.themeChipText, theme === t && styles.themeChipTextActive]}>
@@ -156,7 +161,6 @@ export default function SettingsScreen() {
             <Text style={styles.sectionLabel}>General</Text>
             <View style={styles.card}>
 
-              {/* Notifications */}
               <View style={styles.settingRow}>
                 <View style={styles.settingInfo}>
                   <Text style={styles.settingName}>Notifications</Text>
@@ -175,7 +179,6 @@ export default function SettingsScreen() {
 
               <View style={styles.divider} />
 
-              {/* Replay Tutorial */}
               <View style={styles.settingRow}>
                 <View style={styles.settingInfo}>
                   <Text style={styles.settingName}>Replay Tutorial</Text>
@@ -194,158 +197,151 @@ export default function SettingsScreen() {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  bg: {
-    flex: 1,
-    backgroundColor: Colors.pageBg,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.md,
-    paddingTop: Spacing.lg * 2,
-    backgroundColor: Colors.cardBg,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    gap: Spacing.sm,
-  },
-  backBtn: {
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-    backgroundColor: Colors.paleGreen,
-    borderRadius: Radius.sm,
-  },
-  backBtnText: {
-    color: Colors.primaryGreen,
-    fontWeight: '600',
-    fontSize: FontSize.md,
-  },
-  headerTitle: {
-    fontSize: FontSize.lg,
-    fontWeight: '700',
-    color: Colors.darkBrown,
-    flex: 1,
-  },
-  savingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    minWidth: 64,
-    justifyContent: 'flex-end',
-  },
-  savingText: {
-    fontSize: FontSize.xs,
-    color: Colors.primaryGreen,
-    fontWeight: '500',
-  },
-  savedText: {
-    fontSize: FontSize.xs,
-    color: Colors.midGreen,
-    fontWeight: '500',
-  },
-  loadingRow: {
-    marginTop: Spacing.xl,
-    alignItems: 'center',
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: Spacing.md,
-    paddingBottom: Spacing.lg * 2,
-  },
-
-  // ── Section label ──
-  sectionLabel: {
-    fontSize: FontSize.sm,
-    fontWeight: '600',
-    color: Colors.medBrown,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginTop: Spacing.md,
-    marginBottom: Spacing.xs,
-    marginLeft: Spacing.xs,
-  },
-
-  // ── Card ──
-  card: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-  },
-
-  // ── Row layout ──
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing.sm,
-  },
-  settingInfo: {
-    flex: 1,
-    marginRight: Spacing.sm,
-  },
-  settingName: {
-    fontSize: FontSize.md,
-    fontWeight: '600',
-    color: Colors.darkBrown,
-    marginBottom: 2,
-  },
-  hint: {
-    fontSize: FontSize.xs,
-    color: Colors.lightBrown,
-    lineHeight: 17,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.border,
-  },
-
-  // ── Theme chips ──
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.xs,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.xs,
-  },
-  themeChip: {
-    paddingVertical: Spacing.xs + 2,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: Radius.full,
-    borderWidth: 1.5,
-    borderColor: Colors.midGreen,
-    backgroundColor: Colors.cardBg,
-  },
-  themeChipActive: {
-    backgroundColor: Colors.primaryGreen,
-    borderColor: Colors.primaryGreen,
-  },
-  themeChipText: {
-    fontSize: FontSize.sm,
-    color: Colors.primaryGreen,
-    fontWeight: '600',
-  },
-  themeChipTextActive: {
-    color: Colors.white,
-  },
-
-  // ── Action button ──
-  actionBtn: {
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-    backgroundColor: Colors.paleGreen,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-    borderColor: Colors.midGreen,
-  },
-  actionBtnText: {
-    color: Colors.primaryGreen,
-    fontWeight: '600',
-    fontSize: FontSize.sm,
-  },
-});
+// ── makeStyles ────────────────────────────────────────────────────────────────
+// Accepts the current ColorScheme and returns a fresh StyleSheet.
+// Called inside useMemo so it only re-runs when the theme actually changes.
+const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
+  StyleSheet.create({
+    bg: {
+      flex: 1,
+      backgroundColor: Colors.pageBg,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: Spacing.md,
+      paddingTop: Spacing.top_margin,
+      backgroundColor: Colors.cardBg,
+      borderBottomWidth: 1,
+      borderBottomColor: Colors.border,
+      gap: Spacing.sm,
+    },
+    backBtn: {
+      paddingVertical: Spacing.xs,
+      paddingHorizontal: Spacing.sm,
+      backgroundColor: Colors.paleGreen,
+      borderRadius: Radius.sm,
+    },
+    backBtnText: {
+      color: Colors.primaryGreen,
+      fontWeight: '600',
+      fontSize: FontSize.md,
+    },
+    headerTitle: {
+      fontSize: FontSize.lg,
+      fontWeight: '700',
+      color: Colors.darkBrown,
+      flex: 1,
+    },
+    savingBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      minWidth: 64,
+      justifyContent: 'flex-end',
+    },
+    savingText: {
+      fontSize: FontSize.xs,
+      color: Colors.primaryGreen,
+      fontWeight: '500',
+    },
+    savedText: {
+      fontSize: FontSize.xs,
+      color: Colors.midGreen,
+      fontWeight: '500',
+    },
+    loadingRow: {
+      marginTop: Spacing.xl,
+      alignItems: 'center',
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: Spacing.md,
+      paddingBottom: Spacing.top_margin,
+    },
+    sectionLabel: {
+      fontSize: FontSize.sm,
+      fontWeight: '600',
+      color: Colors.midBrown,
+      textTransform: 'uppercase',
+      letterSpacing: 0.8,
+      marginTop: Spacing.md,
+      marginBottom: Spacing.xs,
+      marginLeft: Spacing.xs,
+    },
+    card: {
+      backgroundColor: Colors.cardBg,
+      borderRadius: Radius.md,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+    },
+    settingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: Spacing.sm,
+    },
+    settingInfo: {
+      flex: 1,
+      marginRight: Spacing.sm,
+    },
+    settingName: {
+      fontSize: FontSize.md,
+      fontWeight: '600',
+      color: Colors.darkBrown,
+      marginBottom: 2,
+    },
+    hint: {
+      fontSize: FontSize.xs,
+      color: Colors.lightBrown,
+      lineHeight: 17,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: Colors.border,
+    },
+    chipRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: Spacing.xs,
+      marginTop: Spacing.sm,
+      marginBottom: Spacing.xs,
+    },
+    themeChip: {
+      paddingVertical: Spacing.xs + 2,
+      paddingHorizontal: Spacing.sm,
+      borderRadius: Radius.full,
+      borderWidth: 1.5,
+      borderColor: Colors.midGreen,
+      backgroundColor: Colors.cardBg,
+    },
+    themeChipActive: {
+      backgroundColor: Colors.primaryGreen,
+      borderColor: Colors.primaryGreen,
+    },
+    themeChipText: {
+      fontSize: FontSize.sm,
+      color: Colors.primaryGreen,
+      fontWeight: '600',
+    },
+    themeChipTextActive: {
+      color: Colors.white,
+    },
+    actionBtn: {
+      paddingVertical: Spacing.xs,
+      paddingHorizontal: Spacing.sm,
+      backgroundColor: Colors.paleGreen,
+      borderRadius: Radius.sm,
+      borderWidth: 1,
+      borderColor: Colors.midGreen,
+    },
+    actionBtnText: {
+      color: Colors.primaryGreen,
+      fontWeight: '600',
+      fontSize: FontSize.sm,
+    },
+  });

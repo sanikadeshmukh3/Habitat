@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ImageBackground,
   Modal,
@@ -16,24 +16,7 @@ import {
 } from 'react-native';
 import { useCreateHabit, useUpdateHabit } from '../hooks/use-habits';
 import { Habit, HabitCategory, HabitFrequency } from '../types/habit';
-
-// Palette
-const C = {
-  bg:            '#F7FAF5',
-  card:          '#FFFFFF',
-  sage:          '#7BAE7F',
-  sageMid:       '#A8C5A0',
-  sagePale:      '#E3F0E1',
-  yellow:        '#F5E6A3',
-  yellowDeep:    '#E8C84A',
-  indigo:        '#3D3B8E',
-  indigoPale:    '#EEEDF8',
-  indigoMid:     '#6C63FF',
-  textPrimary:   '#2B2D42',
-  textSecondary: '#6B7280',
-  border:        '#E4EDE2',
-  shadow:        'rgba(61, 59, 142, 0.08)',
-};
+import { useTheme, FontSize, Radius, Spacing, createSharedStyles } from '@/constants/theme';
 
 const CATEGORIES = [
   { label: 'FITNESS',      emoji: '🏃' },
@@ -45,6 +28,10 @@ const CATEGORIES = [
 ];
 
 export default function CreateHabitScreen() {
+  const { Colors } = useTheme();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
+  const sharedStyles = createSharedStyles(Colors);
+  
   const router = useRouter();
 
   // If these params are present we are in edit mode
@@ -130,11 +117,11 @@ export default function CreateHabitScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
-            style={styles.backBtn}
+            style={sharedStyles.backBtn}
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
-            <Text style={styles.backArrow}>←</Text>
+            <Text style={sharedStyles.backBtnText}>← Back</Text>
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
@@ -157,13 +144,13 @@ export default function CreateHabitScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Habit Name */}
-          <SectionCard>
-            <SectionLabel text="What's your habit?" required />
+          <SectionCard styles={styles}>
+            <SectionLabel text="What's your habit?" required styles={styles} />
             <View style={styles.inputWrapper}>
               <TextInput
                 style={styles.input}
                 placeholder="e.g. Drink 8 glasses of water"
-                placeholderTextColor={C.textSecondary}
+                placeholderTextColor={Colors.lightBrown}
                 value={habit.name}
                 onChangeText={(text) => { updateHabitField('name', text); setSubmitError(null); }}
                 maxLength={60}
@@ -174,8 +161,8 @@ export default function CreateHabitScreen() {
           </SectionCard>
 
           {/* Category */}
-          <SectionCard>
-            <SectionLabel text="Category" required />
+          <SectionCard styles={styles}>
+            <SectionLabel text="Category" required styles={styles} />
             <View style={styles.pillGrid}>
               {CATEGORIES.map((cat) => {
                 const active = habit.habitCategory === cat.label;
@@ -197,8 +184,8 @@ export default function CreateHabitScreen() {
           </SectionCard>
 
           {/* Frequency */}
-          <SectionCard>
-            <SectionLabel text="How often?" />
+          <SectionCard styles={styles}>
+            <SectionLabel text="How often?" styles={styles} />
             <View style={styles.segmentedControl}>
               {(['DAILY', 'WEEKLY'] as const).map((opt) => (
                 <TouchableOpacity
@@ -216,10 +203,10 @@ export default function CreateHabitScreen() {
           </SectionCard>
 
           {/* Visibility */}
-          <SectionCard>
+          <SectionCard styles={styles}>
             <View style={styles.toggleRow}>
               <View style={styles.toggleText}>
-                <SectionLabel text="Visibility" noMargin />
+                <SectionLabel text="Visibility" noMargin styles={styles} />
                 <Text style={styles.toggleSub}>
                   {habit.visibility ? 'Friends can see this habit' : 'Only you can see this habit'}
                 </Text>
@@ -231,9 +218,9 @@ export default function CreateHabitScreen() {
                 <Switch
                   value={habit.visibility}
                   onValueChange={(value) => updateHabitField('visibility', value)}
-                  trackColor={{ false: C.border, true: C.sageMid }}
-                  thumbColor={habit.visibility ? C.sage : '#f0f0f0'}
-                  ios_backgroundColor={C.border}
+                  trackColor={{ false: Colors.border, true: Colors.lightGreen }}
+                  thumbColor={habit.visibility ? Colors.midGreen : Colors.white}
+                  ios_backgroundColor={Colors.border}
                 />
               </View>
             </View>
@@ -338,14 +325,14 @@ export default function CreateHabitScreen() {
 }
 
 // Helpers
-function SectionCard({ children }: { children: React.ReactNode }) {
+function SectionCard({ children, styles }: { children: React.ReactNode; styles: ReturnType<typeof makeStyles> }) {
   return <View style={styles.card}>{children}</View>;
 }
 
 function SectionLabel({
-  text, required, noMargin,
+  text, required, noMargin, styles,
 }: {
-  text: string; required?: boolean; noMargin?: boolean;
+  text: string; required?: boolean; noMargin?: boolean; styles: ReturnType<typeof makeStyles>;
 }) {
   return (
     <View style={[styles.labelRow, noMargin && { marginBottom: 0 }]}>
@@ -355,126 +342,125 @@ function SectionLabel({
   );
 }
 
-// Styles — unchanged from original
-const styles = StyleSheet.create({
-  background: { flex: 1, backgroundColor: '#EAF6E8' },
+const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet.create({
+  background: { flex: 1, backgroundColor: Colors.pageBg },
   safe:       { flex: 1, backgroundColor: 'transparent' },
   header: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 16 : 8,
-    paddingBottom: 16,
-    backgroundColor: C.bg,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.top_margin,
+    paddingBottom: Spacing.md,
+    backgroundColor: Colors.pageBg,
   },
-  backBtn: {
-    width: 38, height: 38, borderRadius: 12,
-    backgroundColor: C.card, alignItems: 'center', justifyContent: 'center',
-    shadowColor: C.shadow, shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1, shadowRadius: 6, elevation: 3,
-  },
-  backArrow:    { fontSize: 18, color: C.indigo, fontWeight: '600' },
+  // backBtn: {
+  //   width: 38, height: 38, borderRadius: Radius.md,
+  //   backgroundColor: Colors.cardBg, alignItems: 'center', justifyContent: 'center',
+  //   shadowColor: 'rgba(61, 59, 142, 0.08)', shadowOffset: { width: 0, height: 2 },
+  //   shadowOpacity: 1, shadowRadius: Radius.sm, elevation: 3,
+  // },
+  // backArrow:    { fontSize: FontSize.lg, color: Colors.primaryIndigo, fontWeight: '600' },
   headerCenter: { flex: 1, alignItems: 'center' },
-  headerTitle:  { fontSize: 20, fontWeight: '700', color: C.indigo, letterSpacing: -0.3 },
-  headerSub:    { fontSize: 12, color: C.textSecondary, marginTop: 1 },
+  headerTitle:  { fontSize: FontSize.xl, fontWeight: '700', color: Colors.primaryIndigo, letterSpacing: -0.3 },
+  headerSub:    { fontSize: FontSize.xs, color: Colors.lightBrown, marginTop: 1 },
   leafBadge: {
-    width: 38, height: 38, borderRadius: 12,
-    backgroundColor: C.sagePale, alignItems: 'center', justifyContent: 'center',
+    width: 38, height: 38, borderRadius: Radius.md,
+    backgroundColor: Colors.pageBg, alignItems: 'center', justifyContent: 'center',
   },
-  leafEmoji: { fontSize: 18 },
-  scroll:    { paddingHorizontal: 20, paddingTop: 8 },
+  leafEmoji: { fontSize: FontSize.lg },
+  scroll:    { paddingHorizontal: Spacing.md, paddingTop: Spacing.sm },
   card: {
-    backgroundColor: C.card, borderRadius: 20, padding: 18, marginBottom: 14,
-    shadowColor: C.shadow, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1, shadowRadius: 12, elevation: 3,
+    backgroundColor: Colors.cardBg, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.md,
+    shadowColor: 'rgba(61, 59, 142, 0.08)', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1, shadowRadius: Radius.md, elevation: 3,
   },
-  labelRow:     { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  sectionLabel: { fontSize: 13, fontWeight: '700', color: C.indigo, textTransform: 'uppercase', letterSpacing: 0.8 },
-  requiredDot:  { fontSize: 14, color: C.indigoMid, fontWeight: '700' },
+  labelRow:     { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.ms },
+  sectionLabel: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.primaryIndigo, textTransform: 'uppercase', letterSpacing: 0.8 },
+  requiredDot:  { fontSize: FontSize.sm, color: Colors.midIndigo, fontWeight: '700' },
   inputWrapper: {
-    backgroundColor: C.bg, borderRadius: 14, borderWidth: 1.5,
-    borderColor: C.border, paddingHorizontal: 14, paddingVertical: 10,
+    backgroundColor: Colors.pageBg, borderRadius: Radius.md, borderWidth: 1.5,
+    borderColor: Colors.border, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
   },
-  input:      { fontSize: 16, color: C.textPrimary, minHeight: 28 },
-  charCount:  { fontSize: 11, color: C.textSecondary, textAlign: 'right', marginTop: 4 },
+  input:      { fontSize: FontSize.md, color: Colors.darkBrown, minHeight: 28 },
+  charCount:  { fontSize: FontSize.xs, color: Colors.lightBrown, textAlign: 'right', marginTop: Spacing.xs },
   pillGrid:   { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pill: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 50,
-    borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg, gap: 6,
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: 50,
+    borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.pageBg, gap: 6,
   },
-  pillActive:      { backgroundColor: C.indigo, borderColor: C.indigo },
-  pillEmoji:       { fontSize: 14 },
-  pillLabel:       { fontSize: 13, fontWeight: '600', color: C.textSecondary },
-  pillLabelActive: { color: '#FFFFFF' },
+  pillActive:      { backgroundColor: Colors.primaryIndigo, borderColor: Colors.primaryIndigo },
+  pillEmoji:       { fontSize: FontSize.sm },
+  pillLabel:       { fontSize: FontSize.sm, fontWeight: '600', color: Colors.lightBrown },
+  pillLabelActive: { color: Colors.white },
   segmentedControl: {
-    flexDirection: 'row', backgroundColor: C.bg, borderRadius: 14,
-    borderWidth: 1.5, borderColor: C.border, padding: 4, gap: 4,
+    flexDirection: 'row', backgroundColor: Colors.pageBg, borderRadius: Radius.md,
+    borderWidth: 1.5, borderColor: Colors.border, padding: Spacing.xs, gap: 4,
   },
-  segment:           { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
+  segment:           { flex: 1, paddingVertical: 10, borderRadius: Radius.md, alignItems: 'center' },
   segmentActive: {
-    backgroundColor: C.sage, shadowColor: C.sage,
-    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 2,
+    backgroundColor: Colors.midGreen, shadowColor: Colors.midGreen,
+    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: Radius.sm, elevation: 2,
   },
-  segmentLabel:       { fontSize: 14, fontWeight: '600', color: C.textSecondary },
-  segmentLabelActive: { color: '#FFFFFF' },
+  segmentLabel:       { fontSize: FontSize.sm, fontWeight: '600', color: Colors.lightBrown },
+  segmentLabelActive: { color: Colors.white },
   toggleRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   toggleText: { flex: 1, gap: 3 },
-  toggleSub:  { fontSize: 12, color: C.textSecondary, marginTop: 3 },
-  toggleRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  toggleSub:  { fontSize: FontSize.xs, color: Colors.lightBrown, marginTop: Spacing.xs },
+  toggleRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.ms },
   toggleBadge: {
-    fontSize: 11, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 3,
-    borderRadius: 20, overflow: 'hidden', letterSpacing: 0.4,
+    fontSize: FontSize.xs, fontWeight: '700', paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs,
+    borderRadius: Radius.lg, overflow: 'hidden', letterSpacing: 0.4,
   },
-  publicBadge:  { backgroundColor: C.sagePale, color: C.sage },
-  privateBadge: { backgroundColor: C.indigoPale, color: C.indigoMid },
+  publicBadge:  { backgroundColor: Colors.pageBg, color: Colors.midGreen },
+  privateBadge: { backgroundColor: Colors.paleIndigo, color: Colors.midIndigo },
   submitBtn: {
-    flexDirection: 'row', backgroundColor: C.indigo, borderRadius: 18,
-    paddingVertical: 17, alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4,
-    shadowColor: C.indigo, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 14, elevation: 6,
+    flexDirection: 'row', backgroundColor: Colors.primaryIndigo, borderRadius: Radius.lg,
+    paddingVertical: Spacing.md, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, marginTop: Spacing.xs,
+    shadowColor: Colors.primaryIndigo, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: Radius.md, elevation: 6,
   },
-  submitBtnDisabled: { backgroundColor: C.sageMid, shadowOpacity: 0.1 },
-  submitLeaf:        { fontSize: 18 },
-  submitLabel:       { fontSize: 16, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.3 },
+  submitBtnDisabled: { backgroundColor: Colors.lightGreen, shadowOpacity: 0.1 },
+  submitLeaf:        { fontSize: FontSize.lg },
+  submitLabel:       { fontSize: FontSize.md, fontWeight: '700', color: Colors.white, letterSpacing: 0.3 },
   errorBanner: {
-    marginTop: 10, backgroundColor: '#FFF0F0', borderWidth: 1.5,
-    borderColor: '#F5C2C2', borderRadius: 14, paddingVertical: 12, paddingHorizontal: 16,
+    marginTop: Spacing.sm, backgroundColor: Colors.white, borderWidth: 1.5,
+    borderColor: Colors.danger, borderRadius: Radius.md, paddingVertical: Spacing.ms, paddingHorizontal: Spacing.md,
   },
-  errorBannerText: { fontSize: 13, color: '#C0392B', fontWeight: '600', textAlign: 'center' },
+  errorBannerText: { fontSize: FontSize.sm, color: Colors.danger, fontWeight: '600', textAlign: 'center' },
   aiNudge: {
-    marginTop: 14, borderRadius: 16, borderWidth: 1.5,
-    borderColor: C.yellow, backgroundColor: '#FEFDF5', padding: 14,
+    marginTop: Spacing.md, borderRadius: Radius.md, borderWidth: 1.5,
+    borderColor: Colors.midIndigo, backgroundColor: Colors.pageBg, padding: Spacing.md,
   },
-  aiNudgeInner: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  aiNudgeIcon:  { fontSize: 22, color: C.yellowDeep },
-  aiNudgeTitle: { fontSize: 13, fontWeight: '700', color: C.textPrimary },
-  aiNudgeSub:   { fontSize: 12, color: C.textSecondary, marginTop: 1 },
+  aiNudgeInner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.ms },
+  aiNudgeIcon:  { fontSize: FontSize.xl, color: Colors.midIndigo },
+  aiNudgeTitle: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.darkBrown },
+  aiNudgeSub:   { fontSize: FontSize.xs, color: Colors.lightBrown, marginTop: Spacing.xs },
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(43, 45, 66, 0.45)',
-    justifyContent: 'center', alignItems: 'center', paddingHorizontal: 28,
+    justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.lg,
   },
   modalCard: {
-    width: '100%', backgroundColor: C.card, borderRadius: 28,
+    width: '100%', backgroundColor: Colors.cardBg, borderRadius: Radius.lg,
     alignItems: 'center', overflow: 'hidden',
-    shadowColor: C.indigo, shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.22, shadowRadius: 24, elevation: 12, paddingBottom: 28,
+    shadowColor: Colors.primaryIndigo, shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.22, shadowRadius: Radius.lg, elevation: 12, paddingBottom: Spacing.lg,
   },
-  modalStrip:         { width: '100%', height: 6, backgroundColor: C.sage, marginBottom: 24 },
-  modalEmoji:         { fontSize: 48, marginBottom: 8 },
-  modalTitle:         { fontSize: 24, fontWeight: '800', color: C.indigo, letterSpacing: -0.4, marginBottom: 8 },
+  modalStrip:         { width: '100%', height: 6, backgroundColor: Colors.midGreen, marginBottom: Spacing.lg },
+  modalEmoji:         { fontSize: 48, marginBottom: Spacing.sm },
+  modalTitle:         { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.primaryIndigo, letterSpacing: -0.4, marginBottom: Spacing.sm },
   modalSub: {
-    fontSize: 14, color: C.textSecondary, textAlign: 'center',
-    lineHeight: 20, paddingHorizontal: 20, marginBottom: 28,
+    fontSize: FontSize.sm, color: Colors.lightBrown, textAlign: 'center',
+    lineHeight: 20, paddingHorizontal: Spacing.md, marginBottom: Spacing.lg,
   },
   modalPrimaryBtn: {
-    width: '85%', backgroundColor: C.indigo, borderRadius: 16,
-    paddingVertical: 15, alignItems: 'center', marginBottom: 12,
-    shadowColor: C.indigo, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 10, elevation: 5,
+    width: '85%', backgroundColor: Colors.primaryIndigo, borderRadius: Radius.md,
+    paddingVertical: Spacing.md, alignItems: 'center', marginBottom: Spacing.ms,
+    shadowColor: Colors.primaryIndigo, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: Radius.sm, elevation: 5,
   },
-  modalPrimaryLabel:   { color: '#FFFFFF', fontSize: 15, fontWeight: '700', letterSpacing: 0.2 },
+  modalPrimaryLabel:   { color: Colors.white, fontSize: FontSize.md, fontWeight: '700', letterSpacing: 0.2 },
   modalSecondaryBtn: {
-    width: '85%', borderWidth: 1.5, borderColor: C.border,
-    borderRadius: 16, paddingVertical: 14, alignItems: 'center',
+    width: '85%', borderWidth: 1.5, borderColor: Colors.border,
+    borderRadius: Radius.md, paddingVertical: Spacing.ms, alignItems: 'center',
   },
-  modalSecondaryLabel: { color: C.textSecondary, fontSize: 15, fontWeight: '600' },
+  modalSecondaryLabel: { color: Colors.lightBrown, fontSize: FontSize.md, fontWeight: '600' },
 });

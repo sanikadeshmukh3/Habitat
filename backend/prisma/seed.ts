@@ -14,6 +14,7 @@ async function main() {
     create: {
       email: "test@test.com",
       password: hashedPassword,
+      username: 'test123',
       firstName: "Test",
       lastName: "User",
       isVerified: true,
@@ -29,6 +30,7 @@ async function main() {
     create: {
       email: "friend1@test.com",
       password: hashedPassword,
+      username: 'friend1',
       firstName: "Alice",
       lastName: "Green",
       isVerified: true,
@@ -41,6 +43,7 @@ async function main() {
     create: {
       email: "friend2@test.com",
       password: hashedPassword,
+      username: 'Bobby1',
       firstName: "Bobby",
       lastName: "Blue",
       isVerified: true,
