@@ -76,7 +76,6 @@ model HabitCheckIn {
   habit            Habit    @relation(fields: [habitId], references: [id])
 
   @@map("habit_check_in")
-  @@unique([habitId, date])
 }
 
 // habit stacking — tracks a user's overall enrollment in a stacking schedule
