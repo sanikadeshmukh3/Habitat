@@ -47,7 +47,7 @@ import api from "@/lib/api";
     };
   
     return (
-      <View style={{ flex: 1, padding: Spacing.top_margin, backgroundColor: Colors.lightGreen }}>
+      <View style={{ flex: 1, padding: Spacing.top_margin, backgroundColor: Colors.pageBg }}>
   
         <TouchableOpacity
           onPress={() => router.back()}
@@ -69,20 +69,20 @@ import api from "@/lib/api";
             fontSize: FontSize.xl,
             marginBottom: Spacing.xl,
             marginTop: 180,
-            color: Colors.pageBg,
+            color: Colors.darkBrown,
             fontWeight: "bold",
           }}
         >
           Forgot Password
         </Text>
   
-        <Text style={{ color: Colors.white, marginBottom: Spacing.xs }}>
+        <Text style={{ color: Colors.darkBrown, marginBottom: Spacing.xs }}>
           Enter your email
         </Text>
   
         <TextInput
           placeholder="Email"
-          placeholderTextColor="#ccc"
+          placeholderTextColor={Colors.midBrown}
           value={email}
           onChangeText={setEmail}
           style={{
@@ -91,7 +91,7 @@ import api from "@/lib/api";
             padding: Spacing.ms,
             marginBottom: Spacing.lg,
             borderRadius: Radius.sm,
-            color: "#052e17",
+            color: Colors.darkBrown,
           }}
           autoCapitalize="none"
         />
@@ -107,9 +107,9 @@ import api from "@/lib/api";
           }}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={Colors.white} />
           ) : (
-            <Text style={{ color: "#fff", fontWeight: "bold", fontSize: FontSize.lg }}>
+            <Text style={{ color: Colors.white, fontWeight: "bold", fontSize: FontSize.lg }}>
               Send Code
             </Text>
           )}

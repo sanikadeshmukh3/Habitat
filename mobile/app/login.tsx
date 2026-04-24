@@ -155,9 +155,9 @@ export default function Login() {
               }}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={Colors.white} />
               ) : (
-                <Text style={{ color: "#fff", fontWeight: "bold", fontSize: FontSize.md }}>Login</Text>
+                <Text style={{ color: Colors.white, fontWeight: "bold", fontSize: FontSize.md }}>Login</Text>
               )}
             </TouchableOpacity>
     

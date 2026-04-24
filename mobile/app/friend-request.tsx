@@ -1,6 +1,6 @@
 import api from "@/lib/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ type FriendRequest = {
 
 export default function FriendRequestScreen() {
   const { Colors } = useTheme();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
 
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
@@ -107,17 +108,17 @@ export default function FriendRequestScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet.create({
   container: { flex: 1, padding: Spacing.lg, paddingTop: Spacing.top_margin },
   title: { fontSize: FontSize.xl, fontWeight: "700", marginBottom: Spacing.lg },
   card: {
     padding: Spacing.md,
     borderRadius: Radius.md,
-    backgroundColor: "#eee",
+    backgroundColor: Colors.white,
     marginBottom: Spacing.ms,
   },
   name: { fontSize: FontSize.md, fontWeight: "600" },
-  username: { color: "#666", marginBottom: Spacing.sm },
+  username: { color: Colors.midBrown, marginBottom: Spacing.sm },
   acceptBtn: { backgroundColor: "green", padding: Spacing.sm, borderRadius: Radius.sm },
   btnText: { color: "white", fontWeight: "600" },
 });

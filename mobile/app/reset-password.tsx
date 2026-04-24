@@ -93,7 +93,7 @@ import { useTheme, FontSize, Radius, Spacing } from "@/constants/theme";
     };
   
     return (
-      <View style={{ flex: 1, padding: Spacing.xl, backgroundColor: Colors.midGreen }}>
+      <View style={{ flex: 1, padding: Spacing.xl, backgroundColor: Colors.pageBg }}>
   
         <TouchableOpacity
           onPress={() => router.back()}
@@ -104,26 +104,26 @@ import { useTheme, FontSize, Radius, Spacing } from "@/constants/theme";
         </TouchableOpacity>
   
         <Text
-          style={{  fontSize: FontSize.xl,  marginBottom: Spacing.md,  marginTop: 180,  color: Colors.pageBg,  fontWeight: "bold",
+          style={{  fontSize: FontSize.xl,  marginBottom: Spacing.md,  marginTop: 180,  color: Colors.darkBrown,  fontWeight: "bold",
           }}
         >
           Reset Password
         </Text>
   
-        <Text style={{ color: Colors.pageBg, marginBottom: 5 }}>
+        <Text style={{ color: Colors.darkBrown, marginBottom: 5 }}>
           Enter Code
         </Text>
         <TextInput
           placeholder="Code"
-          placeholderTextColor="#ccc"
+          placeholderTextColor={Colors.darkBrown}
           value={code}
           onChangeText={setCode}
-          style={{   borderWidth: 1,  borderColor: Colors.pageBg,  padding: Spacing.ms,  marginBottom: 10, borderRadius: 8,  color: "#052e17",
+          style={{   borderWidth: 1,  borderColor: Colors.midBrown,  padding: Spacing.ms,  marginBottom: 10, borderRadius: 8,  color: Colors.midBrown,
           }}
         />
   
         <TouchableOpacity onPress={handleResend} disabled={timer > 0}>
-          <Text style={{ color: Colors.pageBg, marginBottom: Spacing.lg }}>
+          <Text style={{ color: Colors.darkBrown, marginBottom: Spacing.lg }}>
             {timer > 0
               ? `Resend code in ${formatTime(timer)}`
               : resendLoading
@@ -132,16 +132,16 @@ import { useTheme, FontSize, Radius, Spacing } from "@/constants/theme";
           </Text>
         </TouchableOpacity>
   
-        <Text style={{ color: Colors.pageBg, marginBottom: Spacing.xs }}>
+        <Text style={{ color: Colors.darkBrown, marginBottom: Spacing.xs }}>
           New Password
         </Text>
         <TextInput
           placeholder="New Password"
-          placeholderTextColor="#ccc"
+          placeholderTextColor={Colors.midBrown}
           secureTextEntry
           value={password}
           onChangeText={setPassword}
-          style={{ borderWidth: 1,  borderColor: Colors.pageBg,  padding: Spacing.ms,  marginBottom: Spacing.lg,  borderRadius: Radius.sm,  color: Colors.darkBrown,
+          style={{ borderWidth: 1,  borderColor: Colors.darkBrown,  padding: Spacing.ms,  marginBottom: Spacing.lg,  borderRadius: Radius.sm,  color: Colors.darkBrown,
           }}
         />
   
@@ -152,9 +152,9 @@ import { useTheme, FontSize, Radius, Spacing } from "@/constants/theme";
           }}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={Colors.white} />
           ) : (
-            <Text style={{ color: "#fff", fontWeight: "bold", fontSize: FontSize.md }}>
+            <Text style={{ color: Colors.white, fontWeight: "bold", fontSize: FontSize.md }}>
               Reset Password
             </Text>
           )}

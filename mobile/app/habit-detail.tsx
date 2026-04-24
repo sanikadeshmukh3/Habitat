@@ -187,11 +187,11 @@ export default function HabitDetailScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
-            style={styles.backBtn}
+            style={sharedStyles.backBtn}
             onPress={() => router.push('/(tabs)/home')}
             activeOpacity={0.7}
           >
-            <Text style={styles.backArrow}>←</Text>
+            <Text style={sharedStyles.backBtnText}>← Back</Text>
           </TouchableOpacity>
           <View style={{ flex: 1 }} />
           <TouchableOpacity style={styles.editBtn} onPress={handleEdit} activeOpacity={0.7}>

@@ -71,7 +71,7 @@ export default function Signup() {
   };
 
   return (
-    <View style={{ flex: 1, padding: Spacing.xl, backgroundColor: Colors.midGreen }}>
+    <View style={{ flex: 1, padding: Spacing.xl, backgroundColor: Colors.pageBg }}>
 
       <TouchableOpacity
         onPress={() => router.back()}
@@ -82,7 +82,7 @@ export default function Signup() {
       </TouchableOpacity>
 
       <Text
-        style={{fontSize: FontSize.xl, marginBottom: Spacing.lg, marginTop: 180, color: Colors.pageBg, fontWeight: "bold",
+        style={{fontSize: FontSize.xl, marginBottom: Spacing.lg, marginTop: 180, color: Colors.darkBrown, fontWeight: "bold",
         }}
       >
         Sign Up
@@ -90,30 +90,30 @@ export default function Signup() {
 
       <TextInput
         placeholder="First Name"
-        placeholderTextColor="#ccc"
+        placeholderTextColor={Colors.midBrown}
         value={firstName}
         onChangeText={setFirstName}
-        style={{ borderWidth: 1, borderColor: Colors.pageBg, padding: Spacing.ms, marginBottom: Spacing.sm, borderRadius: Radius.sm, color: Colors.darkBrown,
+        style={{ borderWidth: 1, borderColor: Colors.darkBrown, padding: Spacing.ms, marginBottom: Spacing.sm, borderRadius: Radius.sm, color: Colors.darkBrown,
         }}
         autoCorrect={false}
       />
 
       <TextInput
         placeholder="Last Name"
-        placeholderTextColor="#ccc"
+        placeholderTextColor={Colors.midBrown}
         value={lastName}
         onChangeText={setLastName}
-        style={{ borderWidth: 1, borderColor: Colors.pageBg, padding: Spacing.ms, marginBottom: Spacing.sm, borderRadius: Radius.sm, color: Colors.darkBrown,
+        style={{ borderWidth: 1, borderColor: Colors.darkBrown, padding: Spacing.ms, marginBottom: Spacing.sm, borderRadius: Radius.sm, color: Colors.darkBrown,
         }}
         autoCorrect={false}
       />
 
       <TextInput
         placeholder="Email"
-        placeholderTextColor="#ccc"
+        placeholderTextColor={Colors.midBrown}
         value={email}
         onChangeText={setEmail}
-        style={{ borderWidth: 1, borderColor: Colors.pageBg, padding: Spacing.ms, marginBottom: Spacing.sm, borderRadius: Radius.sm, color: Colors.darkBrown,
+        style={{ borderWidth: 1, borderColor: Colors.darkBrown, padding: Spacing.ms, marginBottom: Spacing.sm, borderRadius: Radius.sm, color: Colors.darkBrown,
         }}
         autoCapitalize="none"
         autoCorrect={false}
@@ -121,11 +121,11 @@ export default function Signup() {
 
       <TextInput
         placeholder="Password"
-        placeholderTextColor="#ccc"
+        placeholderTextColor={Colors.midBrown}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
-        style={{ borderWidth: 1, borderColor: Colors.pageBg, padding: Spacing.ms, marginBottom: Spacing.sm, borderRadius: Radius.sm, color: Colors.darkBrown,
+        style={{ borderWidth: 1, borderColor: Colors.darkBrown, padding: Spacing.ms, marginBottom: Spacing.sm, borderRadius: Radius.sm, color: Colors.darkBrown,
         }}
         autoCapitalize="none"
         autoCorrect={false}
@@ -133,11 +133,11 @@ export default function Signup() {
 
       <TextInput
         placeholder="Confirm Password"
-        placeholderTextColor="#ccc"
+        placeholderTextColor={Colors.midBrown}
         secureTextEntry
         value={confirmPassword}
         onChangeText={setConfirmPassword}
-        style={{ borderWidth: 1, borderColor: Colors.pageBg, padding: Spacing.ms, marginBottom: Spacing.lg, borderRadius: Radius.sm, color: Colors.darkBrown,
+        style={{ borderWidth: 1, borderColor: Colors.darkBrown, padding: Spacing.ms, marginBottom: Spacing.lg, borderRadius: Radius.sm, color: Colors.darkBrown,
         }}
         autoCapitalize="none"
         autoCorrect={false}
@@ -150,9 +150,9 @@ export default function Signup() {
         }}
       >
         {loading ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={Colors.white} />
         ) : (
-          <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>
+          <Text style={{ color: Colors.white, fontWeight: "bold", fontSize: 16 }}>
             Sign Up
           </Text>
         )}

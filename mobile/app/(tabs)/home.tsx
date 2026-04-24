@@ -477,12 +477,12 @@ export default function HomeScreen() {
                           disabled={processingId === item.id}
                           style={{
                             backgroundColor:
-                              processingId === item.id ? "#aaa" : "#ccc",
+                              processingId === item.id ? Colors.midBrown : Colors.lightBrown,
                             padding: Spacing.xs,
                             borderRadius: Radius.sm,
                           }}
                         >
-                          <Text style={{ color: "#333" }}>
+                          <Text style={{ color: Colors.darkBrown }}>
                             {processingId === item.id ? "..." : "Decline"}
                           </Text>
                         </TouchableOpacity>
@@ -576,7 +576,7 @@ StyleSheet.create({
   points: {
     fontSize: FontSize.big,
     fontWeight: "700",
-    color: Colors.white,
+    color: Colors.darkBrown,
   },
   sectionTitle: {
     fontSize: FontSize.lg,
@@ -713,7 +713,7 @@ StyleSheet.create({
     alignItems: "center",
     marginBottom: Spacing.sm,
     padding: Spacing.sm,
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: Colors.pageBg,
     borderRadius: Radius.md,
   },
 
@@ -852,7 +852,7 @@ StyleSheet.create({
   },
 
   addText: {
-    color: Colors.white,
+    color: Colors.darkBrown,
     fontSize: FontSize.sm,
     fontWeight: "600",
   },
