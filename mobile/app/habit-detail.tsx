@@ -248,115 +248,105 @@ export default function HabitDetailScreen() {
           </TouchableOpacity>
 
           {/* Stats row */}
-          <View style={styles.statsRow}>
-            <StatCard
-              value={`${habit.currentStreak}${inProbationPeriod ? ' ⏰' : ''}`}
-              label="Current Streak"
-              sublabel={habit.frequency === 'DAILY' ? 'days' : 'weeks'}
-              emoji="🔥"
-              accent={Colors.midGreen}
-              accentPale={Colors.paleGreen}
-              styles={styles}
-            />
-            <StatCard
-              value={String(liveBestStreak)}
-              label="Best Streak"
-              sublabel={habit.frequency === 'DAILY' ? 'days' : 'weeks'}
-              emoji="⭐"
-              accent={Colors.midGreen}
-              accentPale={Colors.paleGreen}
-              styles={styles}
-            />
-          </View>
-
-          <View style={styles.statsRow}>
-            <StatCard
-              value={`${completionRate}%`}
-              label="Completion"
-              sublabel="all time"
-              emoji="📊"
-              accent={Colors.midIndigo}
-              accentPale={Colors.paleIndigo}
-              styles={styles}
-            />
-            <StatCard
-              value={String(stats?.totalCompletions ?? 0)}
-              label="Total Check-ins"
-              sublabel="completed"
-              emoji="✅"
-              accent={Colors.midGreen}
-              accentPale={Colors.paleGreen}
-              styles={styles}
-            />
-          </View>
-
-          {/* Calendar grid — unchanged from your original */}
-          <View style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Activity</Text>
-              <Text style={styles.sectionSub}>Last 5 weeks</Text>
+          {stats && (
+            <View style={styles.statsRow}>
+              <StatCard
+                value={`${stats.currentStreak}${inProbationPeriod ? ' ⏰' : ''}`}
+                label="Current Streak"
+                sublabel={`Best: ${liveBestStreak} days`}
+                emoji="🔥"
+                accent={Colors.midGreen}
+                accentPale={Colors.paleGreen}
+                styles={styles}
+              />
+              <StatCard
+                value={`${completionRate}%`}
+                label="Completion Rate"
+                sublabel={`${stats.totalCompletions} of ${stats.totalDays} days`}
+                emoji="📈"
+                accent={Colors.midGreen}
+                accentPale={Colors.paleGreen}
+                styles={styles}
+              />
             </View>
-            <View style={styles.dayLabelsRow}>
-              {DAY_LABELS.map((d, i) => (
-                <Text key={i} style={styles.dayLabel}>{d}</Text>
-              ))}
-            </View>
-            {Array.from({ length: 5 }).map((_, weekIdx) => {
-              const weekStart = new Date(gridStart);
-              weekStart.setDate(gridStart.getDate() + weekIdx * 7);
-              return (
-                <View key={weekIdx} style={styles.dotRow}>
-                  {Array.from({ length: 7 }).map((_, dayIdx) => {
-                    const cellDate = new Date(weekStart);
-                    cellDate.setDate(weekStart.getDate() + dayIdx);
-                    cellDate.setHours(12, 0, 0, 0);
-                    const key = buildMonthKey(habitId, cellDate);
-                    const ci  = monthCheckIns[key];
-                    const isFuture = cellDate > today;
-                    const dotStyle = isFuture
-                      ? styles.dotFuture
-                      : ci?.completed
-                        ? styles.dotCompleted
-                        : ci
-                          ? styles.dotMissed
-                          : styles.dot;
-                    return <View key={dayIdx} style={[styles.dot, dotStyle]} />;
-                  })}
-                </View>
-              );
-            })}
-            <View style={styles.legend}>
-              <LegendItem color={Colors.midGreen}              label="Done" styles={styles}/>
-              <LegendItem color={`${Colors.danger}59`}        label="Missed" styles={styles}/>
-              <LegendItem color={`${Colors.border}`}       label="No data" styles={styles}/>
-            </View>
-          </View>
+          )}
 
-          {/* Consistency bar */}
+          {/* Calendar dot grid */}
           {stats && (
             <View style={styles.card}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Consistency</Text>
-                <Text style={styles.sectionSub}>{completionRate}% this month</Text>
+                <Text style={styles.sectionTitle}>Last 5 Weeks</Text>
+                <Text style={styles.sectionSub}>{stats.totalCompletions} completions</Text>
+              </View>
+
+              <View style={styles.dayLabelsRow}>
+                {DAY_LABELS.map((d, i) => (
+                  <Text key={i} style={styles.dayLabel}>{d}</Text>
+                ))}
+              </View>
+
+              {[0, 1, 2, 3, 4].map((week) => (
+                <View key={week} style={styles.dotRow}>
+                  {[0, 1, 2, 3, 4, 5, 6].map((day) => {
+                    const idx     = week * 7 + day;
+                    const gridVal = stats.completionGrid[idx];
+
+                    // Build the date this cell represents
+                    const cellDate = new Date(gridStart);
+                    cellDate.setDate(gridStart.getDate() + idx);
+                    const cellKey = buildMonthKey(habitId, cellDate);
+
+                    // Use live check-in cache for this cell if available,
+                    // otherwise fall back to the grid from the backend
+                    const liveEntry = monthCheckIns[cellKey];
+                    const val = liveEntry !== undefined ? liveEntry.completed : gridVal;
+
+                    return (
+                      <View
+                        key={day}
+                        style={[
+                          styles.dot,
+                          val === true  && styles.dotCompleted,
+                          val === false && styles.dotMissed,
+                          val === null  && styles.dotFuture,
+                        ]}
+                      />
+                    );
+                  })}
+                </View>
+              ))}
+
+              <View style={styles.legend}>
+                <LegendItem color={Colors.midGreen}   label="Completed" styles={styles} />
+                <LegendItem color={Colors.danger}    label="Missed" styles={styles} />
+                <LegendItem color={Colors.border} label="No data" styles={styles} />
+              </View>
+            </View>
+          )}
+
+          {/* Progress bar */}
+          {stats && (
+            <View style={styles.card}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Overall Progress</Text>
+                <Text style={[styles.sectionSub, { color: Colors.primaryIndigo, fontWeight: '700' }]}>
+                  {completionRate}%
+                </Text>
               </View>
               <View style={styles.progressTrack}>
                 <View style={[styles.progressFill, { width: `${completionRate}%` }]} />
               </View>
               <Text style={styles.progressCaption}>
-                {stats.totalCompletions} of {stats.totalDays} days completed.{' '}
-                {completionRate >= 80
-                  ? "You're crushing it! 🌿"
-                  : completionRate >= 50
-                    ? 'Keep going — you\'re building the habit.'
-                    : 'Every check-in counts. Show up today!'}
+                You've completed this habit {stats.totalCompletions} times out of {stats.totalDays} days tracked.
               </Text>
             </View>
           )}
 
           {/* Delete */}
           <TouchableOpacity
-            style={styles.deleteBtn}
+            style={[styles.deleteBtn, isDeleting && { opacity: 0.6 }]}
             onPress={handleDelete}
+            activeOpacity={0.7}
             disabled={isDeleting}
           >
             <Text style={styles.deleteBtnText}>
