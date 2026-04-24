@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Image,
   ImageBackground,
   ActivityIndicator,
   Alert,
@@ -37,10 +36,10 @@ export default function ProfileScreen() {
 
   // ── Derived display values ─────────────────────────────────────────────────
   const email     = profile?.email              ?? '';
-  const publicTag = profile?.settings.publicTag ?? '';
-  const photoUri  = profile?.settings.photoUri  ?? null;
-  const points = profile?.points ?? 0;
-  const badges = profile?.badges ?? [];
+  const firstName = profile?.firstName          ?? '';
+  const lastName  = profile?.lastName           ?? '';
+  const points    = profile?.points             ?? 0;
+  const badges    = profile?.badges             ?? [];
 
   // ── UI-only state ─────────────────────────────────────────────────────────
   const [showNewPassword,     setShowNewPassword]     = useState(false);
@@ -53,10 +52,10 @@ export default function ProfileScreen() {
   const [passwordGateError, setPasswordGateError] = useState('');
 
   const [draftEmail,       setDraftEmail]       = useState('');
-  const [draftTag,         setDraftTag]         = useState('');
+  const [draftFirstName,   setDraftFirstName]   = useState('');
+  const [draftLastName,    setDraftLastName]    = useState('');
   const [draftPass,        setDraftPass]        = useState('');
   const [draftPassConfirm, setDraftPassConfirm] = useState('');
-  const [draftPhotoUri,    setDraftPhotoUri]    = useState<string | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -80,10 +79,10 @@ export default function ProfileScreen() {
     }
     setShowPasswordGate(false);
     setDraftEmail(email);
-    setDraftTag(publicTag);
+    setDraftFirstName(firstName);
+    setDraftLastName(lastName);
     setDraftPass('');
     setDraftPassConfirm('');
-    setDraftPhotoUri(photoUri);
     setIsEditing(true);
   };
 
@@ -99,14 +98,22 @@ export default function ProfileScreen() {
       }
     }
 
+    if (draftFirstName.trim().length === 0) {
+      Alert.alert('First name required', 'Please enter your first name.');
+      return;
+    }
+
     const payload: Parameters<typeof saveProfile>[0] = {};
-    if (draftEmail.trim() && draftEmail.trim() !== email)     payload.email     = draftEmail.trim();
-    if (draftTag.trim()   && draftTag.trim()   !== publicTag) payload.publicTag = draftTag.trim();
+    if (draftEmail.trim()     && draftEmail.trim()     !== email)     payload.email     = draftEmail.trim();
+    if (draftFirstName.trim() && draftFirstName.trim() !== firstName) payload.firstName = draftFirstName.trim();
+    // Allow clearing last name (send null) or updating it
+    if (draftLastName.trim() !== lastName) {
+      payload.lastName = draftLastName.trim() || null;
+    }
     if (draftPass.length >= 8) {
       payload.password        = draftPass;
       payload.currentPassword = currentPassword;
     }
-    if (draftPhotoUri !== photoUri) payload.photoUri = draftPhotoUri;
 
     if (Object.keys(payload).length === 0) {
       setIsEditing(false);
@@ -131,19 +138,6 @@ export default function ProfileScreen() {
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const sharedStyles = createSharedStyles(Colors);
 
-  const pickPhoto = async () => {
-    try {
-      const { launchImageLibraryAsync, requestMediaLibraryPermissionsAsync } =
-        await import('expo-image-picker');
-      const { status } = await requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') { Alert.alert('Permission required', 'Photo library access is needed.'); return; }
-      const result = await launchImageLibraryAsync({ mediaTypes: 'images', quality: 0.8 });
-      if (!result.canceled) setDraftPhotoUri(result.assets[0].uri);
-    } catch (e) {
-      console.error('Image pick error:', e);
-    }
-  };
-
   const handleLogOut = async () => {
     try {
       await AsyncStorage.clear();
@@ -157,7 +151,6 @@ export default function ProfileScreen() {
   };
 
   const goBack = () => router.push('./(tabs)/home');
-  const displayPhotoUri = isEditing ? draftPhotoUri : photoUri;
 
   if (profileError) {
     return (
@@ -187,19 +180,10 @@ export default function ProfileScreen() {
           <View style={styles.infoBlock}>
             <View style={styles.avatarWrapper}>
               <View style={styles.avatarCircle}>
-                {displayPhotoUri ? (
-                  <Image source={{ uri: displayPhotoUri }} style={styles.avatarImage} resizeMode="cover" />
-                ) : (
-                  <Text style={styles.avatarInitial}>
-                    {email[0]?.toUpperCase() ?? '?'}
-                  </Text>
-                )}
+                <Text style={styles.avatarInitial}>
+                  {(isEditing ? draftFirstName : firstName)[0]?.toUpperCase() ?? '?'}
+                </Text>
               </View>
-              {isEditing && (
-                <TouchableOpacity style={styles.cameraBtn} onPress={pickPhoto}>
-                  <Text style={styles.cameraBtnText}>📷</Text>
-                </TouchableOpacity>
-              )}
             </View>
 
             <View style={styles.infoText}>
@@ -216,16 +200,28 @@ export default function ProfileScreen() {
                 <Text style={styles.infoValue}>{email}</Text>
               )}
 
-              <Text style={styles.infoLabel}>Tag</Text>
+              <Text style={styles.infoLabel}>First Name</Text>
               {isEditing ? (
                 <TextInput
                   style={styles.editInput}
-                  value={draftTag}
-                  onChangeText={setDraftTag}
-                  autoCapitalize="none"
+                  value={draftFirstName}
+                  onChangeText={setDraftFirstName}
+                  autoCapitalize="words"
                 />
               ) : (
-                <Text style={styles.infoValue}>{publicTag || '—'}</Text>
+                <Text style={styles.infoValue}>{firstName || '—'}</Text>
+              )}
+
+              <Text style={styles.infoLabel}>Last Name</Text>
+              {isEditing ? (
+                <TextInput
+                  style={styles.editInput}
+                  value={draftLastName}
+                  onChangeText={setDraftLastName}
+                  autoCapitalize="words"
+                />
+              ) : (
+                <Text style={styles.infoValue}>{lastName || '—'}</Text>
               )}
 
               <Text style={styles.infoLabel}>Password</Text>
@@ -290,7 +286,6 @@ export default function ProfileScreen() {
         <View style={styles.statsRow}>
           <View style={styles.pointsCard}>
             <Text style={styles.cardTitle}>Points</Text>
-            {/* ── UPDATED: real points from profile, with loading state ── */}
             {profileLoading ? (
               <ActivityIndicator color={Colors.primaryGreen} />
             ) : (
@@ -378,14 +373,11 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
   backBtn:     { marginBottom: Spacing.md, alignSelf: 'flex-start', paddingVertical: Spacing.xs, paddingHorizontal: Spacing.sm, backgroundColor: Colors.paleGreen, borderRadius: Radius.sm },
   backBtnText: { color: Colors.primaryGreen, fontWeight: '600', fontSize: FontSize.md },
 
-  topRow:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', backgroundColor: Colors.cardBg, borderRadius: Radius.md, padding: Spacing.md, marginBottom: Spacing.md, borderWidth: 1, borderColor: Colors.border },
-  infoBlock:   { flexDirection: 'row', alignItems: 'flex-start', flex: 1, marginRight: Spacing.sm },
+  topRow:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', backgroundColor: Colors.cardBg, borderRadius: Radius.md, padding: Spacing.md, marginBottom: Spacing.md, borderWidth: 1, borderColor: Colors.border },
+  infoBlock:     { flexDirection: 'row', alignItems: 'flex-start', flex: 1, marginRight: Spacing.sm },
   avatarWrapper: { alignItems: 'center', marginRight: Spacing.sm },
-  avatarCircle:  { width: 64, height: 64, borderRadius: Radius.full, backgroundColor: Colors.primaryGreen, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
-  avatarImage:   { width: 64, height: 64, borderRadius: Radius.full },
+  avatarCircle:  { width: 64, height: 64, borderRadius: Radius.full, backgroundColor: Colors.primaryGreen, justifyContent: 'center', alignItems: 'center' },
   avatarInitial: { color: Colors.white, fontSize: FontSize.xl, fontWeight: '700' },
-  cameraBtn:     { marginTop: 4, paddingHorizontal: Spacing.xs, paddingVertical: 2, backgroundColor: Colors.paleGreen, borderRadius: Radius.sm },
-  cameraBtnText: { fontSize: 14 },
   infoText:      { flex: 1 },
   infoLabel:     { fontSize: FontSize.xs, color: Colors.lightBrown, textTransform: 'uppercase', letterSpacing: 0.8, marginTop: Spacing.xs },
   infoValue:     { fontSize: FontSize.sm, color: Colors.darkBrown, fontWeight: '500' },
