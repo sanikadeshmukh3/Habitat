@@ -522,14 +522,9 @@ export default function RecapScreen() {
             <InfoModal
               visible={showInfoModal}
               title="About Habitat Wrapped"
-              description={
-                `This screen is your weekly reflection space. It highlights how consistently
-                you showed up, which areas led the week, and the overall rhythm behind your habits.
-
-                Think of it as a calm, visual recap of your routines — your own Habitat Wrapped.
-
-                You’ll also see a personalized AI summary here as more weekly patterns become available.`
-              }
+              description={`This screen is your weekly reflection space. It highlights how consistently you showed up, which areas led the week, and the overall rhythm behind your habits.
+                
+Think of it as a calm, visual recap of your routines — your own Habitat Wrapped. You’ll also see a personalized AI summary here as more weekly patterns become available.`}
               onClose={() => setShowInfoModal(false)}
             />
 
