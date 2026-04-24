@@ -1,4 +1,4 @@
-import { Colors, FontSize, Radius, Spacing } from '@/constants/oldtheme';
+import { useTheme, FontSize, Radius, Spacing, Colors, createSharedStyles } from '@/constants/theme';
 import { router, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -115,7 +115,7 @@ const FONTS = {
     bodyBold: Platform.select({ ios: 'Avenir Next', android: 'sans-serif-medium' }),
 };
 
-function AvatarBlock({ name }: { name: string }) {
+function AvatarBlock({ name, styles }: { name: string, styles: ReturnType<typeof makeStyles> }) {
     const initial = name?.charAt(0)?.toUpperCase() ?? '?';
 
     return (
@@ -133,10 +133,12 @@ function FriendHabitCardView({
     card,
     index,
     scrollX,
+    styles,
 }: {
     card: FriendHabitCard;
     index: number;
     scrollX: Animated.Value;
+    styles: ReturnType<typeof makeStyles>;
 }) {
     const inputRange = [
         (index - 1) * (CARD_WIDTH + CARD_SPACING),
@@ -177,14 +179,14 @@ function FriendHabitCardView({
             {!!card.subtitle && <Text style={styles.snapshotSubtitle}>{card.subtitle}</Text>}
         </View>
 
-        <View style={[styles.snapshotAccent, { backgroundColor: card.accent ?? COLORS.moss }]} />
+        <View style={[styles.snapshotAccent, { backgroundColor: card.accent ?? Colors.midGreen }]} />
 
         <View style={styles.snapshotBody}>{card.body}</View>
         </Animated.View>
     );
 }
 
-function HabitStatsBlock({ habitName, streak }: { habitName: string; streak: number }) {
+function HabitStatsBlock({ habitName, streak, styles }: { habitName: string; streak: number; styles: ReturnType<typeof makeStyles> }) {
     return (
         <View style={styles.habitMiniBlock}>
         <View style={styles.habitMiniTextWrap}>
@@ -203,6 +205,10 @@ function HabitStatsBlock({ habitName, streak }: { habitName: string; streak: num
 
 
 export default function FriendScreen() {
+    const { Colors } = useTheme();
+    const styles = useMemo(() => makeStyles(Colors), [Colors]);
+    const sharedStyles = createSharedStyles(Colors);
+
     const scrollX = useRef(new Animated.Value(0)).current;
     const [showInfoModal, setShowInfoModal] = useState(false);
     const [friend, setFriend] = useState<FriendType | null>(null);
@@ -438,6 +444,7 @@ export default function FriendScreen() {
                 key={habit.id}
                 habitName={habit.name}
                 streak={habit.currentStreak}
+                styles={styles}
                 />
             ))}
             </View>
@@ -469,10 +476,10 @@ export default function FriendScreen() {
             showsVerticalScrollIndicator={false}
         >
             <TouchableOpacity 
-            style={styles.backBtn} 
+            style={sharedStyles.backBtn} 
             onPress={() => router.push('/home')} // Or router.replace('/home')
             >
-                <Text style={styles.backBtnText}>← Back</Text>
+                <Text style={sharedStyles.backBtnText}>← Back</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -540,7 +547,7 @@ export default function FriendScreen() {
             <View style={styles.profileTextWrap}>
             <Text style={styles.profileEyebrow}>friend overview</Text>
 
-            <AvatarBlock name={displayName} />
+            <AvatarBlock name={displayName} styles={styles} />
             <Text style={styles.profileTag}>{publicTag}</Text>
 
             <View style={{ marginTop: 10 }}>
@@ -578,7 +585,7 @@ export default function FriendScreen() {
                 data={friendHabitCards}
                 keyExtractor={(i) => i.id}
                 renderItem={({ item, index }) => (
-                <FriendHabitCardView card={item} index={index} scrollX={scrollX} />
+                <FriendHabitCardView card={item} index={index} scrollX={scrollX} styles={styles} />
                 )}
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.snapList}
@@ -597,14 +604,14 @@ export default function FriendScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet.create({
     background: {
         flex: 1,
-        backgroundColor: "#EAF6E8",
+        backgroundColor: Colors.pageBg,
     },
     overlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(250,246,239,0.20)',
+        backgroundColor: Colors.overlay,
     },
 
     backBtn: {
@@ -643,8 +650,8 @@ const styles = StyleSheet.create({
         gap: 10,
     },
     title: {
-        fontSize: 24,
-        color: COLORS.forest,
+        fontSize: FontSize.xl,
+        color: Colors.primaryGreen,
         maxWidth: '82%',
         fontWeight: '700',
         letterSpacing: 0.2,
@@ -653,32 +660,32 @@ const styles = StyleSheet.create({
     helpPill: {
         minWidth: 28,
         height: 28,
-        borderRadius: 14,
-        backgroundColor: COLORS.chip,
+        borderRadius: Radius.md,
+        backgroundColor: Colors.white,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
         borderColor: 'rgba(77,58,45,0.10)',
     },
     helpText: {
-        color: COLORS.brown,
-        fontSize: 14,
+        color: Colors.midBrown,
+        fontSize: FontSize.sm,
     },
 
     subtitle: {
-        marginTop: 12,
+        marginTop: Spacing.ms,
         marginBottom: 18,
-        color: COLORS.bark,
-        fontSize: 15,
+        color: Colors.darkBrown,
+        fontSize: FontSize.sm,
         lineHeight: 22,
         textAlign: 'center',
     },
 
     profileCard: {
-        marginTop: 4,
-        borderRadius: 24,
+        marginTop: Spacing.xs,
+        borderRadius: Radius.lg,
         overflow: 'hidden',
-        backgroundColor: COLORS.softWhite,
+        backgroundColor: Colors.pageBg,
         borderWidth: 1,
         borderColor: 'rgba(77,58,45,0.08)',
     },
@@ -687,50 +694,50 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     profileEyebrow: {
-        color: COLORS.moss,
-        fontSize: 11,
+        color: Colors.midGreen,
+        fontSize: FontSize.xs,
         letterSpacing: 1.1,
         textTransform: 'uppercase',
     },
     profileTag: {
         marginTop: 6,
-        fontSize: 15,
-        color: COLORS.forest,
+        fontSize: FontSize.md,
+        color: Colors.primaryGreen,
         textAlign: 'center',
     },
     profileDescription: {
-        marginTop: 8,
-        fontSize: 14,
+        marginTop: Spacing.sm,
+        fontSize: FontSize.sm,
         lineHeight: 21,
-        color: COLORS.brown,
+        color: Colors.midBrown,
         textAlign: 'center',
     },
 
     pointsCard: {
         marginTop: 18,
         padding: 18,
-        borderRadius: 24,
-        backgroundColor: 'rgba(247,241,232,0.88)',
+        borderRadius: Radius.lg,
+        backgroundColor: Colors.pageBg,
         borderWidth: 1,
         borderColor: 'rgba(77,58,45,0.08)',
         alignItems: 'center',
     },
     pointsEyebrow: {
-        color: COLORS.moss,
-        fontSize: 11,
+        color: Colors.midGreen,
+        fontSize: FontSize.xs,
         letterSpacing: 1.1,
     },
     pointsValue: {
         marginTop: 6,
         fontSize: 34,
-        color: COLORS.forest,
+        color: Colors.primaryGreen,
         fontWeight: '700',
     },
 
     sectionTitle: {
         marginTop: 18,
-        fontSize: 22,
-        color: COLORS.forest,
+        fontSize: FontSize.xl,
+        color: Colors.primaryGreen,
         fontWeight: '700',
     },
 
@@ -741,26 +748,26 @@ const styles = StyleSheet.create({
         alignItems: 'flex-end',
     },
     snapHint: {
-        color: COLORS.brown,
-        fontSize: 12,
+        color: Colors.midBrown,
+        fontSize: FontSize.xs,
     },
 
     snapList: {
         paddingTop: 14,
-        paddingBottom: 8,
+        paddingBottom: Spacing.sm,
         paddingRight: SIDE_SPACER,
     },
     snapshotCard: {
         width: CARD_WIDTH,
         marginRight: CARD_SPACING,
-        padding: 16,
-        borderRadius: 24,
-        backgroundColor: COLORS.softWhite,
+        padding: Spacing.md,
+        borderRadius: Radius.lg,
+        backgroundColor: Colors.white,
         borderWidth: 1,
         borderColor: 'rgba(77,58,45,0.08)',
         shadowColor: '#5A4635',
         shadowOpacity: 0.10,
-        shadowRadius: 16,
+        shadowRadius: Radius.md,
         shadowOffset: { width: 0, height: 8 },
         elevation: 4,
         alignSelf: 'flex-start',
@@ -771,82 +778,82 @@ const styles = StyleSheet.create({
         alignItems: 'baseline',
     },
     snapshotTitle: {
-        color: COLORS.bark,
-        fontSize: 18,
+        color: Colors.darkBrown,
+        fontSize: FontSize.lg,
         flex: 1,
-        paddingRight: 8,
+        paddingRight: Spacing.sm,
     },
     snapshotSubtitle: {
-        color: COLORS.forest,
-        fontSize: 16,
+        color: Colors.primaryGreen,
+        fontSize: FontSize.md,
     },
     snapshotAccent: {
         marginTop: 10,
         width: 44,
         height: 5,
-        borderRadius: 999,
+        borderRadius: Radius.full,
     },
     snapshotBody: {
-        marginTop: 16,
+        marginTop: Spacing.md,
         justifyContent: 'flex-start',
         },
 
     cardBodyHeadline: {
-        fontSize: 19,
-        color: COLORS.forest,
+        fontSize: FontSize.lg,
+        color: Colors.primaryGreen,
         fontWeight: '700',
     },
     cardBodySubtext: {
         marginTop: 6,
-        color: COLORS.brown,
-        fontSize: 14,
+        color: Colors.midBrown,
+        fontSize: FontSize.sm,
         lineHeight: 20,
     },
 
     statsBlock: {
-        marginTop: 16,
+        marginTop: Spacing.md,
         flexDirection: 'row',
         justifyContent: 'space-between',
-        backgroundColor: 'rgba(255,255,255,0.60)',
-        borderRadius: 18,
-        padding: 14,
-        gap: 12,
+        backgroundColor: Colors.pageBg,
+        borderRadius: Radius.lg,
+        padding: Spacing.md,
+        gap: Spacing.ms,
     },
     statsBig: {
-        fontSize: 28,
-        color: COLORS.bark,
+        fontSize: FontSize.xxl,
+        color: Colors.darkBrown,
         fontWeight: '700',
     },
     statsLabel: {
         marginTop: 2,
-        color: COLORS.brown,
-        fontSize: 12,
+        color: Colors.midBrown,
+        fontSize: FontSize.xs,
     },
 
     summaryCard: {
         marginTop: 18,
         padding: 18,
-        borderRadius: 24,
-        backgroundColor: 'rgba(247,241,232,0.88)',
+        borderRadius: Radius.lg,
+        backgroundColor: Colors.pageBg,
         borderWidth: 1,
         borderColor: 'rgba(77,58,45,0.08)',
     },
     summaryEyebrow: {
-        color: COLORS.moss,
-        fontSize: 11,
+        color: Colors.midGreen,
+        fontSize: FontSize.xs,
         letterSpacing: 1.1,
     },
     summaryHeadline: {
         marginTop: 6,
-        fontSize: 22,
-        color: COLORS.forest,
+        fontSize: FontSize.xl,
+        color: Colors.primaryGreen,
         fontWeight: '700',
     },
     summaryText: {
-        marginTop: 8,
-        fontSize: 14,
+        marginTop: Spacing.sm,
+        fontSize: FontSize.sm,
         lineHeight: 21,
-        color: COLORS.brown,
+        color: Colors.midBrown,
     },
 
     modalOverlay: {
@@ -854,91 +861,91 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.15)',
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 24,
+        paddingHorizontal: Spacing.lg,
     },
 
     modalCard: {
         width: '100%',
-        borderRadius: 24,
-        backgroundColor: 'rgba(247,241,232,0.98)',
-        padding: 22,
+        borderRadius: Radius.lg,
+        backgroundColor: Colors.pageBg,
+        padding: Spacing.lg,
         borderWidth: 1,
         borderColor: 'rgba(77,58,45,0.10)',
     },
 
     modalTitle: {
-        fontSize: 22,
-        color: COLORS.forest,
+        fontSize: FontSize.xl,
+        color: Colors.primaryGreen,
         fontWeight: '700',
         marginBottom: 10,
     },
 
     modalText: {
-        fontSize: 14,
+        fontSize: FontSize.sm,
         lineHeight: 21,
-        color: COLORS.brown,
-        marginBottom: 12,
+        color: Colors.midBrown,
+        marginBottom: Spacing.ms,
     },
 
     modalButton: {
-        marginTop: 8,
+        marginTop: Spacing.sm,
         alignSelf: 'flex-end',
-        backgroundColor: COLORS.forest,
-        paddingHorizontal: 16,
+        backgroundColor: Colors.primaryGreen,
+        paddingHorizontal: Spacing.md,
         paddingVertical: 10,
-        borderRadius: 999,
+        borderRadius: Radius.full,
     },
 
     modalButtonText: {
         color: '#FFFFFF',
-        fontSize: 14,
+        fontSize: FontSize.sm,
     },
 
     habitMiniBlock: {
-    marginTop: 12,
+    marginTop: Spacing.ms,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.60)',
-    borderRadius: 18,
+    backgroundColor: Colors.cardBg,
+    borderRadius: Radius.lg,
     padding: 14,
-    gap: 12,
+    gap: Spacing.ms,
     },
     habitMiniTextWrap: {
     flex: 1,
     paddingRight: 10,
     },
     habitMiniName: {
-    fontSize: 17,
-    color: COLORS.bark,
+    fontSize: FontSize.lg,
+    color: Colors.darkBrown,
     lineHeight: 22,
     },
     habitMiniRight: {
     alignItems: 'flex-end',
     },
     habitMiniStreak: {
-    fontSize: 22,
-    color: COLORS.forest,
+    fontSize: FontSize.xl,
+    color: Colors.primaryGreen,
     fontWeight: '700',
     },
     habitMiniLabel: {
     marginTop: 2,
-    color: COLORS.brown,
-    fontSize: 12,
+    color: Colors.midBrown,
+    fontSize: FontSize.xs,
     },
 
     avatarCard: {
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: Spacing.md,
     },
 
     avatarCircle: {
     width: 92,
     height: 92,
-    borderRadius: 46,
-    backgroundColor: 'rgba(255,255,255,0.75)',
+    borderRadius: Radius.xl,
+    backgroundColor: Colors.cardBg,
     borderWidth: 1,
-    borderColor: 'rgba(77,58,45,0.10)',
+    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#5A4635',
@@ -949,60 +956,60 @@ const styles = StyleSheet.create({
     },
 
     avatarInitial: {
-    fontSize: 38,
-    color: COLORS.forest,
+    fontSize: FontSize.big,
+    color: Colors.primaryGreen,
     fontFamily: FONTS.title,
     fontWeight: '700',
     },
 
     avatarName: {
     marginTop: 10,
-    fontSize: 26,
-    color: COLORS.bark,
+    fontSize: FontSize.xxl,
+    color: Colors.darkBrown,
     fontWeight: '700',
     textAlign: 'center',
     },
 
     addBtn: {
         marginTop: 10,
-        backgroundColor: COLORS.forest,
+        backgroundColor: Colors.primaryGreen,
         paddingHorizontal: 18,
-        paddingVertical: 8,
-        borderRadius: 999,
+        paddingVertical: Spacing.sm,
+        borderRadius: Radius.full,
         alignSelf: "center",
       },
       
       addText: {
         color: "white",
-        fontSize: 14,
+        fontSize: FontSize.sm,
         fontWeight: "600",
       },
       
       requestedText: {
         marginTop: 10,
         color: "#888",
-        fontSize: 14,
+        fontSize: FontSize.sm,
       },
       
       friendText: {
         marginTop: 10,
-        color: COLORS.moss,
-        fontSize: 14,
+        color: Colors.midGreen,
+        fontSize: FontSize.sm,
         fontWeight: "600",
       },
 
       searchBtn: {
         alignSelf: "center",
-        marginBottom: 12,
-        backgroundColor: COLORS.moss,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 999,
+        marginBottom: Spacing.ms,
+        backgroundColor: Colors.midGreen,
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.sm,
+        borderRadius: Radius.full,
       },
       
       searchBtnText: {
         color: "white",
-        fontSize: 14,
+        fontSize: FontSize.sm,
         fontWeight: "600",
       },
 

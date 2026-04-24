@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, createElement } from 'react';
 import type { ReactNode } from 'react';
 import { Platform } from 'react-native';
+import { ViewStyle, TextStyle } from 'react-native';
 
 // ── Color palette type ─────────────────────────────────────────
 export type ColorScheme = {
@@ -12,8 +13,11 @@ export type ColorScheme = {
   lightGreen:   string;
   paleGreen:    string;
   darkBrown:    string;
-  medBrown:     string;
+  midBrown:     string;
   lightBrown:   string;
+  primaryIndigo:string;
+  midIndigo:    string;
+  paleIndigo:   string;
   white:        string;
   danger:       string;
   badgeGold:    string;
@@ -31,8 +35,11 @@ const lightColors: ColorScheme = {
   lightGreen:   '#A8D5BA',
   paleGreen:    '#CDECCD',
   darkBrown:    '#3B2A1A',
-  medBrown:     '#5C3D22',
+  midBrown:     '#5C3D22',
   lightBrown:   '#8B6344',
+  primaryIndigo:'#3D3B8E',
+  midIndigo:    '#6C63FF',
+  paleIndigo:   '#EEEDF8',
   white:        '#FFFFFF',
   danger:       '#C0392B',
   badgeGold:    '#D4AC0D',
@@ -50,8 +57,11 @@ const darkColors: ColorScheme = {
   lightGreen:   '#2A5C3A',
   paleGreen:    '#1A3322',
   darkBrown:    '#E8D5C0',
-  medBrown:     '#C4A882',
+  midBrown:     '#C4A882',
   lightBrown:   '#8A7060',
+  primaryIndigo:'#6C63FF',
+  midIndigo:    '#3D3B8E',
+  paleIndigo:   '#EEEDF8',
   white:        '#F0F0F0',
   danger:       '#E05A4A',
   badgeGold:    '#E8C43A',
@@ -69,8 +79,11 @@ const natureColors: ColorScheme = {
   lightGreen:   '#B8CFA8',
   paleGreen:    '#DDE8D0',
   darkBrown:    '#2C1F0E',
-  medBrown:     '#6B4A2A',
+  midBrown:     '#6B4A2A',
   lightBrown:   '#9C7A52',
+  primaryIndigo:'#5D3A9B',
+  midIndigo:    '#8A63C9',
+  paleIndigo:   '#F0EAF8',
   white:        '#FDFAF4',
   danger:       '#B84A30',
   badgeGold:    '#C8960C',
@@ -160,25 +173,37 @@ export const Fonts = Platform.select({
 }) as { sans: string; serif: string; rounded: string; mono: string };
 
 export const FontSize = {
-  xs:  11,
-  sm:  13,
-  md:  15,
+  xs:  12,
+  sm:  14,
+  md:  16,
   lg:  18,
   xl:  22,
   xxl: 28,
+  big: 40,
 } as const;
 
 export const Radius = {
   sm:   8,
   md:   14,
   lg:   20,
+  xl:   40,
   full: 999,
 } as const;
 
 export const Spacing = {
   xs: 4,
   sm: 8,
+  ms: 12,
   md: 16,
   lg: 24,
   xl: 36,
+  top_margin: 48,
 } as const;
+
+export const createSharedStyles = (Colors: ColorScheme): {
+  backBtn: ViewStyle;
+  backBtnText: TextStyle;
+} => ({
+  backBtn:     { marginBottom: Spacing.md, alignSelf: 'flex-start', paddingVertical: Spacing.xs, paddingHorizontal: Spacing.sm, backgroundColor: Colors.paleGreen, borderRadius: Radius.sm },
+  backBtnText: { color: Colors.primaryGreen, fontWeight: '600', fontSize: FontSize.md },
+});

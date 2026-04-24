@@ -17,7 +17,7 @@ import {
   Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useTheme, FontSize, Radius, Spacing } from '@/constants/theme';
+import { useTheme, FontSize, Radius, Spacing, createSharedStyles } from '@/constants/theme';
 import { useUserProfile, useUpdateUserProfile } from '../hooks/use-user';
 import { useQueryClient } from "@tanstack/react-query";
 import { badgeLabel } from '../types/user';
@@ -129,6 +129,7 @@ export default function ProfileScreen() {
   };
 
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
+  const sharedStyles = createSharedStyles(Colors);
 
   const pickPhoto = async () => {
     try {
@@ -162,8 +163,8 @@ export default function ProfileScreen() {
     return (
       <View style={styles.centred}>
         <Text style={styles.errorText}>Could not load profile. Please try again.</Text>
-        <TouchableOpacity style={styles.backBtn} onPress={goBack}>
-          <Text style={styles.backBtnText}>← Back</Text>
+        <TouchableOpacity style={sharedStyles.backBtn} onPress={goBack}>
+          <Text style={sharedStyles.backBtnText}>← Back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -177,8 +178,8 @@ export default function ProfileScreen() {
     >
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
 
-        <TouchableOpacity style={styles.backBtn} onPress={goBack}>
-          <Text style={styles.backBtnText}>← Back</Text>
+        <TouchableOpacity style={sharedStyles.backBtn} onPress={goBack}>
+          <Text style={sharedStyles.backBtnText}>← Back</Text>
         </TouchableOpacity>
 
         {/* ── Top row: avatar + info ─────────────────────────────────────── */}
@@ -299,7 +300,6 @@ export default function ProfileScreen() {
 
           <View style={styles.badgesCard}>
             <Text style={styles.cardTitle}>Badges</Text>
-            {/* ── UPDATED: real badges from profile ── */}
             {profileLoading ? (
               <ActivityIndicator color={Colors.primaryGreen} />
             ) : badges.length === 0 ? (
@@ -373,7 +373,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
   bg:        { flex: 1, backgroundColor: Colors.pageBg },
   centred:   { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.pageBg, gap: Spacing.md },
   errorText: { color: Colors.lightBrown, fontSize: FontSize.sm, textAlign: 'center', paddingHorizontal: Spacing.lg },
-  container: { paddingTop: Spacing.lg * 2, paddingHorizontal: Spacing.md, paddingBottom: Spacing.xl },
+  container: { paddingTop: Spacing.top_margin, paddingHorizontal: Spacing.md, paddingBottom: Spacing.xl },
 
   backBtn:     { marginBottom: Spacing.md, alignSelf: 'flex-start', paddingVertical: Spacing.xs, paddingHorizontal: Spacing.sm, backgroundColor: Colors.paleGreen, borderRadius: Radius.sm },
   backBtnText: { color: Colors.primaryGreen, fontWeight: '600', fontSize: FontSize.md },
@@ -410,13 +410,13 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
   badgeText:     { fontSize: FontSize.sm, color: Colors.primaryGreen, fontWeight: '600' },
   noBadgesText:  { fontSize: FontSize.sm, color: Colors.lightBrown, marginTop: Spacing.xs, fontStyle: 'italic' },
 
-  logOutBtn:     { marginTop: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: Radius.md, borderWidth: 1.5, borderColor: '#d9534f', alignItems: 'center' },
-  logOutBtnText: { color: '#d9534f', fontWeight: '700', fontSize: FontSize.md },
+  logOutBtn:     { marginTop: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.danger, alignItems: 'center' },
+  logOutBtnText: { color: Colors.danger, fontWeight: '700', fontSize: FontSize.md },
 
   modalOverlay:  { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.lg },
   modalCard:     { width: '100%', backgroundColor: Colors.cardBg, borderRadius: Radius.md, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.border, gap: Spacing.xs },
   modalTitle:    { fontSize: FontSize.lg, fontWeight: '700', color: Colors.darkBrown, marginBottom: 2 },
   modalSubtitle: { fontSize: FontSize.sm, color: Colors.lightBrown, marginBottom: Spacing.sm },
-  modalError:    { fontSize: FontSize.xs, color: '#d9534f', marginTop: 2 },
+  modalError:    { fontSize: FontSize.xs, color: Colors.danger, marginTop: 2 },
   modalBtnRow:   { flexDirection: 'row', gap: Spacing.xs, marginTop: Spacing.sm },
 });

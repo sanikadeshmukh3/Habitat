@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useTheme, FontSize, Radius, Spacing } from '@/constants/theme';
+import { useTheme, FontSize, Radius, Spacing, createSharedStyles } from '@/constants/theme';
 import type { ThemeName } from '@/constants/theme';
 import { useUserSettings, useUpdateUserSettings } from '@/hooks/use-user';
 import type { AppTheme, UpdateSettingsPayload } from '@/types/user';
@@ -38,6 +38,7 @@ const THEME_STORAGE_KEY = '@app_theme';
 export default function SettingsScreen() {
 
   const { Colors, theme, setTheme } = useTheme();
+  const sharedStyles = createSharedStyles(Colors);
 
   // ── Remote data ─────────────────────────────────────────────────────────
   const {
@@ -50,12 +51,6 @@ export default function SettingsScreen() {
   // ── Derived values with safe defaults while loading ──────────────────────
   const habitStacking = settings?.habitStacking ?? false;
   const notifications = settings?.notifications ?? false;
-
-  useEffect(() => {
-    AsyncStorage.getItem(THEME_STORAGE_KEY).then(saved => {
-      if (saved) setTheme(saved as ThemeName);
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Save a single settings key immediately on change ────────────────────
   const saveSetting = (patch: UpdateSettingsPayload) => {
@@ -93,8 +88,8 @@ export default function SettingsScreen() {
     >
       {/* ── Header ────────────────────────────────────────────── */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={goBack}>
-          <Text style={styles.backBtnText}>← Back</Text>
+        <TouchableOpacity style={sharedStyles.backBtn} onPress={goBack}>
+          <Text style={sharedStyles.backBtnText}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>App Settings</Text>
 
@@ -215,7 +210,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
       flexDirection: 'row',
       alignItems: 'center',
       padding: Spacing.md,
-      paddingTop: Spacing.lg * 2,
+      paddingTop: Spacing.top_margin,
       backgroundColor: Colors.cardBg,
       borderBottomWidth: 1,
       borderBottomColor: Colors.border,
@@ -264,12 +259,12 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
     },
     scrollContent: {
       padding: Spacing.md,
-      paddingBottom: Spacing.lg * 2,
+      paddingBottom: Spacing.top_margin,
     },
     sectionLabel: {
       fontSize: FontSize.sm,
       fontWeight: '600',
-      color: Colors.medBrown,
+      color: Colors.midBrown,
       textTransform: 'uppercase',
       letterSpacing: 0.8,
       marginTop: Spacing.md,

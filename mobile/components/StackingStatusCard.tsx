@@ -1,6 +1,6 @@
 import api from '@/lib/api';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
     ActivityIndicator,
     StyleSheet,
@@ -8,6 +8,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useTheme, FontSize, Radius, Spacing } from '@/constants/theme';
 
 const colors = {
   bg:            '#F7FAF5',
@@ -45,6 +46,9 @@ type Props = {
 };
 
 export default function StackingStatusCard({ enrollmentId, onOptOut }: Props) {
+  const { Colors } = useTheme();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
+
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState<ProgressData | null>(null);
@@ -67,7 +71,7 @@ export default function StackingStatusCard({ enrollmentId, onOptOut }: Props) {
   if (loading) {
     return (
       <View style={styles.card}>
-        <ActivityIndicator color={colors.indigo} />
+        <ActivityIndicator color={Colors.primaryIndigo} />
       </View>
     );
   }
@@ -141,105 +145,105 @@ export default function StackingStatusCard({ enrollmentId, onOptOut }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet.create({
   card: {
-    backgroundColor: colors.indigoPale,
-    borderRadius: 20,
-    marginTop: 25,
-    marginBottom: 10,
+    backgroundColor: Colors.paleIndigo,
+    borderRadius: Radius.lg,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.sm,
     overflow: 'hidden',
     shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,
-    shadowRadius: 8,
+    shadowRadius: Radius.sm,
     elevation: 2,
   },
   accentBar: {
     height: 4,
-    backgroundColor: colors.yellowDeep,
+    backgroundColor: Colors.badgeGold,
     width: '100%',
   },
   content: {
-    padding: 20,
+    padding: Spacing.md,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: Spacing.ms,
   },
   sectionLabel: {
-    fontSize: 12,
+    fontSize: FontSize.xs,
     fontWeight: '700',
-    color: colors.indigo,
+    color: Colors.primaryIndigo,
     letterSpacing: 1,
   },
   optOutText: {
-    fontSize: 13,
-    color: colors.indigoMid,
+    fontSize: FontSize.sm,
+    color: Colors.midIndigo,
     fontWeight: '600',
   },
   activeHabitLabel: {
-    fontSize: 13,
-    color: colors.textPrimary,
-    marginBottom: 4,
+    fontSize: FontSize.sm,
+    color: Colors.darkBrown,
+    marginBottom: Spacing.xs,
   },
   activeHabitName: {
-    fontSize: 18,
+    fontSize: FontSize.lg,
     fontWeight: '700',
-    color: colors.indigo,
-    marginBottom: 16,
+    color: Colors.primaryIndigo,
+    marginBottom: Spacing.md,
   },
   progressRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   progressLabel: {
-    fontSize: 13,
+    fontSize: FontSize.sm,
     fontWeight: '600',
-    color: colors.textPrimary,
+    color: Colors.darkBrown,
   },
   progressScore: {
-    fontSize: 13,
+    fontSize: Spacing.sm,
     fontWeight: '700',
-    color: colors.indigo,
+    color: Colors.primaryIndigo,
   },
   progressTarget: {
     fontWeight: '400',
-    color: colors.textPrimary,
+    color: Colors.darkBrown,
   },
   progressBarBackground: {
     height: 10,
-    backgroundColor: colors.sagePale,
-    borderRadius: 6,
+    backgroundColor: Colors.paleGreen,
+    borderRadius: Radius.sm,
     overflow: 'hidden',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: colors.sage,
-    borderRadius: 6,
+    backgroundColor: Colors.midGreen,
+    borderRadius: Radius.sm,
   },
   progressBarComplete: {
-    backgroundColor: colors.indigo,
+    backgroundColor: Colors.primaryIndigo,
   },
   progressMessage: {
-    fontSize: 12,
-    color: colors.textPrimary,
-    marginBottom: 16,
+    fontSize: FontSize.xs,
+    color: Colors.darkBrown,
+    marginBottom: Spacing.md,
     lineHeight: 18,
   },
   rankingButton: {
-    backgroundColor: colors.indigo,
-    paddingVertical: 12,
-    borderRadius: 12,
+    backgroundColor: Colors.primaryIndigo,
+    paddingVertical: Spacing.ms,
+    borderRadius: Spacing.ms,
     alignItems: 'center',
   },
   rankingButtonText: {
-    color: colors.card,
-    fontSize: 14,
+    color: Colors.cardBg,
+    fontSize: FontSize.sm,
     fontWeight: '700',
   },
 });

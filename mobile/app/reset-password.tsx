@@ -2,8 +2,11 @@ import { View, TextInput, Text, TouchableOpacity, ActivityIndicator, } from "rea
   import { useState, useEffect } from "react";
   import { useLocalSearchParams, router } from "expo-router";
 import api from "@/lib/api";
+import { useTheme, FontSize, Radius, Spacing } from "@/constants/theme";
   
   export default function ResetPassword() {
+    const { Colors } = useTheme();
+    
     const { email } = useLocalSearchParams<{ email: string }>();
   
     const [code, setCode] = useState("");
@@ -90,37 +93,37 @@ import api from "@/lib/api";
     };
   
     return (
-      <View style={{ flex: 1, padding: 40, backgroundColor: "#74c69d" }}>
+      <View style={{ flex: 1, padding: Spacing.xl, backgroundColor: Colors.pageBg }}>
   
         <TouchableOpacity
           onPress={() => router.back()}
-          style={{   position: "absolute",    top: 60,   left: 20,   paddingVertical: 6,    paddingHorizontal: 10,    backgroundColor: "#EAF6E8",    borderRadius: 8,
+          style={{   position: "absolute",    top: Spacing.top_margin,   left: Spacing.lg,   paddingVertical: Spacing.sm,    paddingHorizontal: Spacing.md,    backgroundColor: Colors.pageBg,    borderRadius: Radius.sm,
           }}
         >
-          <Text style={{ color: "#2d6a4f", fontWeight: "600" }}>← Back</Text>
+          <Text style={{ color: Colors.primaryGreen, fontWeight: "600" }}>← Back</Text>
         </TouchableOpacity>
   
         <Text
-          style={{  fontSize: 24,  marginBottom: 30,  marginTop: 180,  color: "#EAF6E8",  fontWeight: "bold",
+          style={{  fontSize: FontSize.xl,  marginBottom: Spacing.md,  marginTop: 180,  color: Colors.darkBrown,  fontWeight: "bold",
           }}
         >
           Reset Password
         </Text>
   
-        <Text style={{ color: "#EAF6E8", marginBottom: 5 }}>
+        <Text style={{ color: Colors.darkBrown, marginBottom: 5 }}>
           Enter Code
         </Text>
         <TextInput
           placeholder="Code"
-          placeholderTextColor="#ccc"
+          placeholderTextColor={Colors.darkBrown}
           value={code}
           onChangeText={setCode}
-          style={{   borderWidth: 1,  borderColor: "#EAF6E8",  padding: 12,  marginBottom: 10, borderRadius: 8,  color: "#052e17",
+          style={{   borderWidth: 1,  borderColor: Colors.midBrown,  padding: Spacing.ms,  marginBottom: 10, borderRadius: 8,  color: Colors.midBrown,
           }}
         />
   
         <TouchableOpacity onPress={handleResend} disabled={timer > 0}>
-          <Text style={{ color: "#EAF6E8", marginBottom: 20 }}>
+          <Text style={{ color: Colors.darkBrown, marginBottom: Spacing.lg }}>
             {timer > 0
               ? `Resend code in ${formatTime(timer)}`
               : resendLoading
@@ -129,29 +132,29 @@ import api from "@/lib/api";
           </Text>
         </TouchableOpacity>
   
-        <Text style={{ color: "#EAF6E8", marginBottom: 5 }}>
+        <Text style={{ color: Colors.darkBrown, marginBottom: Spacing.xs }}>
           New Password
         </Text>
         <TextInput
           placeholder="New Password"
-          placeholderTextColor="#ccc"
+          placeholderTextColor={Colors.midBrown}
           secureTextEntry
           value={password}
           onChangeText={setPassword}
-          style={{ borderWidth: 1,  borderColor: "#EAF6E8",  padding: 12,  marginBottom: 25,  borderRadius: 8,  color: "#052e17",
+          style={{ borderWidth: 1,  borderColor: Colors.darkBrown,  padding: Spacing.ms,  marginBottom: Spacing.lg,  borderRadius: Radius.sm,  color: Colors.darkBrown,
           }}
         />
   
         <TouchableOpacity
           onPress={handleResetPress}
           disabled={loading}
-          style={{ backgroundColor: loading ? "#95d5b2" : "#2d6a4f", paddingVertical: 14, borderRadius: 10, alignItems: "center",
+          style={{ backgroundColor: loading ? Colors.lightGreen : Colors.primaryGreen, paddingVertical: Spacing.md, borderRadius: Radius.sm, alignItems: "center",
           }}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={Colors.white} />
           ) : (
-            <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>
+            <Text style={{ color: Colors.white, fontWeight: "bold", fontSize: FontSize.md }}>
               Reset Password
             </Text>
           )}
