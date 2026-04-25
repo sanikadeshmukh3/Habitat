@@ -6,7 +6,7 @@
     "test": "jest --runInBand",
     "test:unit": "jest tests/unit --runInBand",
     "test:integration": "jest tests/integration --runInBand",
-    "start": "prisma migrate deploy && node server.js",
+    "start": "prisma migrate deploy && prisma db seed && node server.js",
     "build": "prisma generate",
     "postinstall": "prisma generate",
     "dev": "nodemon server.js"
