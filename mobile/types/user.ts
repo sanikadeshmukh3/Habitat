@@ -28,10 +28,8 @@ export type AppTheme = 'light' | 'dark' | 'nature';
  * General ─────────────────────────────────────────────────────────────────────
  *   notifications  Whether the user wants push/local reminders.
  *
- * Profile (stored here because they don't have their own columns) ─────────────
- *   publicTag      Display handle shown on public profiles, e.g. "@greenleaf_user".
+ * Profile ─────────────────────────────────────────────────────────────────────
  *   isPublic       Controls whether the profile is visible to other users.
- *   photoUri       Avatar URL or local Expo URI. null = no photo (show initials).
  */
 export interface UserSettings {
   // Appearance
@@ -44,9 +42,7 @@ export interface UserSettings {
   notifications: boolean;
 
   // Profile extras (stored in JSONB because they have no dedicated columns)
-  publicTag: string;
-  isPublic:  boolean;
-  photoUri:  string | null;
+  isPublic: boolean;
 }
 
 /** Default settings applied whenever a key is missing from the JSONB column */
@@ -54,18 +50,16 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   theme:         'light',
   habitStacking: false,
   notifications: false,
-  publicTag:     '',
   isPublic:      true,
-  photoUri:      null,
 };
 
 // ─── Badge types ──────────────────────────────────────────────────────────────
- 
+
 export type UserBadge = {
-  badgeId:   string;
-  earnedAt:  string; // ISO date string
+  badgeId:  string;
+  earnedAt: string; // ISO date string
 };
- 
+
 // Frontend display metadata — mirrors BADGE_DEFINITIONS in lib/badges.js
 export const BADGE_META: Record<string, { name: string; emoji: string; description: string }> = {
   starting_out:          { name: 'Starting Out',          emoji: '🌱', description: 'Used the app for a full week.' },
@@ -79,7 +73,7 @@ export const BADGE_META: Record<string, { name: string; emoji: string; descripti
   point_collector:       { name: 'Point Collector',       emoji: '💎', description: 'Earned a total of 100 points.' },
   point_hoarder:         { name: 'Point Hoarder',         emoji: '🏆', description: 'Earned a total of 1,000 points.' },
 };
- 
+
 /** Returns the display label used in the badge chip, e.g. "🔥 Streak Starter" */
 export function badgeLabel(badgeId: string): string {
   const meta = BADGE_META[badgeId];
@@ -92,16 +86,19 @@ export function badgeLabel(badgeId: string): string {
 /**
  * UserProfile
  *
- * Mirrors what GET /users/:id returns.
+ * Mirrors what GET /users/me returns.
  * `password` is never included in API responses.
  */
 export interface UserProfile {
-  email:    string;
-  timezone: string | null;
-  creation: string;           // ISO-8601 date string from JSON serialisation
-  points: number;
-  badges: UserBadge[];
-  settings: UserSettings;
+  id:        string;
+  email:     string;
+  firstName: string;
+  lastName:  string | null;
+  timezone:  string | null;
+  creation:  string;           // ISO-8601 date string from JSON serialisation
+  points:    number;
+  badges:    UserBadge[];
+  settings:  UserSettings;
 }
 
 // ─── API payloads ─────────────────────────────────────────────────────────────
@@ -109,27 +106,25 @@ export interface UserProfile {
 /**
  * UpdateProfilePayload
  * All fields are optional — only supply what you want to change.
- * Mirrors the accepted body of PATCH /users/:id.
+ * Mirrors the accepted body of PATCH /users/me.
  */
 export interface UpdateProfilePayload {
-  email?:     string;
-  currentPassword?: string; // required server-side for auth verification, but optional here since the user might only be changing settings
-  password?:  string;         // plain-text; hashed server-side
-  publicTag?: string;
-  isPublic?:  boolean;
-  photoUri?:  string | null;
+  email?:           string;
+  currentPassword?: string; // required server-side when changing password
+  password?:        string; // plain-text; hashed server-side
+  firstName?:       string;
+  lastName?:        string | null;
+  isPublic?:        boolean;
 }
 
 /**
  * UpdateSettingsPayload
  * All fields are optional — only supply what you want to change.
- * Mirrors the accepted body of PATCH /users/:id/settings.
+ * Mirrors the accepted body of PATCH /users/me/settings.
  */
 export interface UpdateSettingsPayload {
   theme?:         AppTheme;
   habitStacking?: boolean;
   notifications?: boolean;
-  publicTag?:     string;
   isPublic?:      boolean;
-  photoUri?:      string | null;
 }
