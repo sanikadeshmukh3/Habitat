@@ -25,6 +25,7 @@ type FriendType = {
     username: string;
     firstName: string;
     lastName?: string;
+    points: number;
     habit: {
       id: string;
       name: string;
@@ -269,6 +270,7 @@ export default function FriendScreen() {
             username: data.username,
             firstName: data.firstName,
             lastName: data.lastName,
+            points: data.points ?? 0,
             habit: data.habit.map((h: any) => ({
               id: h.id,
               name: h.name,
@@ -399,7 +401,7 @@ export default function FriendScreen() {
 
       const displayName = `${friend?.firstName ?? ""} ${friend?.lastName ?? ""}`;
       const publicTag = friend ? `@${friend.username}`: "";
-      const points = 0; // temp
+      const points = friend?.points ?? 0;
 
       const publicHabits = useMemo(
         () =>
