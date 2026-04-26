@@ -25,13 +25,15 @@ api.interceptors.request.use(async (config) => {
 // for centralized error handling
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     let message = "Something went wrong.";
 
     if (error.response) {
       if (error.response.data?.message) {
         message = error.response.data.message;
       } else if (error.response.status == 401) {
+        await AsyncStorage.removeItem("token"); // to prevent any bad tokens still in storage
+        
         message = "Session expired, please try again.";
       } else if (error.response.status >= 500) {
         message = "Server error. Try again later";
