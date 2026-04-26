@@ -23,6 +23,15 @@ function normalizeToStartOfDay(dateInput) {
   return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 0, 0, 0, 0);
 }
 
+// returns the Monday and Sunday that start/end the week that contains 'date'
+function getWeekBounds(d) {
+  const dayOfWeek    = d.getDay();
+  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const weekStart    = new Date(d.getFullYear(), d.getMonth(), d.getDate() + daysToMonday, 0, 0, 0, 0);
+  const weekEnd      = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 7, 0, 0, 0, 0);
+  return { weekStart, weekEnd };
+}
+
 // ─── Main upsert ──────────────────────────────────────────────────────────────
 
 /**
@@ -71,27 +80,8 @@ async function upsertHabitCheckIn(userId, habitId, data) {
     throw { status: 400, message: 'Cannot check in an inactive habit' };
   }
 
-  // for weekly habits, block a second check-in within the same Mon–Sun week
-  if (habit.frequency === 'WEEKLY') {
-    const d = new Date(date);
-    const dayOfWeek = d.getDay();
-    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const weekStart = new Date(d.getFullYear(), d.getMonth(), d.getDate() + daysToMonday, 0, 0, 0, 0);
-    const weekEnd   = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 7);
-
-    const existingThisWeek = await prisma.habitCheckIn.findFirst({
-      where: {
-        habitId,
-        completed: true,
-        date: { gte: weekStart, lt: weekEnd },
-      },
-    });
-
-    if (existingThisWeek) {
-      throw { status: 409, message: 'This habit has already been completed this week' };
-    }
-  }
+  // any check-in or feedback edit within the same Mon-Sun week always lands on the same existing record,
+  // making duplicates physically impossible
 
   const checkInDate = normalizeToStartOfDay(date);
   const nextDay     = new Date(checkInDate);
@@ -100,10 +90,23 @@ async function upsertHabitCheckIn(userId, habitId, data) {
   // ── Wrap everything in a transaction so check-in + streak + points + badges are atomic ──
   const result = await prisma.$transaction(async (tx) => {
 
-    // 1. Find any existing check-in for this day (needed for both paths below)
-    const existing = await tx.habitCheckIn.findFirst({
-      where: { habitId, date: { gte: checkInDate, lt: nextDay } },
-    });
+    // 1. Find any existing check-in for this day/week
+    //    daily habits: look up by exact date.
+    //    weekly habits: look up by the full Mon–Sun week so that feedback edits
+    //      from any day of the week always find and update the original record,
+    //      rather than attempting to create a duplicate
+    let existing;
+    if (habit.frequency === 'WEEKLY') {
+      const { weekStart, weekEnd } = getWeekBounds(checkInDate);
+      existing = await tx.habitCheckIn.findFirst({
+        where: { habitId, date: { gte: weekStart, lt: weekEnd } },
+        orderBy: { date: 'desc' }, // always pick the most recently modified record
+      });
+    } else {
+      existing = await tx.habitCheckIn.findFirst({
+        where: { habitId, date: { gte: checkInDate, lt: nextDay } },
+      });
+    }
 
     // ── UNCHECK PATH ──────────────────────────────────────────────────────────
     // When unchecking we need to:
@@ -197,14 +200,13 @@ async function upsertHabitCheckIn(userId, habitId, data) {
           completed:        true,
           difficultyRating: difficultyRating == null ? null : Number(difficultyRating),
           notes:            notes === '' ? null : notes,
-          date:             checkInDate,
         },
       });
     } else {
       checkIn = await tx.habitCheckIn.create({
         data: {
           habitId,
-          date:             checkInDate,
+          date:             checkInDate, // only set on create
           completed:        true,
           pointsEarned:     0, // updated below once we know the streak
           difficultyRating: difficultyRating == null ? null : Number(difficultyRating),
@@ -308,7 +310,7 @@ async function upsertHabitCheckIn(userId, habitId, data) {
       const def = BADGE_DEFINITIONS.find((b) => b.id === id);
       return { id: def.id, name: def.name, emoji: def.emoji, description: def.description };
     });
-
+    
     return {
       checkIn,
       pointsEarned,
