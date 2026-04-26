@@ -31,6 +31,10 @@ function normalizeToStartOfDay(dateInput) {
  *   2. Points award (1 + floor(log2(newStreak)))
  *   3. Badge evaluation and insert
  *
+ * Only check-ins on or after `habit.createdAt` are counted towards streaks and
+ * points. This prevents backdated check-ins from farming streaks or points
+ * beyond what the habit's lifetime can legitimately produce.
+ *
  * Returns the check-in row plus metadata the client can use for toasts/UI:
  *   { checkIn, pointsEarned, newStreak, streakBroke, newBadges, totalPoints }
  */
@@ -140,18 +144,20 @@ async function upsertHabitCheckIn(userId, habitId, data) {
         });
       }
 
-      // All completed check-ins that remain after this uncheck
+      // All completed check-ins that remain after this uncheck, restricted to
+      // dates on or after the habit's creation date so backdated entries cannot
+      // contribute to the recalculated streak.
       const remaining = await tx.habitCheckIn.findMany({
-        where: { habitId, completed: true },
+        where: { habitId, completed: true, date: { gte: habit.createdAt } },
         orderBy: { date: 'desc' },
       });
       const remainingDates = remaining.map((c) => new Date(c.date));
 
       let newStreak = 0;
       if (habit.frequency === 'DAILY') {
-        newStreak = recalculateDailyStreak(remainingDates).streak;
+        newStreak = recalculateDailyStreak(remainingDates, new Date()).streak;
       } else if (habit.frequency === 'WEEKLY') {
-        newStreak = recalculateWeeklyStreak(remainingDates).streak;
+        newStreak = recalculateWeeklyStreak(remainingDates, new Date()).streak;
       }
 
       await tx.habit.update({
@@ -180,7 +186,7 @@ async function upsertHabitCheckIn(userId, habitId, data) {
 
       return {
         checkIn,
-        pointsEarned:  -pointsToDeduct,
+        pointsEarned:  pointsToDeduct > 0 ? -pointsToDeduct : 0,
         newStreak,
         streakBroke:   newStreak < habit.currentStreak,
         newBadges:     [],
@@ -213,13 +219,15 @@ async function upsertHabitCheckIn(userId, habitId, data) {
       });
     }
 
-    // 2. Compute new streak from prior completed check-ins
+    // 2. Compute new streak from prior completed check-ins, restricted to
+    //    dates on or after the habit's creation date so backdated entries
+    //    cannot contribute to the streak or earn points.
     let newStreak               = habit.currentStreak;
     let newProbationPeriodStart = habit.streakProbationPeriodStart;
     let streakBroke             = false;
 
     const priorCheckIns = await tx.habitCheckIn.findMany({
-      where: { habitId, completed: true, date: { lt: checkInDate } },
+      where: { habitId, completed: true, date: { gte: habit.createdAt, lt: checkInDate } },
       orderBy: { date: 'desc' },
     });
     const priorDates    = priorCheckIns.map((c) => new Date(c.date));

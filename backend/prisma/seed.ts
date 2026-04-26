@@ -84,6 +84,85 @@ async function main() {
       observationWindowEnd: new Date(Date.now() + 56 * 24 * 60 * 60 * 1000),
     },
   });
+
+  const ALL_BADGES = [
+  "starting_out",
+  "getting_into_it",
+  "really_habitual",
+  "humble_leaf",
+  "automaticity_achieved",
+  "streak_starter",
+  "streak_warrior",
+  "streak_legend",
+  "point_collector",
+  "point_hoarder",
+];
+
+  const b_user = await prisma.user.upsert({
+    where: { email: "badge@badge.com"},
+    update: {},
+    create: {
+      email: "badge@badge.com",
+      password: hashedPassword,
+      username: 'badgeUser',
+      firstName: "Badge",
+      lastName: "User",
+      isVerified: true,
+    },
+  });
+
+  await prisma.userBadge.createMany({
+  data: ALL_BADGES.map((badgeId) => ({
+    userId: b_user.id,
+    badgeId,
+    earnedAt: new Date(),
+  })),
+  skipDuplicates: true,
+});
+
+//   const teethHabit = await prisma.habit.upsert({
+//   where: { id: "seeded-teeth-habit" },
+//   update: {},
+//   create: {
+//     id: "seeded-teeth-habit",
+//     name: "Brush Teeth",
+//     description: "Brush teeth every day",
+//     habitCategory: "WELLNESS",
+//     frequency: "DAILY",
+//     visibility: true,
+//     currentStreak: 0,
+//     active: true,
+//     userId: b_user.id,
+//     observationWindowEnd: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
+//   },
+// });
+
+// await prisma.habitCheckIn.deleteMany({
+//   where: { habitId: teethHabit.id },
+// });
+
+// const days = 156;
+// const now = new Date();
+// const HOUR = 8;
+
+// const checkIns = [];
+
+// for (let i = days - 1; i >= 0; i--) {
+//   const date = new Date();
+//   date.setDate(now.getDate() - i);
+//   date.setHours(HOUR, 0, 0, 0);
+
+//   checkIns.push({
+//     habitId: teethHabit.id,
+//     date,
+//     completed: true,
+//     pointsEarned: 10, // optional
+//   });
+// }
+
+// await prisma.habitCheckIn.createMany({
+//   data: checkIns,
+// });
 }
 
 main()
