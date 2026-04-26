@@ -1,40 +1,29 @@
-import { router } from "expo-router";
-import React, { useEffect, useState, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Modal,
-  TextInput,
-  ImageBackground,
-  KeyboardAvoidingView,
-  Platform,
-  LayoutAnimation,
-  UIManager,
-} from 'react-native';
-import { useTheme, FontSize, Radius, Spacing, createSharedStyles } from '@/constants/theme';
-import api from '@/lib/api';
 import CheckInModal from '@/components/checkin-modal';
+import { FontSize, Radius, Spacing, createSharedStyles, useTheme } from '@/constants/theme';
 import {
+  MonthlyCheckInMap,
+  buildMonthKey,
   useCheckInsForMonth,
   useUpsertCheckIn,
-  buildMonthKey,
-  MonthlyCheckInMap,
 } from '@/hooks/use-checkin';
-
+import api from '@/lib/api';
+import { router } from "expo-router";
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  ImageBackground,
+  LayoutAnimation,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  UIManager,
+  View
+} from 'react-native';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
-
-// ── Fake habits – replace with real data/store ────────────────
-// const HABITS = [
-//   { id: 'seeded-workout-habit', title: 'Fitness Habit'       },
-//   { id: '2', title: 'Nutrition Habit'     },
-//   { id: '3', title: 'Procrastination Habit' },
-// ];
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_NAMES = [
@@ -42,12 +31,19 @@ const MONTH_NAMES = [
   'July','August','September','October','November','December',
 ];
 
-// ── Helper: days in a month ───────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate();
 }
 function getFirstDayOfWeek(year: number, month: number) {
   return new Date(year, month, 1).getDay();
+}
+
+// returns true if date A is strictly before date B
+function dateBefore(a: Date, b: Date) {
+  if (a.getFullYear() !== b.getFullYear()) return a.getFullYear() < b.getFullYear();
+  if (a.getMonth()    !== b.getMonth())    return a.getMonth()    < b.getMonth();
+  return a.getDate() < b.getDate();
 }
 
 // Returns 0–1 representing a ratio of how many habits were checked on a given day.
@@ -71,7 +67,6 @@ function completionRatio(
   return checked / habits.length;
 }
 
-
 export default function CalendarScreen() {
   const { Colors } = useTheme();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
@@ -84,17 +79,10 @@ export default function CalendarScreen() {
   const { data: entries = {} } = useCheckInsForMonth(year, month);
 
   const [habits, setHabits] = useState<any[]>([]);
-  // Tracks which habits have their notes dropdown open
-const [expandedHabits, setExpandedHabits] = useState<Record<string, boolean>>({});
-
-  // Which day's habits are shown below the grid (defaults to today)
+  const [expandedHabits, setExpandedHabits] = useState<Record<string, boolean>>({});
   const [selectedDay, setSelectedDay] = useState(today.getDate());
-
-  // Pixel height of a single day cell, measured via onLayout.
   const [cellHeight, setCellHeight] = useState(0);
 
-
-  // Modal state
   const [modalVisible, setModalVisible] = useState(false);
   const [modalTarget, setModalTarget] = useState<{
     habitId: string;
@@ -102,7 +90,6 @@ const [expandedHabits, setExpandedHabits] = useState<Record<string, boolean>>({}
   } | null>(null);
   const [draftDifficultyRating, setDraftDifficultyRating] = useState<number | null>(null);
   const [draftNotes, setDraftNotes] = useState('');
-
 
   useEffect(() => {
     const fetchHabits = async () => {
@@ -113,11 +100,8 @@ const [expandedHabits, setExpandedHabits] = useState<Record<string, boolean>>({}
         console.error("Failed to fetch habits:", err);
       }
     };
-  
     fetchHabits();
   }, []);
-
-
 
   // ── Navigation ──────────────────────────────────────────────
   const prevMonth = () => {
@@ -132,18 +116,29 @@ const [expandedHabits, setExpandedHabits] = useState<Record<string, boolean>>({}
   const nextYear = () => setYear(y => y + 1);
 
   // ── Build calendar grid ─────────────────────────────────────
-  const daysInMonth  = getDaysInMonth(year, month);
-  const firstDow     = getFirstDayOfWeek(year, month);
+  const daysInMonth = getDaysInMonth(year, month);
+  const firstDow    = getFirstDayOfWeek(year, month);
   const cells: (number | null)[] = [
     ...Array(firstDow).fill(null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
-  // pad to full weeks
   while (cells.length % 7 !== 0) cells.push(null);
+
+  // ── Derived date values ─────────────────────────────────────
+  const todayDate    = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const selectedDate = new Date(year, month, selectedDay);
+  const isFuture     = dateBefore(todayDate, selectedDate);
+
+  // only show habits that existed on or before the selected day
+  const habitsForSelectedDay = habits.filter(habit => {
+    const created     = new Date(habit.createdAt);
+    const createdDate = new Date(created.getFullYear(), created.getMonth(), created.getDate());
+    return !dateBefore(selectedDate, createdDate); // selectedDate >= createdDate
+  });
 
   // ── Modal helpers ───────────────────────────────────────────
   const openModal = (habitId: string, day: number) => {
-    const key = buildMonthKey(habitId, new Date(year, month, day, 12));
+    const key      = buildMonthKey(habitId, new Date(year, month, day, 12));
     const existing = entries[key];
 
     setModalTarget({ habitId, day });
@@ -151,43 +146,6 @@ const [expandedHabits, setExpandedHabits] = useState<Record<string, boolean>>({}
     setDraftNotes(existing?.notes ?? '');
     setModalVisible(true);
   };
-
-  // const saveModal = async () => {
-  //   try {
-  //     const token = await AsyncStorage.getItem("token");
-  //     const [habitId, y, m, d] = modalKey.split("-");
-  //     const date = new Date(Number(y), Number(m), Number(d));
-  
-  //     await fetch("http://localhost:3000/checkins", {
-  //       method: "POST",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //         Authorization: `Bearer ${token}`,
-  //       },
-  //       body: JSON.stringify({
-  //         habitId,
-  //         date,
-  //         completed: true,
-  //         notes: draftNotes,
-  //         mood: draftMood,          
-  //         difficultyRating: null,
-  //       }),
-  //     });
-  
-  //     setEntries(prev => ({
-  //       ...prev,
-  //       [modalKey]: {
-  //         checked: true,
-  //         notes: draftNotes,
-  //         mood: draftMood,
-  //       },
-  //     }));
-  
-  //     setModalVisible(false);
-  //   } catch (err) {
-  //     console.error("Failed to save habit entry:", err);
-  //   }
-  // };
 
   const { mutate: saveCheckIn } = useUpsertCheckIn(year, month);
 
@@ -241,10 +199,21 @@ const [expandedHabits, setExpandedHabits] = useState<Record<string, boolean>>({}
 
           {/* ── Day cells ─────────────────────────────────────── */}
           {cells.map((day, i) => {
-            const ratio = day !== null
-              ? completionRatio(habits, entries, year, month, day)
-              : 0;
+            // Filter habits by creation date when computing fill ratio
+            const habitsForCell = day !== null
+              ? habits.filter(h => {
+                  const c        = new Date(h.createdAt);
+                  const cellDate = new Date(year, month, day);
+                  return !dateBefore(
+                    cellDate,
+                    new Date(c.getFullYear(), c.getMonth(), c.getDate())
+                  );
+                })
+              : [];
 
+            const ratio  = day !== null
+              ? completionRatio(habitsForCell, entries, year, month, day)
+              : 0;
             const fillPx = cellHeight * ratio;
 
             return (
@@ -277,78 +246,82 @@ const [expandedHabits, setExpandedHabits] = useState<Record<string, boolean>>({}
         </View>
 
         {/* ── Habits section ─────────────────────────────────── */}
-        {/* Shows habits for the SELECTED day (tap any date above) */}
         <Text style={styles.sectionTitle}>
           Habits – {MONTH_NAMES[month]} {selectedDay}
         </Text>
 
-  {habits.map(habit => {
-  const entry = entryForKey(habit.id, selectedDay);
-  const checked = entry?.completed ?? false;
-  const notesExist = !!entry?.notes?.trim();
-  const isExpanded = expandedHabits[habit.id] ?? false;
+        {isFuture ? (
+          <View style={styles.noEntriesContainer}>
+            <Text style={styles.noEntriesText}>No entries yet.</Text>
+          </View>
+        ) : habitsForSelectedDay.length === 0 ? (
+          <View style={styles.noEntriesContainer}>
+            <Text style={styles.noEntriesText}>No habits on this day.</Text>
+          </View>
+        ) : (
+          habitsForSelectedDay.map(habit => {
+            const entry       = entryForKey(habit.id, selectedDay);
+            const checked     = entry?.completed ?? false;
+            const notesExist  = !!entry?.notes?.trim();
+            const isExpanded  = expandedHabits[habit.id] ?? false;
 
-  return (
-    <View key={habit.id} style={styles.habitContainer}>
-      <View style={styles.habitRow}>
-        <Text style={styles.habitName}>{habit.name}</Text>
+            return (
+              <View key={habit.id} style={styles.habitContainer}>
+                <View style={styles.habitRow}>
+                  <Text style={styles.habitName}>{habit.name}</Text>
 
-                      {/* Check circle:
-                  • Empty/white border  = not yet checked
-                  • Solid green bubble + white ✓ = checked
-                  Pressing it opens the mood/notes modal          */}
+                  <TouchableOpacity
+                    style={[styles.checkCircle, checked && styles.checkCircleDone]}
+                    onPress={() => {
+                      if (checked) {
+                        saveCheckIn({
+                          habitId: habit.id,
+                          date: new Date(year, month, selectedDay, 12).toISOString(),
+                          completed: false,
+                          difficultyRating: entry?.difficultyRating ?? null,
+                          notes: entry?.notes ?? '',
+                        });
+                      } else {
+                        openModal(habit.id, selectedDay);
+                      }
+                    }}
+                  >
+                    {checked && <Text style={styles.checkMark}>✓</Text>}
+                  </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.checkCircle, checked && styles.checkCircleDone]}
-          onPress={() => {
-            if (checked) {
-              saveCheckIn({
-                habitId: habit.id,
-                date: new Date(year, month, selectedDay, 12).toISOString(),
-                completed: false,
-                difficultyRating: entry?.difficultyRating ?? null,
-                notes: entry?.notes ?? '',
-              });
-            } else {
-              openModal(habit.id, selectedDay);
-            }
-          }}
-        >
-          {checked && <Text style={styles.checkMark}>✓</Text>}
-        </TouchableOpacity>
+                  {/* Expand notes toggle */}
+                  {notesExist && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                        setExpandedHabits(prev => ({
+                          ...prev,
+                          [habit.id]: !prev[habit.id],
+                        }));
+                      }}
+                      style={{ marginLeft: Spacing.sm }}
+                    >
+                      <Text style={{ fontSize: FontSize.sm, color: Colors.primaryGreen }}>
+                        {isExpanded ? 'Hide notes' : 'Show notes'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
 
-        {/* Expand notes toggle */}
-        {notesExist && (
-          <TouchableOpacity
-            onPress={() => {
-              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-              setExpandedHabits(prev => ({
-                ...prev,
-                [habit.id]: !prev[habit.id],
-              }));
-            }}
-            style={{ marginLeft: Spacing.sm }}
-          >
-            <Text style={{ fontSize: FontSize.sm, color: Colors.primaryGreen }}>
-              {isExpanded ? 'Hide notes' : 'Show notes'}
-            </Text>
-          </TouchableOpacity>
+                {/* Notes dropdown */}
+                {isExpanded && notesExist && (
+                  <View style={styles.notesDropdown}>
+                    <Text style={styles.notesText}>{entry?.notes}</Text>
+                  </View>
+                )}
+              </View>
+            );
+          })
         )}
-      </View>
-
-      {/* Notes dropdown */}
-      {isExpanded && notesExist && (
-        <View style={styles.notesDropdown}>
-          <Text style={styles.notesText}>{entry?.notes}</Text>
-        </View>
-      )}
-    </View>
-  );
-})}
 
       </ScrollView>
 
-      {/* ── Mood entry modal ─────────────────────────────────── */}
+      {/* ── Check-in modal ───────────────────────────────────── */}
       <CheckInModal
         visible={modalVisible}
         initialDifficultyRating={draftDifficultyRating}
@@ -532,6 +505,16 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
   selectedDayText: {
     color: Colors.white,
     fontWeight: '700',
+  },
+  noEntriesContainer: {
+    alignItems: 'center',
+    marginTop: Spacing.lg,
+    paddingVertical: Spacing.lg,
+  },
+  noEntriesText: {
+    fontSize: FontSize.md,
+    color: Colors.lightBrown,
+    fontStyle: 'italic',
   },
 
   // ── Modal ──
