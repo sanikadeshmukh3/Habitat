@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "HabitFrequency" AS ENUM ('DAILY', 'WEEKLY', 'MONTHLY');
+CREATE TYPE "HabitFrequency" AS ENUM ('DAILY', 'WEEKLY');
 
 -- CreateEnum
 CREATE TYPE "HabitCategory" AS ENUM ('FITNESS', 'NUTRITION', 'PRODUCTIVITY', 'WELLNESS', 'SLEEP', 'OTHER');
@@ -18,11 +18,13 @@ CREATE TABLE "user" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
+    "username" TEXT NOT NULL,
     "first_name" TEXT NOT NULL,
     "last_name" TEXT,
     "timezone" TEXT,
     "creation" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "settings" JSONB NOT NULL DEFAULT '{"the guy": {"last name": "guy", "first name": "might"}}',
+    "points" INTEGER NOT NULL DEFAULT 0,
     "is_verified" BOOLEAN NOT NULL DEFAULT false,
     "verification_code" TEXT,
     "code_expires" TIMESTAMP(3),
@@ -39,6 +41,7 @@ CREATE TABLE "habit" (
     "habit_category" "HabitCategory" NOT NULL,
     "visibility" BOOLEAN NOT NULL DEFAULT true,
     "current_streak" INTEGER NOT NULL DEFAULT 0,
+    "streak_probation_period_start" TIMESTAMP(3),
     "priority_rank" INTEGER,
     "frequency" "HabitFrequency" NOT NULL,
     "active" BOOLEAN NOT NULL DEFAULT true,
@@ -63,6 +66,7 @@ CREATE TABLE "habit_check_in" (
     "completed" BOOLEAN NOT NULL,
     "difficulty_rating" INTEGER,
     "notes" TEXT,
+    "points_earned" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "habit_check_in_pkey" PRIMARY KEY ("id")
 );
@@ -96,6 +100,41 @@ CREATE TABLE "stacking_schedule_entry" (
 );
 
 -- CreateTable
+CREATE TABLE "user_badge" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "badge_id" TEXT NOT NULL,
+    "earned_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "user_badge_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "FriendRequest" (
+    "id" TEXT NOT NULL,
+    "senderId" TEXT NOT NULL,
+    "receiverId" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "FriendRequest_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "weekly_summary" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "week_key" TEXT NOT NULL,
+    "summary" TEXT NOT NULL,
+    "source_hash" TEXT,
+    "refresh_count" INTEGER NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "weekly_summary_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "_UserFriends" (
     "A" TEXT NOT NULL,
     "B" TEXT NOT NULL,
@@ -105,6 +144,15 @@ CREATE TABLE "_UserFriends" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "user_email_key" ON "user"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "user_username_key" ON "user"("username");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "user_badge_user_id_badge_id_key" ON "user_badge"("user_id", "badge_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "weekly_summary_user_id_week_key_key" ON "weekly_summary"("user_id", "week_key");
 
 -- CreateIndex
 CREATE INDEX "_UserFriends_B_index" ON "_UserFriends"("B");
@@ -123,6 +171,18 @@ ALTER TABLE "stacking_schedule_entry" ADD CONSTRAINT "stacking_schedule_entry_en
 
 -- AddForeignKey
 ALTER TABLE "stacking_schedule_entry" ADD CONSTRAINT "stacking_schedule_entry_habit_id_fkey" FOREIGN KEY ("habit_id") REFERENCES "habit"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user_badge" ADD CONSTRAINT "user_badge_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "FriendRequest" ADD CONSTRAINT "FriendRequest_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "FriendRequest" ADD CONSTRAINT "FriendRequest_receiverId_fkey" FOREIGN KEY ("receiverId") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "weekly_summary" ADD CONSTRAINT "weekly_summary_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_UserFriends" ADD CONSTRAINT "_UserFriends_A_fkey" FOREIGN KEY ("A") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
