@@ -128,6 +128,7 @@ export default function CalendarScreen() {
   const todayDate    = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const selectedDate = new Date(year, month, selectedDay);
   const isFuture     = dateBefore(todayDate, selectedDate);
+  const isToday      = selectedDate.getTime() === todayDate.getTime();
 
   // only show habits that existed on or before the selected day
   const habitsForSelectedDay = habits.filter(habit => {
@@ -162,7 +163,7 @@ export default function CalendarScreen() {
     >
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
 
-        {/* Back button */}
+        {/* ── Back button ────────────────────────────────────── */}
         <TouchableOpacity style={sharedStyles.backBtn} onPress={goBack}>
           <Text style={sharedStyles.backBtnText}>← Back</Text>
         </TouchableOpacity>
@@ -271,7 +272,11 @@ export default function CalendarScreen() {
                   <Text style={styles.habitName}>{habit.name}</Text>
 
                   <TouchableOpacity
-                    style={[styles.checkCircle, checked && styles.checkCircleDone]}
+                    style={[
+                      styles.checkCircle,
+                      checked && styles.checkCircleDone,
+                      !checked && !isToday && styles.checkCircleDisabled,
+                    ]}
                     onPress={() => {
                       if (checked) {
                         saveCheckIn({
@@ -282,9 +287,12 @@ export default function CalendarScreen() {
                           notes: entry?.notes ?? '',
                         });
                       } else {
+                        // only allow new check-ins on today
+                        if (!isToday) return;
                         openModal(habit.id, selectedDay);
                       }
                     }}
+                    disabled={!checked && !isToday}
                   >
                     {checked && <Text style={styles.checkMark}>✓</Text>}
                   </TouchableOpacity>
@@ -486,6 +494,11 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
   checkCircleDone: {
     borderColor: Colors.primaryGreen,
     backgroundColor: Colors.paleGreen,
+  },
+  checkCircleDisabled: {
+    borderColor: Colors.border,
+    backgroundColor: Colors.inputBg,
+    opacity: 0.4,
   },
   checkCircleText: {
     fontSize: 18,
