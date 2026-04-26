@@ -39,6 +39,32 @@ function getFirstDayOfWeek(year: number, month: number) {
   return new Date(year, month, 1).getDay();
 }
 
+// returns the Monday and Sunday that start/end the week that contains 'date'
+function getWeekBounds(date: Date): { weekStart: Date; weekEnd: Date } {
+  const day         = date.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  const daysToMon   = day === 0 ? -6 : 1 - day;
+  const weekStart   = new Date(date.getFullYear(), date.getMonth(), date.getDate() + daysToMon);
+  const weekEnd     = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6);
+  return { weekStart, weekEnd };
+}
+
+// for a weekly habit, returns the completed entry for the week containing 'date', or null
+function weeklyCheckInForDay(
+  habitId: string,
+  date: Date,
+  entries: MonthlyCheckInMap,
+): MonthlyCheckInMap[string] | null {
+  const { weekStart, weekEnd } = getWeekBounds(date);
+  let current = new Date(weekStart);
+  while (current <= weekEnd) {
+    const key   = buildMonthKey(habitId, new Date(current.getFullYear(), current.getMonth(), current.getDate(), 12));
+    const entry = entries[key];
+    if (entry?.completed) return entry;
+    current = new Date(current.getFullYear(), current.getMonth(), current.getDate() + 1);
+  }
+  return null;
+}
+
 // returns true if date A is strictly before date B
 function dateBefore(a: Date, b: Date) {
   if (a.getFullYear() !== b.getFullYear()) return a.getFullYear() < b.getFullYear();
@@ -58,8 +84,10 @@ function completionRatio(
   if (habits.length === 0) return 0;
 
   const date = new Date(year, month, day, 12);
-
   const checked = habits.filter((h) => {
+    if (h.frequency === 'WEEKLY') {
+      return weeklyCheckInForDay(h.id, date, entries) !== null;
+    }
     const key = buildMonthKey(h.id, date);
     return entries[key]?.completed;
   }).length;
@@ -77,6 +105,20 @@ export default function CalendarScreen() {
   const [month, setMonth] = useState(today.getMonth());
 
   const { data: entries = {} } = useCheckInsForMonth(year, month);
+
+  // adjacent months — needed for weekly habits in weeks that cross month boundaries
+  const prevMonthYear  = month === 0 ? year - 1 : year;
+  const prevMonthNum   = month === 0 ? 11 : month - 1;
+  const nextMonthYear  = month === 11 ? year + 1 : year;
+  const nextMonthNum   = month === 11 ? 0 : month + 1;
+  const { data: prevEntries = {} } = useCheckInsForMonth(prevMonthYear, prevMonthNum);
+  const { data: nextEntries = {} } = useCheckInsForMonth(nextMonthYear, nextMonthNum);
+
+  // merged map used for all weekly habit lookups
+  const allEntries = useMemo(
+    () => ({ ...prevEntries, ...entries, ...nextEntries }),
+    [prevEntries, entries, nextEntries]
+  );
 
   const [habits, setHabits] = useState<any[]>([]);
   const [expandedHabits, setExpandedHabits] = useState<Record<string, boolean>>({});
@@ -130,6 +172,11 @@ export default function CalendarScreen() {
   const isFuture     = dateBefore(todayDate, selectedDate);
   const isToday      = selectedDate.getTime() === todayDate.getTime();
 
+  const { mutate: saveCheckIn } = useUpsertCheckIn(year, month);
+
+  const entryForKey = (habitId: string, day: number, map = allEntries) =>
+    map[buildMonthKey(habitId, new Date(year, month, day, 12))];
+    
   // only show habits that existed on or before the selected day
   const habitsForSelectedDay = habits.filter(habit => {
     const created     = new Date(habit.createdAt);
@@ -140,18 +187,13 @@ export default function CalendarScreen() {
   // ── Modal helpers ───────────────────────────────────────────
   const openModal = (habitId: string, day: number) => {
     const key      = buildMonthKey(habitId, new Date(year, month, day, 12));
-    const existing = entries[key];
+    const existing = allEntries[key];
 
     setModalTarget({ habitId, day });
     setDraftDifficultyRating(existing?.difficultyRating ?? null);
     setDraftNotes(existing?.notes ?? '');
     setModalVisible(true);
   };
-
-  const { mutate: saveCheckIn } = useUpsertCheckIn(year, month);
-
-  const entryForKey = (habitId: string, day: number) =>
-    entries[buildMonthKey(habitId, new Date(year, month, day, 12))];
 
   const goBack = () => router.push("./(tabs)/home");
 
@@ -211,9 +253,12 @@ export default function CalendarScreen() {
                   );
                 })
               : [];
-
-            const ratio  = day !== null
-              ? completionRatio(habitsForCell, entries, year, month, day)
+            
+            const cellDate     = day !== null ? new Date(year, month, day) : null;
+            const isCellFuture = cellDate ? dateBefore(todayDate, cellDate) : false;
+            
+            const ratio  = day !== null && !isCellFuture
+              ? completionRatio(habitsForCell, allEntries, year, month, day)
               : 0;
             const fillPx = cellHeight * ratio;
 
@@ -261,7 +306,10 @@ export default function CalendarScreen() {
           </View>
         ) : (
           habitsForSelectedDay.map(habit => {
-            const entry       = entryForKey(habit.id, selectedDay);
+            const entry = habit.frequency === 'WEEKLY'
+              ? weeklyCheckInForDay(habit.id, selectedDate, allEntries)
+              : entryForKey(habit.id, selectedDay);
+
             const checked     = entry?.completed ?? false;
             const notesExist  = !!entry?.notes?.trim();
             const isExpanded  = expandedHabits[habit.id] ?? false;
@@ -275,6 +323,7 @@ export default function CalendarScreen() {
                     style={[
                       styles.checkCircle,
                       checked && styles.checkCircleDone,
+                      !checked && isToday && styles.checkCircleToday,
                       !checked && !isToday && styles.checkCircleDisabled,
                     ]}
                     onPress={() => {
@@ -493,12 +542,17 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
   },
   checkCircleDone: {
     borderColor: Colors.primaryGreen,
-    backgroundColor: Colors.paleGreen,
+    backgroundColor: Colors.midGreen,
   },
   checkCircleDisabled: {
     borderColor: Colors.border,
     backgroundColor: Colors.inputBg,
     opacity: 0.4,
+  },
+  checkCircleToday: {
+    borderColor: Colors.primaryGreen,
+    borderWidth: 2,
+    backgroundColor: 'transparent',
   },
   checkCircleText: {
     fontSize: 18,

@@ -72,7 +72,7 @@ async function upsertHabitCheckIn(userId, habitId, data) {
   }
 
   // for weekly habits, block a second check-in within the same Mon–Sun week
-  if (habit.frequency === 'WEEKLY') {
+  if (habit.frequency === 'WEEKLY' && completed) {
     const d = new Date(date);
     const dayOfWeek = d.getDay();
     const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
