@@ -150,7 +150,9 @@ export default function CalendarScreen() {
   useEffect(() => {
     const fetchHabits = async () => {
       try {
-        const { data } = await api.get("/habits");
+        const { data } = await api.get("/habits", {
+          params: {includeInactive: true }
+        });
         setHabits(data.habits || data.data || []);
       } catch (err) {
         console.error("Failed to fetch habits:", err);
@@ -343,6 +345,8 @@ export default function CalendarScreen() {
 
             const checked = entry?.completed ?? false;
 
+            const isInactive = habit.active === false;
+
             return (
               <View key={habit.id} style={styles.habitContainer}>
                 <View style={styles.habitRow}>
@@ -351,12 +355,27 @@ export default function CalendarScreen() {
                     style={[
                       styles.checkCircle,
                       checked && styles.checkCircleDone,
-                      !checked && isToday && styles.checkCircleToday,
-                      !checked && !isToday && styles.checkCircleDisabled,
+                      !checked && isToday && isInactive && styles.checkCircleToday,
+                      ((!checked && !isToday) || isInactive) && styles.checkCircleDisabled,
                     ]}
                     onPress={() => {
+                      if (isInactive) {
+                        if (!checked) return; // no check-in to view
+                        setDetailModalTarget({
+                          habitId: habit.id,
+                          checkInDate,
+                          checkInIsToday: false,
+                          entry: {
+                            difficultyRating: entry?.difficultyRating ?? null,
+                            notes: entry?.notes ?? '',
+                          },
+                          habitName: habit.name,
+                        });
+                        setDetailModalVisible(true);
+                        return;
+                      }
                       if (checked) {
-                        // Open detail modal with the correct check-in date and undo eligibility
+                        // open detail modal with the correct check-in date and undo functionality
                         setDetailModalTarget({
                           habitId: habit.id,
                           checkInDate,
@@ -374,12 +393,17 @@ export default function CalendarScreen() {
                         openModal(habit.id, selectedDay);
                       }
                     }}
-                    disabled={!checked && !isToday}
+                    disabled={(!checked && !isToday) || (isInactive && !checked)}
                   >
                     {/* show difficulty emoji if check-in has one, fallback to checkmark */}
                     <Text style={checked ? styles.checkCircleText : undefined}>
                       {checked ? difficultyEmoji(entry?.difficultyRating ?? null) : ''}
                     </Text>
+                    {/* visual cue on the habit name for inactive habits
+                    <Text style={[styles.habitName, isInactive && { color: Colors.lightBrown }]}>
+                      {habit.name}{isInactive ? ' (deleted)' : ''}
+                    </Text>
+                    */}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -417,6 +441,7 @@ export default function CalendarScreen() {
       {/* ── Check-in detail modal (view/edit completed habit) ── */}
       <CheckInDetailModal
         visible={detailModalVisible}
+        readOnly={detailModalTarget ? habits.find(h => h.id === detailModalTarget.habitId)?.active === false : false}
         habitName={detailModalTarget?.habitName ?? ''}
         difficultyRating={detailModalTarget?.entry.difficultyRating ?? null}
         notes={detailModalTarget?.entry.notes ?? ''}

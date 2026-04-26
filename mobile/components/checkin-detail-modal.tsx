@@ -2,14 +2,14 @@ import { FontSize, Radius, Spacing, useTheme } from '@/constants/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const DIFFICULTY_OPTIONS = [
@@ -28,6 +28,7 @@ type Props = {
   difficultyRating: number | null;
   notes: string;
   isToday: boolean;
+  readOnly?: boolean; // if true, hides edit and undo — record is view only
   onClose: () => void;
   onSave: (value: { difficultyRating: number | null; notes: string }) => void;
   onUndo: () => void;
@@ -41,6 +42,7 @@ export default function CheckInDetailModal({
   difficultyRating,
   notes,
   isToday,
+  readOnly = false,
   onClose,
   onSave,
   onUndo,
@@ -52,7 +54,7 @@ export default function CheckInDetailModal({
   const [draftRating, setDraftRating] = useState<number | null>(difficultyRating);
   const [draftNotes, setDraftNotes]   = useState(notes);
 
-  // Reset to view mode and sync draft values whenever modal opens
+  // reset to view mode and sync draft values whenever modal opens
   useEffect(() => {
     if (visible) {
       setMode('view');
@@ -66,7 +68,7 @@ export default function CheckInDetailModal({
     setMode('view');
   };
 
-  // Cancel edit — revert drafts to saved values and return to view
+  // cancel edit — revert drafts to saved values and return to view
   const handleCancelEdit = () => {
     setDraftRating(difficultyRating);
     setDraftNotes(notes);
@@ -113,23 +115,25 @@ export default function CheckInDetailModal({
                 <Text style={styles.noNotes}>No notes added.</Text>
               )}
 
-              {/* ── Primary actions — centered row ── */}
-              <View style={styles.primaryActions}>
-                {isToday && (
-                  <TouchableOpacity style={styles.undoBtn} onPress={onUndo}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              {/* ── Primary actions — only shown if not read-only ── */}
+              {!readOnly && (
+                <View style={styles.primaryActions}>
+                  {isToday && (
+                    <TouchableOpacity style={styles.undoBtn} onPress={onUndo}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <MaterialCommunityIcons name="arrow-u-left-top" size={16} color={Colors.danger} />
                         <Text style={styles.undoBtnText}>Undo check-in</Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity style={styles.editBtn} onPress={() => setMode('edit')}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <MaterialCommunityIcons name="pencil-outline" size={16} color={Colors.white} />
+                      <Text style={styles.editBtnText}>Edit feedback</Text>
                     </View>
                   </TouchableOpacity>
-                )}
-                <TouchableOpacity style={styles.editBtn} onPress={() => setMode('edit')}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <MaterialCommunityIcons name="pencil-outline" size={16} color={Colors.white} />
-                        <Text style={styles.editBtnText}>Edit feedback</Text>
-                    </View>
-                </TouchableOpacity>
-              </View>
+                </View>
+              )}
 
               {/* ── Discrete close link ── */}
               <TouchableOpacity style={styles.closeLink} onPress={onClose}>
@@ -223,7 +227,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
       fontWeight: '600',
       marginTop: 4,
     },
-    // Plain text notes — no box, sits naturally on the card
+    // plain text notes — no box, sits naturally on the card
     notesText: {
       fontSize: FontSize.sm,
       color: Colors.darkBrown,
@@ -232,7 +236,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
       marginBottom: Spacing.md,
       paddingHorizontal: Spacing.sm,
     },
-    // Italic placeholder when no notes exist — same plain style
+    // italic placeholder when no notes exist — same plain style
     noNotes: {
       fontSize: FontSize.sm,
       color: Colors.lightBrown,
@@ -240,7 +244,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
       textAlign: 'center',
       marginBottom: Spacing.md,
     },
-    // Centered row for the two primary action buttons
+    // centered row for the two primary action buttons
     primaryActions: {
       flexDirection: 'row',
       justifyContent: 'center',
@@ -248,7 +252,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
       marginTop: Spacing.sm,
       width: '100%',
     },
-    // Red outlined button — Undo / Cancel
+    // red outlined button
     undoBtn: {
       flex: 1,
       paddingVertical: Spacing.sm + 2,
@@ -263,7 +267,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
       fontWeight: '600',
       fontSize: FontSize.sm,
     },
-    // Solid green button — Edit / Save
+    // solid green button
     editBtn: {
       flex: 1,
       paddingVertical: Spacing.sm + 2,
@@ -277,7 +281,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
       fontWeight: '700',
       fontSize: FontSize.sm,
     },
-    // Discrete close — small muted text link, no border or fill
+    // discrete close — small muted text link, no border or fill
     closeLink: {
       marginTop: Spacing.md,
       paddingVertical: Spacing.xs,
