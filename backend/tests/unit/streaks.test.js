@@ -296,12 +296,22 @@ describe('computeWeeklyCheckIn', () => {
    * check-in must not increment the streak. alreadyCompletedThisWeek is true
    * and newStreak equals the current streak unchanged.
    */
-  test('second check-in in the same week does not increment streak', () => {
-    const result = computeWeeklyCheckIn(3, [daysAgo(2)], today());
-    expect(result.alreadyCompletedThisWeek).toBe(true);
-    expect(result.newStreak).toBe(3); // unchanged
-  });
+function daysAgoFrom(base, n) {
+  const d = new Date(base);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - n);
+  return d;
+}
 
+test('second check-in in the same week does not increment streak', () => {
+  const base = new Date(2024, 0, 10); // Wednesday (safe mid-week)
+  const earlierThisWeek = daysAgoFrom(base, 2); // Monday of same ISO week
+
+  const result = computeWeeklyCheckIn(3, [earlierThisWeek], base);
+
+  expect(result.alreadyCompletedThisWeek).toBe(true);
+  expect(result.newStreak).toBe(3);
+});
   /**
    * A prior check-in 7 days ago falls in the previous ISO week. As long as
    * that week is directly before the current week, the streak increments.
