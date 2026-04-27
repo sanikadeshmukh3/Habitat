@@ -620,6 +620,35 @@ app.post("/friend/reject", async (req, res) => {
   }
 });
 
+app.post("/friend/remove", async (req, res) => {
+  const { userId, friendId } = req.body;
+
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        friends: {
+          disconnect: { id: friendId },
+        },
+      },
+    });
+
+    await prisma.user.update({
+      where: { id: friendId },
+      data: {
+        friends: {
+          disconnect: { id: userId },
+        },
+      },
+    });
+
+    return res.json({ message: "Friend removed" });
+  } catch (err) {
+    console.error("Remove friend failed:", err);
+    return res.status(500).json({ error: "Failed to remove friend" });
+  }
+});
+
 app.get("/users/:id/friends", async (req, res) => {
   const { id } = req.params;
 
