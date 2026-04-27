@@ -154,6 +154,7 @@ async function createHabit(req, res, next) {
     const duplicate = await prisma.habit.findFirst({
       where: {
         userId,
+        active: true,
         name: { equals: body.name.trim(), mode: 'insensitive' },
       },
     });
