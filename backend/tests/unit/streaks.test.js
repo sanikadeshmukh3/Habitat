@@ -1,4 +1,4 @@
-// __tests__/streaks.test.js
+// tests/unit/streaks.test.js
 
 const {
   diffDays,
