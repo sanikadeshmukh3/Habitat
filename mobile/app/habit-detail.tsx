@@ -1,43 +1,23 @@
 import CheckInModal from '@/components/checkin-modal';
+import { FontSize, Radius, Spacing, createSharedStyles, useTheme } from '@/constants/theme';
 import { buildMonthKey, useCheckInsForMonth, useUpsertCheckIn } from '@/hooks/use-checkin';
 import { useDeleteHabit, useHabitDetail } from '@/hooks/use-habits';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   ImageBackground,
-  Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
-import { useTheme, FontSize, Radius, Spacing, createSharedStyles } from '@/constants/theme'
 
-// // Palette
-// const C = {
-//   // bg:            '#F7FAF5',
-//   // card:          '#FFFFFF',
-//   // sage:          '#7BAE7F',
-//   // sageMid:       '#A8C5A0',
-//   // sagePale:      '#E3F0E1',
-//   // yellow:        '#F5E6A3',
-//   // yellowDeep:    '#E8C84A',
-//   // indigo:        '#3D3B8E',
-//   // indigoPale:    '#EEEDF8',
-//   // indigoMid:     '#6C63FF',
-//   // textPrimary:   '#2B2D42',
-//   // textSecondary: '#6B7280',
-//   // border:        '#E4EDE2',
-//   // red:           '#FF6B6B',
-//   // redPale:       '#FFF0F0',
-// };
-
-// Map category enum → display label + emoji
+// map each category to a display label and emoji
 const CATEGORY_META: Record<string, { label: string; emoji: string }> = {
   FITNESS:      { label: 'Fitness',      emoji: '🏃' },
   NUTRITION:    { label: 'Nutrition',    emoji: '🥗' },
@@ -49,12 +29,12 @@ const CATEGORY_META: Record<string, { label: string; emoji: string }> = {
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-// Format ISO date string → "Feb 1, 2026"
+// format ISO date string
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
     month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+    day:   'numeric',
+    year:  'numeric',
   });
 }
 
@@ -67,8 +47,8 @@ export default function HabitDetailScreen() {
   const { id: habitId } = useLocalSearchParams<{ id: string }>();
 
   // ── Data fetching ──────────────────────────────────────────────────────────
-  // NOTE: useHabitDetail should now return `inProbationPeriod: boolean` from the
-  // GET /habits/:id response (populated by getHabitWithStreakHealth in the backend).
+  // NOTE: useHabitDetail should now return 'inProbationPeriod: boolean' from the
+  // GET /habits/:id response (populated by getHabitWithStreakHealth in the backend)
   const { data: habit, isLoading: habitLoading } = useHabitDetail(habitId);
 
   const today = new Date();
@@ -76,14 +56,14 @@ export default function HabitDetailScreen() {
   const year  = today.getFullYear();
   const month = today.getMonth();
 
-  // Grid start — the Sunday that opens the 5-week window
+  // grid start — the Sunday that opens the 5-week window
   const gridStart = new Date(today);
   gridStart.setDate(today.getDate() - today.getDay() - 28);
   gridStart.setHours(0, 0, 0, 0);
 
   const { data: monthCheckIns = {} } = useCheckInsForMonth(year, month);
 
-  // Build today's cache key — must match buildMonthKey in use-checkin.ts
+  // build today's cache key — must match buildMonthKey in use-checkin.ts
   const todayKey = buildMonthKey(habitId, new Date(year, month, today.getDate(), 12));
   const checkedIn = monthCheckIns[todayKey]?.completed ?? false;
 
@@ -119,9 +99,9 @@ export default function HabitDetailScreen() {
 
   const freqLabel = habit.frequency === 'DAILY' ? 'Daily' : 'Weekly';
 
-  // ── Probation period — NEW ─────────────────────────────────────────────────
-  // `habit.inProbationPeriod` is set by getHabitWithStreakHealth on the backend.
-  // Only relevant for DAILY habits.
+  // ── Probation period ───────────────────────────────────────────────────────
+  // 'habit.inProbationPeriod' is set by getHabitWithStreakHealth on the backend
+  // only relevant for DAILY habits
   const inProbationPeriod = habit.frequency === 'DAILY' && (habit.inProbationPeriod ?? false);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -226,11 +206,11 @@ export default function HabitDetailScreen() {
             <Text style={styles.habitSince}>Tracking since {formatDate(habit.createdAt)}</Text>
           </View>
 
-          {/* ── Probation period warning banner — NEW ── */}
+          {/* ── Probation period warning banner ─────── */}
           {inProbationPeriod && (
             <View style={styles.probationBanner}>
               <Text style={styles.probationBannerText}>
-                ⏰ Probation period active — check in today to keep your streak!
+              ⏳ Probation period active — check in today to keep your streak!
               </Text>
             </View>
           )}
@@ -251,7 +231,7 @@ export default function HabitDetailScreen() {
           {stats && (
             <View style={styles.statsRow}>
               <StatCard
-                value={`${stats.currentStreak}${inProbationPeriod ? ' ⏰' : ''}`}
+                value={`${stats.currentStreak}${inProbationPeriod ? ' ⏳' : ''}`}
                 label="Current Streak"
                 sublabel={`Best: ${liveBestStreak} days`}
                 emoji="🔥"
@@ -291,12 +271,12 @@ export default function HabitDetailScreen() {
                     const idx     = week * 7 + day;
                     const gridVal = stats.completionGrid[idx];
 
-                    // Build the date this cell represents
+                    // build the date this cell represents
                     const cellDate = new Date(gridStart);
                     cellDate.setDate(gridStart.getDate() + idx);
                     const cellKey = buildMonthKey(habitId, cellDate);
 
-                    // Use live check-in cache for this cell if available,
+                    // use live check-in cache for this cell if available,
                     // otherwise fall back to the grid from the backend
                     const liveEntry = monthCheckIns[cellKey];
                     const val = liveEntry !== undefined ? liveEntry.completed : gridVal;
@@ -321,24 +301,6 @@ export default function HabitDetailScreen() {
                 <LegendItem color={Colors.danger}    label="Missed" styles={styles} />
                 <LegendItem color={Colors.border} label="No data" styles={styles} />
               </View>
-            </View>
-          )}
-
-          {/* Progress bar */}
-          {stats && (
-            <View style={styles.card}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Overall Progress</Text>
-                <Text style={[styles.sectionSub, { color: Colors.primaryIndigo, fontWeight: '700' }]}>
-                  {completionRate}%
-                </Text>
-              </View>
-              <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, { width: `${completionRate}%` }]} />
-              </View>
-              <Text style={styles.progressCaption}>
-                You've completed this habit {stats.totalCompletions} times out of {stats.totalDays} days tracked.
-              </Text>
             </View>
           )}
 
@@ -579,12 +541,6 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
   legendItem:   { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   legendDot:    { width: 10, height: 10, borderRadius: 3 },
   legendLabel:  { fontSize: FontSize.xs, color: Colors.lightBrown, fontWeight: '500' },
-  progressTrack: {
-    height: 10, backgroundColor: Colors.border, borderRadius: Radius.sm,
-    overflow: 'hidden', marginBottom: Spacing.ms,
-  },
-  progressFill:    { height: '100%', backgroundColor: Colors.midGreen, borderRadius: Radius.sm },
-  progressCaption: { fontSize: FontSize.xs, color: Colors.lightBrown, lineHeight: 17 },
   deleteBtn: {
     borderRadius: Radius.md, paddingVertical: Spacing.ms, alignItems: 'center',
     backgroundColor: Colors.white, borderWidth: 1.5, borderColor: Colors.danger, marginBottom: Spacing.xs,
