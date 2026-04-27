@@ -1,4 +1,4 @@
-// __tests__/checkinService.test.js
+// tests/unit/checkinService.test.js
 
 jest.mock('../../lib/prisma', () => ({
   habit: {
