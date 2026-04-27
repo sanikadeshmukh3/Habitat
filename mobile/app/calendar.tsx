@@ -8,6 +8,7 @@ import {
   useUpsertCheckIn,
 } from '@/hooks/use-checkin';
 import api from '@/lib/api';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from "expo-router";
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -48,7 +49,7 @@ function getWeekBounds(date: Date): { weekStart: Date; weekEnd: Date } {
   return { weekStart, weekEnd };
 }
 
-// for a weekly habit, returns the completed entry AND the exact date it was checked in, 
+// for a weekly habit, returns the completed entry AND the exact date it was checked in,
 // for the week containing 'date' or null if none exists
 function weeklyCheckInForDay(
   habitId: string,
@@ -125,7 +126,9 @@ export default function CalendarScreen() {
   );
 
   const [habits, setHabits] = useState<any[]>([]);
-  const [selectedDay, setSelectedDay] = useState(today.getDate()); // which day's habits are shown below the grid (defaults to today)
+  // which day's habits are shown below the grid (defaults to today)
+  const [selectedDay, setSelectedDay] = useState(today.getDate());
+  // pixel height of a single day cell, measured via onLayout
   const [cellHeight, setCellHeight] = useState(0);
 
   // new check-in modal state (opened when tapping an unchecked habit today)
@@ -151,7 +154,7 @@ export default function CalendarScreen() {
     const fetchHabits = async () => {
       try {
         const { data } = await api.get("/habits", {
-          params: {includeInactive: true }
+          params: { includeInactive: true }
         });
         setHabits(data.habits || data.data || []);
       } catch (err) {
@@ -200,19 +203,20 @@ export default function CalendarScreen() {
   const habitsForSelectedDay = habits.filter(habit => {
     const created     = new Date(habit.createdAt);
     const createdDate = new Date(created.getFullYear(), created.getMonth(), created.getDate());
-    
-    // gate by creation date - habit must have existed on the selected day
+
+    // gate by creation date — habit must have existed on the selected day
     if (dateBefore(selectedDate, createdDate)) return false;
 
-    // gate by deletion date - don't show deleted habits on dates after deletion occurs
+    // gate by deletion date — don't show deleted habits on dates after deletion occurs
     if (habit.deletedAt) {
       const deleted     = new Date(habit.deletedAt);
+      // use UTC components to avoid timezone shifting the date back by one day
       const deletedDate = new Date(deleted.getUTCFullYear(), deleted.getUTCMonth(), deleted.getUTCDate());
 
-      // remove from any date strictly after the deletion date
+      // hide on any date strictly after the deletion date
       if (dateBefore(deletedDate, selectedDate)) return false;
     }
-    
+
     return true;
   });
 
@@ -274,7 +278,7 @@ export default function CalendarScreen() {
 
           {/* ── Day cells ─────────────────────────────────────── */}
           {cells.map((day, i) => {
-            // Filter habits by creation date when computing fill ratio
+            // filter habits by creation date when computing fill ratio
             const habitsForCell = day !== null
               ? habits.filter(h => {
                   const c        = new Date(h.createdAt);
@@ -325,6 +329,7 @@ export default function CalendarScreen() {
         </View>
 
         {/* ── Habits section ─────────────────────────────────── */}
+        {/* Shows habits for the selected day (tap any date above) */}
         <Text style={styles.sectionTitle}>
           Habits – {MONTH_NAMES[month]} {selectedDay}
         </Text>
@@ -356,20 +361,41 @@ export default function CalendarScreen() {
               checkInDate.getMonth()    === todayDate.getMonth()    &&
               checkInDate.getDate()     === todayDate.getDate();
 
-            const checked = entry?.completed ?? false;
-
+            const checked    = entry?.completed ?? false;
             const isInactive = habit.active === false;
+
+            // daily habits: missed if the day has fully passed with no check-in
+            // weekly habits: missed only if the entire week has passed with no check-in
+            const isPastDay = dateBefore(selectedDate, todayDate);
+            const isMissed = (() => {
+              if (!isPastDay || checked) return false;
+              if (isInactive) return false; // handled separately below
+              if (habit.frequency === 'WEEKLY') {
+                // only count as missed once the full week has closed
+                const { weekEnd } = getWeekBounds(selectedDate);
+                return dateBefore(weekEnd, todayDate);
+              }
+              return true; // daily habit, past day, no check-in
+            })();
+
+            // for deleted habits, determine if that day was also missed
+            const isInactiveMissed = isInactive && !checked && isPastDay;
 
             return (
               <View key={habit.id} style={styles.habitContainer}>
                 <View style={styles.habitRow}>
-                  <Text style={styles.habitName}>{habit.name}</Text>
+                  <Text style={[styles.habitName, isInactive && { color: Colors.lightBrown }]}>
+                    {habit.name}
+                    {isInactive && <Text style={styles.deletedTag}> (deleted)</Text>}
+                  </Text>
                   <TouchableOpacity
                     style={[
                       styles.checkCircle,
-                      checked && styles.checkCircleDone,
-                      !checked && isToday && isInactive && styles.checkCircleToday,
-                      ((!checked && !isToday) || isInactive) && styles.checkCircleDisabled,
+                      checked && !isInactive && styles.checkCircleDone,
+                      !checked && isToday && !isInactive && styles.checkCircleToday,
+                      isMissed && styles.checkCircleMissed,
+                      isInactive && checked && styles.checkCircleArchived,
+                      isInactiveMissed && styles.checkCircleArchivedMissed,
                     ]}
                     onPress={() => {
                       if (isInactive) {
@@ -406,17 +432,28 @@ export default function CalendarScreen() {
                         openModal(habit.id, selectedDay);
                       }
                     }}
-                    disabled={(!checked && !isToday) || (isInactive && !checked)}
+                    disabled={(!checked && !isToday && !isMissed && !isInactive) || (isInactive && !checked)}
                   >
-                    {/* show difficulty emoji if check-in has one, fallback to checkmark */}
-                    <Text style={checked ? styles.checkCircleText : undefined}>
-                      {checked ? difficultyEmoji(entry?.difficultyRating ?? null) : ''}
-                    </Text>
-                    {/* visual cue on the habit name for inactive habits
-                    <Text style={[styles.habitName, isInactive && { color: Colors.lightBrown }]}>
-                      {habit.name}{isInactive ? ' (deleted)' : ''}
-                    </Text>
-                    */}
+                    {/* Completed active — difficulty emoji or fallback checkmark */}
+                    {checked && !isInactive && (
+                      <Text style={styles.checkCircleText}>
+                        {difficultyEmoji(entry?.difficultyRating ?? null)}
+                      </Text>
+                    )}
+                    {/* Completed deleted — full color emoji, grayed circle */}
+                    {checked && isInactive && (
+                      <Text style={styles.checkCircleText}>
+                        {difficultyEmoji(entry?.difficultyRating ?? null)}
+                      </Text>
+                    )}
+                    {/* Missed active — red X */}
+                    {isMissed && (
+                      <Ionicons name="close" size={22} color="#cc3333" />
+                    )}
+                    {/* Missed deleted — red X inside grayed circle */}
+                    {isInactiveMissed && (
+                      <Ionicons name="close" size={22} color="#cc3333" />
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -426,7 +463,7 @@ export default function CalendarScreen() {
 
       </ScrollView>
 
-      {/* ── Check-in modal (today, unchecked habit) ──────── */}
+      {/* ── New check-in modal (today, unchecked habit) ──────── */}
       <CheckInModal
         visible={modalVisible}
         initialDifficultyRating={draftDifficultyRating}
@@ -465,7 +502,7 @@ export default function CalendarScreen() {
         }}
         onSave={({ difficultyRating, notes }) => {
           if (!detailModalTarget) return;
-          // save to the actual check-in date, not the currently selected calendar day  
+          // save to the actual check-in date, not the currently selected calendar day
           saveCheckIn({
             habitId: detailModalTarget.habitId,
             date: detailModalTarget.checkInDate.toISOString(),
@@ -505,19 +542,6 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
     paddingTop: Spacing.top_margin,
     paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.xl,
-  },
-  backBtn: {
-    marginBottom: Spacing.md,
-    alignSelf: 'flex-start',
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-    backgroundColor: Colors.paleGreen,
-    borderRadius: Radius.sm,
-  },
-  backBtnText: {
-    color: Colors.primaryGreen,
-    fontWeight: '600',
-    fontSize: FontSize.md,
   },
 
   // ── Navigation rows ──
@@ -618,6 +642,14 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
     fontWeight: '500',
     flex: 1,
   },
+  // small italic tag shown next to soft-deleted habit names
+  deletedTag: {
+    fontSize: FontSize.xs,
+    color: Colors.lightBrown,
+    fontStyle: 'italic',
+  },
+
+  // ── Check circle — base style, overridden by one of the states below ──
   checkCircle: {
     width: 40,
     height: 40,
@@ -633,26 +665,38 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
     borderColor: Colors.primaryGreen,
     backgroundColor: Colors.paleGreen,
   },
-  // past day, not checked — faded and non-interactive
-  checkCircleDisabled: {
-    borderColor: Colors.border,
-    backgroundColor: Colors.inputBg,
-    opacity: 0.4,
-  },
-  // today, not yet checked
+  // today, not yet checked — bold border signals it's tappable
   checkCircleToday: {
     borderColor: Colors.primaryGreen,
     borderWidth: 2.0,
     backgroundColor: 'transparent',
   },
-  // emoji or checkmark rendered inside a completed circle
+  // past day with no check-in — red X indicator
+  checkCircleMissed: {
+    borderColor: Colors.danger,
+    backgroundColor: '#fdf0f0',
+  },
+  // deleted habit completed — lighter border, full-opacity emoji inside
+  checkCircleArchived: {
+    borderColor: Colors.paleGreen,
+    backgroundColor: Colors.inputBg,
+    opacity: 1,
+  },
+  // deleted habit, missed — lighter border, but full-opacity red X inside
+  checkCircleArchivedMissed: {
+    borderColor: Colors.paleGreen,
+    backgroundColor: Colors.inputBg,
+    opacity: 1,
+  },
+  // emoji or difficulty icon rendered inside a completed circle
   checkCircleText: {
     color: Colors.primaryGreen,
     fontSize: 18,
     fontWeight: '700',
     lineHeight: 20,
   },
-  // selected (non-today) day highlight
+
+  // ── Selected day highlight ──
   selectedCell: {
     backgroundColor: Colors.primaryGreen,
     borderRadius: Radius.sm,
@@ -661,6 +705,8 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
     color: Colors.white,
     fontWeight: '700',
   },
+
+  // ── Empty state ──
   noEntriesContainer: {
     alignItems: 'center',
     marginTop: Spacing.lg,
@@ -672,109 +718,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
     fontStyle: 'italic',
   },
 
-  // ── Modal ──
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: Colors.overlay,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.md,
-  },
-  modalCard: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: Radius.lg,
-    padding: Spacing.lg,
-    width: '100%',
-    maxWidth: 380,
-  },
-  modalTitle: {
-    fontSize: FontSize.lg,
-    fontWeight: '700',
-    color: Colors.darkBrown,
-    marginBottom: Spacing.md,
-    textAlign: 'center',
-  },
-  moodRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: Spacing.lg,
-    marginBottom: Spacing.md,
-  },
-  moodBtn: {
-    alignItems: 'center',
-    padding: Spacing.sm,
-    borderRadius: Radius.md,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    width: 80,
-  },
-  moodBtnActive: {
-    borderColor: Colors.primaryGreen,
-    backgroundColor: Colors.paleGreen,
-  },
-  moodEmoji: {
-    fontSize: 32,
-    marginBottom: 4,
-  },
-  moodLabel: {
-    fontSize: FontSize.xs,
-    color: Colors.midBrown,
-    fontWeight: '600',
-  },
-  notesInput: {
-    backgroundColor: Colors.inputBg,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: Spacing.sm,
-    minHeight: 80,
-    fontSize: FontSize.sm,
-    color: Colors.darkBrown,
-    textAlignVertical: 'top',
-    marginBottom: Spacing.md,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: Spacing.sm,
-  },
-  cancelBtn: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-    borderColor: Colors.midGreen,
-  },
-  cancelBtnText: {
-    color: Colors.primaryGreen,
-    fontWeight: '600',
-    fontSize: FontSize.sm,
-  },
-  saveBtn: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: Radius.sm,
-    backgroundColor: Colors.primaryGreen,
-  },
-  saveBtnText: {
-    color: Colors.white,
-    fontWeight: '700',
-    fontSize: FontSize.sm,
-  },
   habitContainer: {
     marginBottom: Spacing.sm,
-  },
-  notesDropdown: {
-    backgroundColor: Colors.inputBg,
-    borderRadius: Radius.sm,
-    padding: Spacing.sm,
-    marginTop: 4,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  notesText: {
-    fontSize: FontSize.sm,
-    color: Colors.darkBrown,
-    lineHeight: 18,
   },
 });
