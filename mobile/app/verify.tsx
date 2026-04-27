@@ -33,7 +33,7 @@ export default function Verify() {
       });
 
       if (status >= 200 && status < 300) {
-        alert("Email verified!");
+        alert("Email verified! Log in to continue.");
 
         if (data.token) {
           await AsyncStorage.setItem("token", data.token);
@@ -45,7 +45,8 @@ export default function Verify() {
           await AsyncStorage.setItem("userId", idToStore);
         }
 
-        router.replace("/(tabs)/home");
+        // router.replace("/(tabs)/home");
+        router.replace("/login");
       } else {
         alert(data.message || "Verification failed");
       }
