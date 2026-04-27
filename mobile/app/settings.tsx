@@ -70,12 +70,14 @@ export default function SettingsScreen() {
 
   const goBack = () => router.push('./(tabs)/home');
 
-  const handleReplayTutorial = () => {
-    // TODO: reset your onboarding flag in AsyncStorage, then navigate to the
-    //       tutorial screen.
-    // e.g. await AsyncStorage.setItem('@tutorialSeen', 'false');
-    //      router.replace('./tutorial');
-    Alert.alert('Tutorial', 'Replaying tutorial...');
+  const handleReplayTutorial = async () => {
+    try {
+      // navigate to tutorial screen
+      router.push('./tutorial');
+    } catch (error) {
+      console.log('Error replaying tutorial:', error);
+      Alert.alert('Error', 'Could not restart tutorial.');
+    }
   };
   // ── Dynamic styles ───────────────────────────────────────────────────────
   const styles = useMemo(() => makeStyles(Colors), [Colors]);

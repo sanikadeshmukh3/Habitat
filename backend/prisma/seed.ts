@@ -163,6 +163,152 @@ async function main() {
 // await prisma.habitCheckIn.createMany({
 //   data: checkIns,
 // });
+
+
+
+// ---------------- JOHN DOE DEMO USER FOR ONBOARDING ----------------
+
+const johnUser = await prisma.user.upsert({
+  where: { email: "john@habitat.com" },
+  update: {},
+  create: {
+    email: "john@habitat.com",
+    password: hashedPassword,
+    username: "johndoe",
+    firstName: "John",
+    lastName: "Doe",
+    isVerified: true,
+  },
+});
+
+console.log("John Doe demo user created");
+
+// Connect John to existing friends
+await prisma.user.update({
+  where: { id: johnUser.id },
+  data: {
+    friends: {
+      connect: [
+        { id: friend1.id },
+        { id: friend2.id },
+      ],
+    },
+  },
+});
+
+// Demo habits
+const johnHabitCreatedAt = new Date();
+johnHabitCreatedAt.setDate(johnHabitCreatedAt.getDate() - 14);
+johnHabitCreatedAt.setHours(8, 0, 0, 0);
+
+const johnWorkout = await prisma.habit.upsert({
+  where: { id: "john-workout-habit" },
+  update: {createdAt: johnHabitCreatedAt},
+  create: {
+    id: "john-workout-habit",
+    name: "Morning Workout",
+    description: "Go to the gym before work",
+    habitCategory: "FITNESS",
+    frequency: "DAILY",
+    visibility: true,
+    currentStreak: 8,
+    active: true,
+    userId: johnUser.id,
+    createdAt: johnHabitCreatedAt,
+    updatedAt: new Date(),
+    observationWindowEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  },
+});
+
+const johnSleep = await prisma.habit.upsert({
+  where: { id: "john-sleep-habit" },
+  update: {createdAt: johnHabitCreatedAt},
+  create: {
+    id: "john-sleep-habit",
+    name: "Sleep Before 11 PM",
+    description: "Sleep earlier consistently",
+    habitCategory: "SLEEP",
+    frequency: "DAILY",
+    visibility: true,
+    currentStreak: 5,
+    active: true,
+    userId: johnUser.id,
+    createdAt: johnHabitCreatedAt,
+    updatedAt: new Date(),
+    observationWindowEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  },
+});
+
+const johnWater = await prisma.habit.upsert({
+  where: { id: "john-water-habit" },
+  update: {createdAt: johnHabitCreatedAt},
+  create: {
+    id: "john-water-habit",
+    name: "Drink Water",
+    description: "Drink 8 glasses daily",
+    habitCategory: "NUTRITION",
+    frequency: "DAILY",
+    visibility: true,
+    currentStreak: 12,
+    active: true,
+    userId: johnUser.id,
+    createdAt: johnHabitCreatedAt,
+    updatedAt: new Date(),
+    observationWindowEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  },
+});
+
+// Remove old demo check-ins before reseeding
+await prisma.habitCheckIn.deleteMany({
+  where: {
+    habitId: {
+      in: [
+        johnWorkout.id,
+        johnSleep.id,
+        johnWater.id,
+      ],
+    },
+  },
+});
+
+// Create last 7 days of realistic check-ins
+const demoHabits = [johnWorkout, johnSleep, johnWater];
+const demoCheckIns = [];
+
+for (let i = 6; i >= 0; i--) {
+  for (const habit of demoHabits) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    date.setHours(8, 0, 0, 0);
+
+    demoCheckIns.push({
+      habitId: habit.id,
+      date,
+      completed: Math.random() > 0.2, // mostly completed
+      difficultyRating: Math.floor(Math.random() * 3) + 1,
+      notes:
+        i % 2 === 0
+          ? "Stayed consistent today"
+          : null,
+      pointsEarned: 10,
+    });
+  }
+}
+
+await prisma.habitCheckIn.createMany({
+  data: demoCheckIns,
+});
+
+await prisma.user.update({
+  where: { id: johnUser.id },
+  data: {
+    points: 210,
+  },
+});
+
+console.log("John Doe onboarding demo data seeded successfully");
+
+
 }
 
 main()
