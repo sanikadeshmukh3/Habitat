@@ -64,19 +64,6 @@ const CARD_WIDTH = SCREEN_WIDTH - CARD_SIDE_MARGIN * 2;
 const SNAP_INTERVAL = SCREEN_WIDTH
 const HORIZONTAL_PADDING = SIDE_SPACER - CARD_GAP / 2;
 
-// const COLORS = {
-//     forest: '#234B3A',
-//     moss: '#5F7A61',
-//     sage: '#AFC3A2',
-//     cream: '#F7F1E8',
-//     tan: '#D9C2A3',
-//     brown: '#6B4F3A',
-//     bark: '#4D3A2D',
-//     softWhite: 'rgba(255,255,255,0.82)',
-//     glass: Colors.cardBg,
-//     chip: 'rgba(255,255,255,0.68)',
-// };
-
 export const ANIMAL_IMAGE_BY_ANIMAL: Record<Animal, ImageSourcePropType> = {
   Wolf: require('@/assets/images/animals/wolf.png'),
   Bee: require('@/assets/images/animals/bee.png'),
@@ -169,7 +156,7 @@ function SnapshotCardView({
   });
 
   return (
-    <View style={styles.snapshotCardWrap}>
+    <View key={card.id} style={styles.snapshotCardWrap}>
       <Animated.View
         style={[
           styles.snapshotCard,
@@ -210,7 +197,7 @@ function MiniBarChart({ values, styles }: { values: number[]; styles: ReturnType
   return (
     <View style={styles.chartWrap}>
       {values.map((h, i) => (
-        <View key={i} style={styles.barColumn}>
+        <View key={`bar-${i}`} style={styles.barColumn}>
           <View style={[styles.bar, { height: h }]} />
         </View>
       ))}
@@ -350,7 +337,7 @@ export default function RecapScreen() {
         subtitle: `${completionPulse.percent}%`,
         accent: Colors.midGreen,
         body: (
-        <View>
+        <View key="completion-pulse-body">
             <Text style={styles.cardBodyHeadline}>
             {completionPulse.percent}% complete
             </Text>
@@ -375,7 +362,7 @@ export default function RecapScreen() {
         subtitle: categoryLeader.topCategory,
         accent: Colors.lightBrown,
         body: (
-            <View>
+            <View key="category-leader-body">
             <View style={styles.categoryHero}>
                 <Text style={styles.categoryHeroLabel}>Top category</Text>
                 <Text style={styles.categoryHeroName}>{categoryLeader.topCategory}</Text>
@@ -428,7 +415,7 @@ export default function RecapScreen() {
         subtitle: `${rhythmCheck.strongDays} strong day${rhythmCheck.strongDays === 1 ? '' : 's'}`,
         accent: Colors.midGreen,
         body: (
-        <View>
+        <View key="rhythm-check-body">
             <Text style={styles.cardBodyHeadline}>
             {sameBestAndWorstDay ? 'Steady all week' : `Best: ${rhythmCheck.bestDay}`}
             </Text>
@@ -458,7 +445,7 @@ export default function RecapScreen() {
         subtitle: moodBoard.label,
         accent: Colors.midGreen,
         body: (
-            <View>
+            <View key="mood-board-body">
             {/* HERO MOOD */}
             <View style={styles.moodHero}>
                 <View style={styles.moodEmojiWrap}>
@@ -630,9 +617,9 @@ Think of it as a calm, visual recap of your routines — your own Habitat Wrappe
             </View>
 
             <View style={styles.pagination}>
-            {snapshotCards.map((_, index) => (
+            {snapshotCards.map((card, index) => (
                 <View
-                key={index}
+                key={`dot-${card.id}`}
                 style={[
                     styles.paginationDot,
                     index === activeIndex && styles.paginationDotActive,
