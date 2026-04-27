@@ -1,4 +1,4 @@
-// __tests__/badges.test.js
+// tests/unit/badges.test.js
 
 const { evaluateNewBadges, BADGE_DEFINITIONS, getBadgeDefinition } = require('../../lib/badges');
 
