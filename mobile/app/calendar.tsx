@@ -200,7 +200,20 @@ export default function CalendarScreen() {
   const habitsForSelectedDay = habits.filter(habit => {
     const created     = new Date(habit.createdAt);
     const createdDate = new Date(created.getFullYear(), created.getMonth(), created.getDate());
-    return !dateBefore(selectedDate, createdDate); // selectedDate >= createdDate
+    
+    // gate by creation date - habit must have existed on the selected day
+    if (dateBefore(selectedDate, createdDate)) return false;
+
+    // gate by deletion date - don't show deleted habits on dates after deletion occurs
+    if (habit.deletedAt) {
+      const deleted     = new Date(habit.deletedAt);
+      const deletedDate = new Date(deleted.getUTCFullYear(), deleted.getUTCMonth(), deleted.getUTCDate());
+
+      // remove from any date strictly after the deletion date
+      if (dateBefore(deletedDate, selectedDate)) return false;
+    }
+    
+    return true;
   });
 
   // ── Modal helpers ───────────────────────────────────────────

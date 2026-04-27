@@ -285,9 +285,12 @@ async function deleteHabit(req, res, next) {
     // soft delete — set active to false rather than destroying the record
     // check-ins are intentionally preserved so historical calendar data remains intact
     // the habit disappears from all active views but its completion history is never lost
+    const now = new Date();
+    const deletedAt = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+
     await prisma.habit.update({
       where: { id },
-      data:  { active: false },
+      data:  { active: false, deletedAt },
     });
 
     res.json({ data: { id } });
