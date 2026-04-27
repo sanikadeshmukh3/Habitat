@@ -1,21 +1,20 @@
-import { useRouter } from 'expo-router';
-import React, { useState, useMemo } from 'react';
+import { FontSize, Radius, Spacing, createSharedStyles, useTheme } from '@/constants/theme';
 import api from '@/lib/api';
+import { useRouter } from 'expo-router';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   ImageBackground,
-  Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TextInput,
-  Alert,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
-import { useTheme, Spacing, FontSize, Radius, createSharedStyles } from '@/constants/theme';
 
 // Palette
 // const C = {
@@ -309,6 +308,7 @@ export default function CreateHabitAIScreen() {
                     name: selectedHabit.name,
                     habitCategory: selectedHabit.category?.toUpperCase(),
                     frequency: selectedHabit.frequency?.toUpperCase(),
+                    fromAI: 'true',
                   },
                 });
               }}
