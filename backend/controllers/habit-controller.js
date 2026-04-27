@@ -218,6 +218,19 @@ async function updateHabit(req, res, next) {
         return;
       }
       data.name = body.name.trim();
+
+      const duplicate = await prisma.habit.findFirst({
+        where: {
+          userId,
+          active: true,
+          name: { equals: data.name, mode: 'insensitive' },
+          NOT: { id },
+        },
+      });
+      if (duplicate) {
+        res.status(409).json({ error: 'You already have a habit with that name' });
+        return;
+      }
     }
 
     if (body.description !== undefined) {
