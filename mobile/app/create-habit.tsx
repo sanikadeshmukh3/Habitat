@@ -157,6 +157,9 @@ export default function CreateHabitScreen() {
               />
               <Text style={styles.charCount}>{habit.name.length}/60</Text>
             </View>
+            {submitError && (
+                <Text style={styles.errorText}>{submitError}</Text>
+            )}
           </SectionCard>
 
           {/* Category */}
@@ -256,12 +259,6 @@ export default function CreateHabitScreen() {
               </>
             )}
           </TouchableOpacity>
-
-          {submitError && (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorBannerText}>⚠️  {submitError}</Text>
-            </View>
-          )}
 
           {/* AI nudge — only shown in create mode */}
           {!isEditMode && (
@@ -448,11 +445,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
   submitBtnDisabled: { backgroundColor: Colors.lightGreen, shadowOpacity: 0.1 },
   submitLeaf:        { fontSize: FontSize.lg },
   submitLabel:       { fontSize: FontSize.md, fontWeight: '700', color: Colors.white, letterSpacing: 0.3 },
-  errorBanner: {
-    marginTop: Spacing.sm, backgroundColor: Colors.white, borderWidth: 1.5,
-    borderColor: Colors.danger, borderRadius: Radius.md, paddingVertical: Spacing.ms, paddingHorizontal: Spacing.md,
-  },
-  errorBannerText: { fontSize: FontSize.sm, color: Colors.danger, fontWeight: '600', textAlign: 'center' },
+  errorText: { fontSize: FontSize.xs, color: Colors.danger, fontStyle: 'italic', marginTop: Spacing.sm },
   aiNudge: {
     marginTop: Spacing.md, borderRadius: Radius.md, borderWidth: 1.5,
     borderColor: Colors.midIndigo, backgroundColor: Colors.pageBg, padding: Spacing.md,
