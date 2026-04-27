@@ -57,7 +57,7 @@ import api from "@/lib/api";
             left: 20,
             paddingVertical: Spacing.sm,
             paddingHorizontal: Spacing.md,
-            backgroundColor: Colors.white,
+            backgroundColor: Colors.paleGreen,
             borderRadius: Radius.sm,
           }}
         >
