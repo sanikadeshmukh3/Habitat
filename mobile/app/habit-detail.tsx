@@ -61,11 +61,27 @@ export default function HabitDetailScreen() {
   gridStart.setDate(today.getDate() - today.getDay() - 28);
   gridStart.setHours(0, 0, 0, 0);
 
-  const { data: monthCheckIns = {} } = useCheckInsForMonth(year, month);
+  // compute week boundaries before hook calls (hooks must not be conditional)
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - today.getDay());
+  weekStart.setHours(0, 0, 0, 0);
+
+  // if this week started in the previous month, need both months' check-ins
+  const weekCrossesMonth = weekStart.getMonth() !== month;
+  const prevMonth = month === 0 ? 11 : month - 1;
+  const prevYear  = month === 0 ? year - 1 : year;
+
+  const { data: monthCheckIns     = {} } = useCheckInsForMonth(year, month);
+  const { data: prevMonthCheckIns = {} } = useCheckInsForMonth(prevYear, prevMonth);
+
+  // merge: current month wins on any key collision
+  const allCheckIns = weekCrossesMonth
+    ? { ...prevMonthCheckIns, ...monthCheckIns }
+    : monthCheckIns;
 
   // build today's cache key — must match buildMonthKey in use-checkin.ts
-  const todayKey = buildMonthKey(habitId, new Date(year, month, today.getDate(), 12));
-  const checkedIn = monthCheckIns[todayKey]?.completed ?? false;
+  const todayKey  = buildMonthKey(habitId, new Date(year, month, today.getDate(), 12));
+  const checkedIn = allCheckIns[todayKey]?.completed ?? false;
 
   // ── Mutations ──────────────────────────────────────────────────────────────
   const { mutate: saveCheckIn }                        = useUpsertCheckIn(year, month);
@@ -86,18 +102,33 @@ export default function HabitDetailScreen() {
   }
 
   // ── Derived display values ─────────────────────────────────────────────────
-  const meta           = CATEGORY_META[habit.habitCategory] ?? CATEGORY_META.OTHER;
-  const stats          = habit.stats;
-  const completionRate = stats
-    ? Math.round((stats.totalCompletions / Math.max(stats.totalDays, 1)) * 100)
-    : 0;
+  const meta  = CATEGORY_META[habit.habitCategory] ?? CATEGORY_META.OTHER;
+  const stats = habit.stats;
 
-  // derive best streak live so it reflects today's check-in immediately
-  const liveBestStreak = stats
-    ? Math.max(stats.bestStreak, stats.currentStreak, checkedIn ? 1 : 0)
-    : 0;
+  // ── Weekly vs daily flag + this-week scan ─────────────────────────────────
+  // weekly habit: scan every day from this week's Sunday through today
+  // uses allCheckIns so a check-in made on a prior-month day is never missed
+  const isWeekly = habit.frequency === 'WEEKLY';
+  let weeklyCheckedIn = false;
+  if (isWeekly) {
+    for (
+      let d = new Date(weekStart);
+      d <= today;
+      d = new Date(d.getTime() + 86_400_000)
+    ) {
+      const key = buildMonthKey(
+        habitId,
+        new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12)
+      );
+      if (allCheckIns[key]?.completed) {
+        weeklyCheckedIn = true;
+        break;
+      }
+    }
+  }
 
-  const freqLabel = habit.frequency === 'DAILY' ? 'Daily' : 'Weekly';
+  // unified completion flag used by the button, handler, and liveBestStreak
+  const isComplete = isWeekly ? weeklyCheckedIn : checkedIn;
 
   // ── Probation period ───────────────────────────────────────────────────────
   // 'habit.inProbationPeriod' is set by getHabitWithStreakHealth on the backend
@@ -107,19 +138,100 @@ export default function HabitDetailScreen() {
   const habitCreatedAt = new Date(habit.createdAt);
   habitCreatedAt.setHours(0, 0, 0, 0);
 
+  // ── Weekly-specific metrics ────────────────────────────────────────────────
+  // Precompute which of the 5 grid weeks had at least one completion.
+  // Checked against both allCheckIns (live) and stats.completionGrid (backend).
+  // Used for calendar coloring, streak, and completion rate calculations below.
+  const completedWeekIndices = new Set<number>();
+  if (isWeekly && stats) {
+    for (let week = 0; week < 5; week++) {
+      for (let day = 0; day < 7; day++) {
+        const idx       = week * 7 + day;
+        const cellDate  = new Date(gridStart);
+        cellDate.setDate(gridStart.getDate() + idx);
+        const cellKey   = buildMonthKey(habitId, cellDate);
+        const liveEntry = allCheckIns[cellKey];
+        const gridVal   = stats.completionGrid[idx];
+        const val = liveEntry !== undefined ? liveEntry.completed : gridVal;
+        if (val === true) {
+          completedWeekIndices.add(week);
+          break; // one completion is enough to mark the whole week
+        }
+      }
+    }
+  }
+
+  // Total weeks the habit has been active: count of distinct Sun–Sat weeks
+  // from the week containing createdAt through the current week (inclusive).
+  // Math.ceil(totalDays / 7) is wrong when the habit spans two calendar weeks
+  // but has fewer than 7 days total, so we compute directly from dates instead.
+  const creationWeekSunday = new Date(habitCreatedAt);
+  creationWeekSunday.setDate(habitCreatedAt.getDate() - habitCreatedAt.getDay());
+  creationWeekSunday.setHours(0, 0, 0, 0);
+  const totalWeeks = Math.floor(
+    (today.getTime() - creationWeekSunday.getTime()) / (7 * 86_400_000)
+  ) + 1;
+
+  // Weekly streak: consecutive completed weeks going back from the current week,
+  // computed from the 5-week grid. Current week is not penalized if it hasn't
+  // ended yet — it's only counted if a check-in has already been made.
+  let weeklyCurrentStreak = 0;
+  if (isWeekly) {
+    for (let week = 4; week >= 0; week--) {
+      const wSunday   = new Date(gridStart);
+      wSunday.setDate(gridStart.getDate() + week * 7);
+      const wSaturday = new Date(wSunday.getTime() + 6 * 86_400_000);
+
+      // skip weeks entirely before the habit's creation date
+      if (wSaturday < habitCreatedAt) continue;
+
+      if (completedWeekIndices.has(week)) {
+        weeklyCurrentStreak++;
+      } else if (wSaturday >= today) {
+        // current (or future) week with no check-in yet — don't break the streak,
+        // just skip so a partial week at the start doesn't penalize the user
+        continue;
+      } else {
+        // past week with no completion → streak is broken
+        break;
+      }
+    }
+  }
+
+  // Completion rate: for weekly habits use totalWeeks as the denominator
+  // (totalCompletions counts distinct weeks with at least one check-in)
+  const completionRate = stats
+    ? isWeekly
+      ? Math.round((stats.totalCompletions / Math.max(totalWeeks, 1)) * 100)
+      : Math.round((stats.totalCompletions / Math.max(stats.totalDays, 1)) * 100)
+    : 0;
+
+  // derive best streak live so it reflects today's check-in immediately
+  const liveBestStreak = stats
+    ? isWeekly
+      ? Math.max(weeklyCurrentStreak, isComplete ? 1 : 0)
+      : Math.max(stats.bestStreak, stats.currentStreak, isComplete ? 1 : 0)
+    : 0;
+
+  const freqLabel = isWeekly ? 'Weekly' : 'Daily';
+
   // ── Handlers ───────────────────────────────────────────────────────────────
   function handleCheckIn() {
-    if (checkedIn) {
-      saveCheckIn({
-        habitId,
-        date: new Date(year, month, today.getDate(), 12).toISOString(),
-        completed: false,
-        difficultyRating: monthCheckIns[todayKey]?.difficultyRating ?? null,
-        notes: monthCheckIns[todayKey]?.notes ?? '',
-      });
+    if (isComplete) {
+      // undo only allowed on the same day the check-in was made
+      if (checkedIn) {
+        saveCheckIn({
+          habitId,
+          date: new Date(year, month, today.getDate(), 12).toISOString(),
+          completed: false,
+          difficultyRating: allCheckIns[todayKey]?.difficultyRating ?? null,
+          notes: allCheckIns[todayKey]?.notes ?? '',
+        });
+      }
+      // weekly check-in made on a prior day -> locked, do nothing
     } else {
-      setDifficultyRating(monthCheckIns[todayKey]?.difficultyRating ?? null);
-      setNotes(monthCheckIns[todayKey]?.notes ?? '');
+      setDifficultyRating(allCheckIns[todayKey]?.difficultyRating ?? null);
+      setNotes(allCheckIns[todayKey]?.notes ?? '');
       setModalVisible(true);
     }
   }
@@ -220,13 +332,15 @@ export default function HabitDetailScreen() {
 
           {/* Quick check-in */}
           <TouchableOpacity
-            style={[styles.checkInBtn, checkedIn && styles.checkInBtnDone]}
+            style={[styles.checkInBtn, isComplete && styles.checkInBtnDone]}
             onPress={handleCheckIn}
             activeOpacity={0.85}
           >
-            <Text style={styles.checkInIcon}>{checkedIn ? '✓' : '○'}</Text>
+            <Text style={styles.checkInIcon}>{isComplete ? '✓' : '○'}</Text>
             <Text style={styles.checkInLabel}>
-              {checkedIn ? 'Completed today!' : 'Mark as complete today'}
+              {isComplete
+                ? (isWeekly ? 'Completed for the week!' : 'Completed today!')
+                : 'Mark as complete today'}
             </Text>
           </TouchableOpacity>
 
@@ -234,9 +348,9 @@ export default function HabitDetailScreen() {
           {stats && (
             <View style={styles.statsRow}>
               <StatCard
-                value={`${stats.currentStreak}${inProbationPeriod ? ' ⏳' : ''}`}
+                value={`${isWeekly ? weeklyCurrentStreak : stats.currentStreak}${inProbationPeriod ? ' ⏳' : ''}`}
                 label="Current Streak"
-                sublabel={`Best: ${liveBestStreak} days`}
+                sublabel={`Best: ${liveBestStreak} ${isWeekly ? 'weeks' : 'days'}`}
                 emoji="🔥"
                 accent={Colors.midGreen}
                 accentPale={Colors.paleGreen}
@@ -245,7 +359,7 @@ export default function HabitDetailScreen() {
               <StatCard
                 value={`${completionRate}%`}
                 label="Completion Rate"
-                sublabel={`${stats.totalCompletions} of ${stats.totalDays} days`}
+                sublabel={`${stats.totalCompletions} of ${isWeekly ? totalWeeks : stats.totalDays} ${isWeekly ? 'weeks' : 'days'}`}
                 emoji="📈"
                 accent={Colors.midGreen}
                 accentPale={Colors.paleGreen}
@@ -279,21 +393,54 @@ export default function HabitDetailScreen() {
                     cellDate.setDate(gridStart.getDate() + idx);
                     const cellKey = buildMonthKey(habitId, cellDate);
 
-                    // use live check-in cache for this cell if available,
-                    // otherwise fall back to the grid from the backend
-                    const liveEntry = monthCheckIns[cellKey];
-                    const rawVal = liveEntry !== undefined ? liveEntry.completed : gridVal;
+                    // prefer live cache over backend grid (reflects optimistic updates instantly)
+                    // allCheckIns covers cross-month weeks so prior-month cells are never missed
+                    const liveEntry = allCheckIns[cellKey];
+                    const rawVal    = liveEntry !== undefined ? liveEntry.completed : gridVal;
 
-                    // past days within the habit's active period with no check-in recorded
-                    // are treated as a missed day
+                    // ── Cell coloring logic ──────────────────────────────────
+                    // Three possible states:
+                    //   true  → completed (green)
+                    //   false → missed    (red)
+                    //   null  → no data   (pale)
+                    //
+                    // Daily habits: any past active day with no check-in is missed.
+                    //
+                    // Weekly habits: coloring is week-granular.
+                    //   - The specific day a check-in was logged → green
+                    //   - Other days in a completed week → no data (don't penalize)
+                    //   - All 7 days of a fully-past uncompleted active week → red
+                    //   - Current/future week days with no check-in yet → no data
                     let effectiveVal: boolean | null;
-                    if (rawVal === true) {
-                      effectiveVal = true;  // completed -> green
-                    } else if (cellDate < today && cellDate >= habitCreatedAt) {
-                      effectiveVal = false; // past, active, no check-in -> red
+
+                    if (isWeekly) {
+                      const wSunday   = new Date(gridStart);
+                      wSunday.setDate(gridStart.getDate() + week * 7);
+                      const wSaturday = new Date(wSunday.getTime() + 6 * 86_400_000);
+
+                      if (rawVal === true) {
+                        effectiveVal = true;  // actual check-in day → green
+                      } else if (completedWeekIndices.has(week)) {
+                        effectiveVal = null;  // week done, but not this specific day → no data
+                      } else if (wSaturday < today && wSunday >= habitCreatedAt) {
+                        effectiveVal = false; // fully-past active week, no check-in → red
+                      } else {
+                        effectiveVal = null;  // current/future week or pre-creation → no data
+                      }
                     } else {
-                      effectiveVal = null; // future, today-pending, or pre-creation -> no  data
+                      // Daily: the backend grid uses null for ALL days without a check-in —
+                      // past and future alike. We infer "missed" on the frontend: any day
+                      // strictly in the past within the habit's active period with no
+                      // completion recorded is treated as a missed day.
+                      if (rawVal === true) {
+                        effectiveVal = true;  // completed → green
+                      } else if (cellDate < today && cellDate >= habitCreatedAt) {
+                        effectiveVal = false; // past, active, no check-in → missed (red)
+                      } else {
+                        effectiveVal = null;  // future, today-pending, or pre-creation → no data
+                      }
                     }
+
                     return (
                       <View
                         key={day}
