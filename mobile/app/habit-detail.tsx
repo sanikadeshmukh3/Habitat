@@ -104,6 +104,9 @@ export default function HabitDetailScreen() {
   // only relevant for DAILY habits
   const inProbationPeriod = habit.frequency === 'DAILY' && (habit.inProbationPeriod ?? false);
 
+  const habitCreatedAt = new Date(habit.createdAt);
+  habitCreatedAt.setHours(0, 0, 0, 0);
+
   // ── Handlers ───────────────────────────────────────────────────────────────
   function handleCheckIn() {
     if (checkedIn) {
@@ -279,16 +282,26 @@ export default function HabitDetailScreen() {
                     // use live check-in cache for this cell if available,
                     // otherwise fall back to the grid from the backend
                     const liveEntry = monthCheckIns[cellKey];
-                    const val = liveEntry !== undefined ? liveEntry.completed : gridVal;
+                    const rawVal = liveEntry !== undefined ? liveEntry.completed : gridVal;
 
+                    // past days within the habit's active period with no check-in recorded
+                    // are treated as a missed day
+                    let effectiveVal: boolean | null;
+                    if (rawVal === true) {
+                      effectiveVal = true;  // completed -> green
+                    } else if (cellDate < today && cellDate >= habitCreatedAt) {
+                      effectiveVal = false; // past, active, no check-in -> red
+                    } else {
+                      effectiveVal = null; // future, today-pending, or pre-creation -> no  data
+                    }
                     return (
                       <View
                         key={day}
                         style={[
                           styles.dot,
-                          val === true  && styles.dotCompleted,
-                          val === false && styles.dotMissed,
-                          val === null  && styles.dotFuture,
+                          effectiveVal === true  && styles.dotCompleted,
+                          effectiveVal === false && styles.dotMissed,
+                          effectiveVal === null  && styles.dotFuture,
                         ]}
                       />
                     );
@@ -371,7 +384,6 @@ function LegendItem({ color, label, styles }: { color: string; label: string, st
 }
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
-
 const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet.create({
   background: {
     flex: 1,
