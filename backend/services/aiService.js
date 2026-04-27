@@ -1,4 +1,4 @@
-const OpenAI = require("openai");
+const OpenAI = require("openai").default;
 const { PrismaClient } = require("@prisma/client");
 const crypto = require("crypto");
 
