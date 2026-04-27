@@ -528,6 +528,12 @@ app.post("/friend/request", async (req, res) => {
   try {
     const { senderId, friendId } = req.body;
 
+    if (senderId === friendId) {
+      return res.status(400).json({
+        error: "Cannot send friend request to yourself",
+      });
+    }
+
     // 1. Check if already friends
     const user = await prisma.user.findUnique({
       where: { id: senderId },
