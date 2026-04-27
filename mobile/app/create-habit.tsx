@@ -40,6 +40,7 @@ export default function CreateHabitScreen() {
     habitCategory?: string;
     frequency?:     string;
     visibility?:    string;
+    fromAI?:        string;
   }>();
 
   const isEditMode = !!params.habitId;
@@ -302,7 +303,14 @@ export default function CreateHabitScreen() {
                 <TouchableOpacity
                   style={styles.modalPrimaryBtn}
                   activeOpacity={0.85}
-                  onPress={() => { setShowSuccess(false); resetForm(); }}
+                  onPress={() => { 
+                    setShowSuccess(false);
+                    if (params.fromAI === 'true') {
+                      router.replace('/create-habit-ai');
+                    } else {
+                      resetForm();
+                    }
+                  }}
                 >
                   <Text style={styles.modalPrimaryLabel}>＋  Create Another Habit</Text>
                 </TouchableOpacity>
