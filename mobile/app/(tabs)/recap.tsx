@@ -58,8 +58,10 @@ type SnapshotCard = {
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SIDE_SPACER = 18;
 const CARD_GAP = 12;
-const CARD_WIDTH = SCREEN_WIDTH - SIDE_SPACER * 2 - CARD_GAP;
-const SNAP_INTERVAL = CARD_WIDTH + CARD_GAP;
+// const CARD_WIDTH = SCREEN_WIDTH - SIDE_SPACER * 2 - CARD_GAP;
+const CARD_SIDE_MARGIN = 18;
+const CARD_WIDTH = SCREEN_WIDTH - CARD_SIDE_MARGIN * 2;
+const SNAP_INTERVAL = SCREEN_WIDTH
 const HORIZONTAL_PADDING = SIDE_SPACER - CARD_GAP / 2;
 
 // const COLORS = {
@@ -598,33 +600,34 @@ Think of it as a calm, visual recap of your routines — your own Habitat Wrappe
               onClose={() => setSnapshotInfoModal(null)}
             />
 
-            <Animated.FlatList
-            horizontal
-            data={snapshotCards}
-            keyExtractor={(i) => i.id}
-            renderItem={({ item, index }) => (
-              <SnapshotCardView
-                card={item}
-                index={index}
-                scrollX={scrollX}
-                styles={styles}
-                onInfoPress={setSnapshotInfoModal}
+            <View style={styles.snapCarouselWrap}>
+              <Animated.FlatList
+                horizontal
+                data={snapshotCards}
+                keyExtractor={(i) => i.id}
+                renderItem={({ item, index }) => (
+                  <SnapshotCardView
+                    card={item}
+                    index={index}
+                    scrollX={scrollX}
+                    styles={styles}
+                    onInfoPress={setSnapshotInfoModal}
+                  />
+                )}
+                showsHorizontalScrollIndicator={false}
+                snapToInterval={SNAP_INTERVAL}
+                snapToAlignment="start"
+                decelerationRate="fast"
+                disableIntervalMomentum
+                bounces={false}
+                onScroll={Animated.event(
+                  [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+                  { useNativeDriver: true }
+                )}
+                onMomentumScrollEnd={handleSnap}
+                scrollEventThrottle={16}
               />
-            )}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.snapList}
-            snapToInterval={SNAP_INTERVAL}
-            snapToAlignment="start"
-            decelerationRate="fast"
-            disableIntervalMomentum
-            bounces={false}
-            onScroll={Animated.event(
-                [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-                { useNativeDriver: true }
-            )}
-            onMomentumScrollEnd={handleSnap}
-            scrollEventThrottle={16}
-            />
+            </View>
 
             <View style={styles.pagination}>
             {snapshotCards.map((_, index) => (
@@ -927,6 +930,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
 
     snapHeaderRow: {
       marginTop: Spacing.xs,
+      marginBottom: Spacing.md,
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'flex-end',
@@ -939,12 +943,16 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
 
     snapList: {
       paddingTop: Spacing.md,
-      paddingBottom: Spacing.sm,
-      paddingHorizontal: Spacing.lg,
+      paddingBottom: Spacing.lg,
+    },
+
+    snapCarouselWrap: {
+      marginHorizontal: -Spacing.lg,
     },
 
     snapshotCardWrap: {
-      width: SNAP_INTERVAL,
+      width: SCREEN_WIDTH,
+      alignItems: 'center',
     },
 
     snapshotCard: {
@@ -1243,7 +1251,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
       flexDirection: 'row',
       justifyContent: 'center',
       alignItems: 'center',
-      marginTop: Spacing.xs,
+      marginTop: Spacing.md,
       marginBottom: Spacing.xs,
       gap: Spacing.sm,
     },
@@ -1443,5 +1451,5 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
   circleIncomplete: {
     backgroundColor: Colors.overlay,
     borderColor: Colors.white,
-  }
+  },
 });
