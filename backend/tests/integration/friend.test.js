@@ -19,11 +19,56 @@ async function createUser(email) {
 
 async function cleanup() {
   try {
-    await prisma.friendRequest.deleteMany();
-    await prisma.habitCheckIn.deleteMany();
-    await prisma.habit.deleteMany();
+    await prisma.friendRequest.deleteMany({
+      where: {
+        OR: [
+          { sender: {
+            OR: [
+              { email: { contains: "user1_" } },
+              { email: { contains: "user2_" } },
+            ],
+          }, },
+          { receiver: {
+            OR: [
+              { email: { contains: "user1_" } },
+              { email: { contains: "user2_" } },
+            ],
+          }, },
+        ]
+      },
+    });
+    await prisma.habitCheckIn.deleteMany({
+      where: {
+        habit: {
+          user: {
+            OR: [
+              { email: { contains: "user1_" } },
+              { email: { contains: "user2_" } },
+            ],
+          },
+        }
 
-    await prisma.user.deleteMany();
+      },
+    });
+    await prisma.habit.deleteMany({
+      where: {
+        user: {
+          OR: [
+            { email: { contains: "user1_" } },
+            { email: { contains: "user2_" } },
+          ],
+        },
+      },
+    });
+
+  await prisma.user.deleteMany({
+    where: {
+      OR: [
+        { email: { contains: "user1_" } },
+        { email: { contains: "user2_" } },
+      ],
+    },
+  });
   } catch (err) {
     console.error("Cleanup failed:", err);
   }
