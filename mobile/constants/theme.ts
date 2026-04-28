@@ -1,7 +1,6 @@
-import { createContext, useContext, useState, createElement } from 'react';
 import type { ReactNode } from 'react';
-import { Platform } from 'react-native';
-import { ViewStyle, TextStyle } from 'react-native';
+import { createContext, createElement, useContext, useState } from 'react';
+import { Platform, TextStyle, ViewStyle } from 'react-native';
 
 // ── Color palette type ─────────────────────────────────────────
 export type ColorScheme = {
@@ -41,7 +40,7 @@ const lightColors: ColorScheme = {
   midIndigo:    '#6C63FF',
   paleIndigo:   '#EEEDF8',
   white:        '#FFFFFF',
-  danger:       '#C0392B',
+  danger:       '#CC3333',
   badgeGold:    '#D4AC0D',
   overlay:      'rgba(0,0,0,0.35)',
   border:       '#C5E0C5',

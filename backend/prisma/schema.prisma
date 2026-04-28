@@ -48,6 +48,7 @@ model Habit {
   active        Boolean        @default(true)
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
+  deletedAt     DateTime?      @map("deleted_at")
 
   // habit stacking fields
   tier                  HabitTier?  // null until observation window closes

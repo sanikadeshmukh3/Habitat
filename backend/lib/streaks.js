@@ -236,19 +236,42 @@ function evaluateWeeklyStreakHealth(currentStreak, lastCompletedDate, today = ne
 // dates and count consecutive hits.
 
 /**
- * Recalculate a daily streak by walking backwards from today through an
- * array of completed dates. Probation is not considered here — a full
- * recalculation always produces the strict consecutive streak.
+ * Recalculate a daily streak by walking backwards from the most recent
+ * eligible day through an array of completed dates. Probation is not
+ * considered here — a full recalculation always produces the strict
+ * consecutive streak.
  *
- * @param {Date[]} completedDates  All remaining completed check-in dates (any order)
- * @param {Date}   [today]
+ * Only dates on or after `habitCreatedAt` are counted. This prevents
+ * backdated check-ins from inflating a streak beyond what the habit's
+ * lifetime can support.
+ *
+ * @param {Date[]}    completedDates  All remaining completed check-in dates (any order)
+ * @param {Date}      [today]
+ * @param {Date|null} [habitCreatedAt] - If provided, dates strictly before this are excluded
  * @returns {{ streak: number }}
  */
-function recalculateDailyStreak(completedDates, today = new Date()) {
-  const dayKeys = new Set(completedDates.map((d) => toDateKey(d)));
+function recalculateDailyStreak(completedDates, today = new Date(), habitCreatedAt = null) {
+  // Filter out any dates that precede the habit's creation date.
+  // The primary enforcement is the gte filter on the DB query in checkinService,
+  // but this guard keeps the pure function correct when called directly.
+  const eligible = habitCreatedAt
+    ? completedDates.filter(
+        (d) => startOfDay(new Date(d)) >= startOfDay(new Date(habitCreatedAt)),
+      )
+    : completedDates;
+
+  const dayKeys = new Set(eligible.map((d) => toDateKey(d)));
 
   let streak = 0;
   const cursor = startOfDay(today);
+
+  // If today has no completed check-in, slide back to yesterday before
+  // counting. This handles the uncheck-today case: the remaining dates start
+  // from yesterday, so the cursor must begin there rather than breaking
+  // immediately on today's absence and returning 0.
+  if (!dayKeys.has(toDateKey(cursor))) {
+    cursor.setDate(cursor.getDate() - 1);
+  }
 
   while (true) {
     if (dayKeys.has(toDateKey(cursor))) {
@@ -266,16 +289,30 @@ function recalculateDailyStreak(completedDates, today = new Date()) {
  * Recalculate a weekly streak by counting backwards through consecutive ISO
  * weeks that have at least one completed check-in.
  *
- * @param {Date[]} completedDates
- * @param {Date}   [today]
+ * Only dates on or after `habitCreatedAt` are counted. This prevents
+ * backdated check-ins from inflating a streak beyond what the habit's
+ * lifetime can support.
+ *
+ * @param {Date[]}    completedDates
+ * @param {Date}      [today]
+ * @param {Date|null} [habitCreatedAt] - If provided, dates strictly before this are excluded
  * @returns {{ streak: number }}
  */
-function recalculateWeeklyStreak(completedDates, today = new Date()) {
-  if (completedDates.length === 0) return { streak: 0 };
+function recalculateWeeklyStreak(completedDates, today = new Date(), habitCreatedAt = null) {
+  // Filter out any dates that precede the habit's creation date.
+  // The primary enforcement is the gte filter on the DB query in checkinService,
+  // but this guard keeps the pure function correct when called directly.
+  const eligible = habitCreatedAt
+    ? completedDates.filter(
+        (d) => startOfDay(new Date(d)) >= startOfDay(new Date(habitCreatedAt)),
+      )
+    : completedDates;
+
+  if (eligible.length === 0) return { streak: 0 };
 
   // Collect distinct completed weeks, sorted descending
   const weekSet = new Map();
-  for (const d of completedDates) {
+  for (const d of eligible) {
     const w = isoWeekOf(d);
     const key = `${w.year}-${w.week}`;
     weekSet.set(key, w);

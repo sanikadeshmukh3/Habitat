@@ -44,12 +44,12 @@ type ActivationSuggestion = {
 
 // maps each category to an Ionicons icon
 const CATEGORY_ICONS: Record<string, string> = {
-  FITNESS:      "barbell-outline",
-  NUTRITION:    "nutrition-outline",
-  SLEEP:        "moon-outline",
-  PRODUCTIVITY: "book-outline",
-  WELLNESS:     "body-outline",
-  OTHER:        "star-outline",
+  FITNESS:      "barbell",
+  NUTRITION:    "nutrition",
+  SLEEP:        "moon",
+  PRODUCTIVITY: "book",
+  WELLNESS:     "body",
+  OTHER:        "star",
 };
 
 // fixes text casing - capitalizes first letter only
@@ -351,7 +351,7 @@ export default function HomeScreen() {
                     {/* BOTTOM: darker inset — streak + completion */}
                     <View style={styles.cardStats}>
                       <View>
-                        <Text style={styles.statsLabel}>Streak</Text>
+                        <Text style={styles.statsLabel}>Current Streak</Text>
                         <Text style={styles.streakNumber}>
                           {item.streak}
                           <Text style={styles.streakUnit}> {streakUnit}</Text>
@@ -360,7 +360,7 @@ export default function HomeScreen() {
 
                       <View style={styles.completionBlock}>
                         <Text style={styles.completionPct}>{pct}%</Text>
-                        <Text style={styles.completionLabel}>all-time</Text>
+                        <Text style={styles.completionLabel}>All-Time</Text>
                       </View>
                     </View>
                   </TouchableOpacity>
@@ -479,37 +479,39 @@ export default function HomeScreen() {
                       <Text style={styles.friendName}>{item.name}</Text>
                     </TouchableOpacity>
                   ) : (
-                    <View key={item.id} style={{ marginBottom: Spacing.ms }}>
-                      <Text style={{ color: Colors.primaryGreen }}>{item.name}</Text>
+<View key={item.id} style={styles.requestCard}>
+  <View style={styles.requestTopRow}>
+    <View style={styles.friendAvatar}>
+      <Text style={styles.friendAvatarText}>
+        {item.name?.charAt(0)?.toUpperCase() || "?"}
+      </Text>
+    </View>
 
-                      <View style={{ flexDirection: "row", gap: 10, marginTop: Spacing.xs }}>
-                        <TouchableOpacity
-                          onPress={() => acceptRequest(item.id)}
-                          style={{
-                            backgroundColor: Colors.primaryGreen,
-                            padding: Spacing.xs,
-                            borderRadius: Radius.sm,
-                          }}
-                        >
-                          <Text style={{ color: Colors.white }}>Accept</Text>
-                        </TouchableOpacity>
+    <Text style={styles.friendName}>{item.name}</Text>
+  </View>
 
-                        <TouchableOpacity
-                          onPress={() => rejectRequest(item.id)}
-                          disabled={processingId === item.id}
-                          style={{
-                            backgroundColor:
-                              processingId === item.id ? Colors.midBrown : Colors.lightBrown,
-                            padding: Spacing.xs,
-                            borderRadius: Radius.sm,
-                          }}
-                        >
-                          <Text style={{ color: Colors.darkBrown }}>
-                            {processingId === item.id ? "..." : "Decline"}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
+  <View style={styles.requestActions}>
+    <TouchableOpacity
+      onPress={() => acceptRequest(item.id)}
+      style={styles.acceptBtn}
+    >
+      <Text style={styles.acceptText}>Accept</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      onPress={() => rejectRequest(item.id)}
+      disabled={processingId === item.id}
+      style={[
+        styles.declineBtn,
+        processingId === item.id && { opacity: 0.6 }
+      ]}
+    >
+      <Text style={styles.declineText}>
+        {processingId === item.id ? "..." : "Decline"}
+      </Text>
+    </TouchableOpacity>
+  </View>
+</View>
                   ),
                 )
               )}
@@ -638,7 +640,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
       width: 42,
       height: 42,
       borderRadius: Radius.sm,
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.paleGreen,
       justifyContent: "center",
       alignItems: "center",
     },
@@ -694,8 +696,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
       alignItems: "center",
     },
     completionPct: {
-      // bright accent green for contrast against the dark inset
-      color: Colors.lightGreen,
+      color: Colors.white,
       fontSize: FontSize.lg,
       fontWeight: "700",
     },
@@ -980,5 +981,50 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) =>
     },
     activeTabText: {
       color: Colors.white,
+    },
+
+    requestCard: {
+      backgroundColor: Colors.pageBg,
+      borderRadius: Radius.md,
+      padding: Spacing.sm,
+      marginBottom: Spacing.sm,
+    },
+    
+    requestTopRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    
+    requestActions: {
+      flexDirection: "row",
+      gap: Spacing.sm,
+      marginTop: Spacing.sm,
+      marginLeft: 55,
+    },
+    
+    acceptBtn: {
+      flex: 1,
+      backgroundColor: Colors.primaryGreen,
+      paddingVertical: Spacing.xs,
+      borderRadius: Radius.full,
+      alignItems: "center",
+    },
+    
+    acceptText: {
+      color: Colors.white,
+      fontWeight: "600",
+    },
+    
+    declineBtn: {
+      flex: 1,
+      backgroundColor: Colors.lightBrown,
+      paddingVertical: Spacing.xs,
+      borderRadius: Radius.full,
+      alignItems: "center",
+    },
+    
+    declineText: {
+      color: Colors.darkBrown,
+      fontWeight: "600",
     },
   });

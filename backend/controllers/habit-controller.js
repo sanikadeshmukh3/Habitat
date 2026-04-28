@@ -21,9 +21,10 @@ function toLocalDateKey(d) {
 async function getHabits(req, res, next) {
   try {
     const userId = req.user.userId;
+    const includeInactive = req.query.includeInactive === 'true';
 
     const habits = await prisma.habit.findMany({
-      where:   { userId },
+      where:   { userId, ...(!includeInactive && { active: true }) },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -153,6 +154,7 @@ async function createHabit(req, res, next) {
     const duplicate = await prisma.habit.findFirst({
       where: {
         userId,
+        active: true,
         name: { equals: body.name.trim(), mode: 'insensitive' },
       },
     });
@@ -217,6 +219,19 @@ async function updateHabit(req, res, next) {
         return;
       }
       data.name = body.name.trim();
+
+      const duplicate = await prisma.habit.findFirst({
+        where: {
+          userId,
+          active: true,
+          name: { equals: data.name, mode: 'insensitive' },
+          NOT: { id },
+        },
+      });
+      if (duplicate) {
+        res.status(409).json({ error: 'You already have a habit with that name' });
+        return;
+      }
     }
 
     if (body.description !== undefined) {
@@ -277,15 +292,20 @@ async function deleteHabit(req, res, next) {
       return;
     }
 
-    // Delete check-ins first to satisfy the foreign key constraint
-    await prisma.habitCheckIn.deleteMany({ where: { habitId: id } });
-
-    // habit stacking — delete any schedule entries for this habit before
-    // deleting the habit itself to satisfy the foreign key constraint on
-    // StackingScheduleEntry.habitId
+    // habit stacking — delete any schedule entries before soft-deleting the habit
+    // to satisfy the foreign key constraint on StackingScheduleEntry.habitId
     await prisma.stackingScheduleEntry.deleteMany({ where: { habitId: id } });
-    
-    await prisma.habit.delete({ where: { id } });
+
+    // soft delete — set active to false rather than destroying the record
+    // check-ins are intentionally preserved so historical calendar data remains intact
+    // the habit disappears from all active views but its completion history is never lost
+    const now = new Date();
+    const deletedAt = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+
+    await prisma.habit.update({
+      where: { id },
+      data:  { active: false, deletedAt },
+    });
 
     res.json({ data: { id } });
   } catch (err) {

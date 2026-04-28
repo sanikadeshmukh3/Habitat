@@ -1,9 +1,9 @@
+import { FontSize, Radius, Spacing, createSharedStyles, useTheme } from '@/constants/theme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ImageBackground,
   Modal,
-  Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -12,11 +12,10 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { useCreateHabit, useUpdateHabit } from '../hooks/use-habits';
 import { Habit, HabitCategory, HabitFrequency } from '../types/habit';
-import { useTheme, FontSize, Radius, Spacing, createSharedStyles } from '@/constants/theme';
 
 const CATEGORIES = [
   { label: 'FITNESS',      emoji: '🏃' },
@@ -34,13 +33,14 @@ export default function CreateHabitScreen() {
   
   const router = useRouter();
 
-  // If these params are present we are in edit mode
+  // if these params are present we are in edit mode
   const params = useLocalSearchParams<{
     habitId?:       string;
     name?:          string;
     habitCategory?: string;
     frequency?:     string;
     visibility?:    string;
+    fromAI?:        string;
   }>();
 
   const isEditMode = !!params.habitId;
@@ -158,6 +158,9 @@ export default function CreateHabitScreen() {
               />
               <Text style={styles.charCount}>{habit.name.length}/60</Text>
             </View>
+            {submitError && (
+                <Text style={styles.errorText}>{submitError}</Text>
+            )}
           </SectionCard>
 
           {/* Category */}
@@ -190,9 +193,13 @@ export default function CreateHabitScreen() {
               {(['DAILY', 'WEEKLY'] as const).map((opt) => (
                 <TouchableOpacity
                   key={opt}
-                  style={[styles.segment, habit.frequency === opt && styles.segmentActive]}
-                  onPress={() => updateHabitField('frequency', opt)}
-                  activeOpacity={0.8}
+                  style={[
+                    styles.segment,
+                    habit.frequency === opt && styles.segmentActive,
+                    isEditMode && styles.segmentLocked,
+                  ]}
+                  onPress={() => { if (!isEditMode) updateHabitField('frequency', opt); }}
+                  activeOpacity={isEditMode ? 1 : 0.8}
                 >
                   <Text style={[styles.segmentLabel, habit.frequency === opt && styles.segmentLabelActive]}>
                     {opt}
@@ -201,6 +208,14 @@ export default function CreateHabitScreen() {
               ))}
             </View>
           </SectionCard>
+
+          {isEditMode && (
+            <View style={styles.freqLockedNote}>
+              <Text style={styles.freqLockedNoteText}>
+                Frequency cannot be changed after a habit is created. To track at a different frequency, consider creating a new habit.
+              </Text>
+            </View>
+          )}
 
           {/* Visibility */}
           <SectionCard styles={styles}>
@@ -246,12 +261,6 @@ export default function CreateHabitScreen() {
             )}
           </TouchableOpacity>
 
-          {submitError && (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorBannerText}>⚠️  {submitError}</Text>
-            </View>
-          )}
-
           {/* AI nudge — only shown in create mode */}
           {!isEditMode && (
             <TouchableOpacity
@@ -294,7 +303,14 @@ export default function CreateHabitScreen() {
                 <TouchableOpacity
                   style={styles.modalPrimaryBtn}
                   activeOpacity={0.85}
-                  onPress={() => { setShowSuccess(false); resetForm(); }}
+                  onPress={() => { 
+                    setShowSuccess(false);
+                    if (params.fromAI === 'true') {
+                      router.replace('/create-habit-ai');
+                    } else {
+                      resetForm();
+                    }
+                  }}
                 >
                   <Text style={styles.modalPrimaryLabel}>＋  Create Another Habit</Text>
                 </TouchableOpacity>
@@ -401,8 +417,24 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
     backgroundColor: Colors.midGreen, shadowColor: Colors.midGreen,
     shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: Radius.sm, elevation: 2,
   },
+  segmentLocked: { opacity: 0.45 },
+  freqLockedNote: {
+    marginTop: -Spacing.sm,
+    marginBottom: Spacing.md,
+    backgroundColor: Colors.paleIndigo,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
   segmentLabel:       { fontSize: FontSize.sm, fontWeight: '600', color: Colors.lightBrown },
   segmentLabelActive: { color: Colors.white },
+  freqLockedNoteText: {
+    fontSize: FontSize.xs,
+    color: Colors.midIndigo,
+    lineHeight: 17,
+  },
   toggleRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   toggleText: { flex: 1, gap: 3 },
   toggleSub:  { fontSize: FontSize.xs, color: Colors.lightBrown, marginTop: Spacing.xs },
@@ -421,11 +453,7 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
   submitBtnDisabled: { backgroundColor: Colors.lightGreen, shadowOpacity: 0.1 },
   submitLeaf:        { fontSize: FontSize.lg },
   submitLabel:       { fontSize: FontSize.md, fontWeight: '700', color: Colors.white, letterSpacing: 0.3 },
-  errorBanner: {
-    marginTop: Spacing.sm, backgroundColor: Colors.white, borderWidth: 1.5,
-    borderColor: Colors.danger, borderRadius: Radius.md, paddingVertical: Spacing.ms, paddingHorizontal: Spacing.md,
-  },
-  errorBannerText: { fontSize: FontSize.sm, color: Colors.danger, fontWeight: '600', textAlign: 'center' },
+  errorText: { fontSize: FontSize.xs, color: Colors.danger, fontStyle: 'italic', marginTop: Spacing.sm },
   aiNudge: {
     marginTop: Spacing.md, borderRadius: Radius.md, borderWidth: 1.5,
     borderColor: Colors.midIndigo, backgroundColor: Colors.pageBg, padding: Spacing.md,

@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+    Alert,
     View,
     Text,
     StyleSheet,
@@ -25,6 +26,7 @@ type FriendType = {
     username: string;
     firstName: string;
     lastName?: string;
+    points: number;
     habit: {
       id: string;
       name: string;
@@ -269,6 +271,7 @@ export default function FriendScreen() {
             username: data.username,
             firstName: data.firstName,
             lastName: data.lastName,
+            points: data.points ?? 0,
             habit: data.habit.map((h: any) => ({
               id: h.id,
               name: h.name,
@@ -329,6 +332,39 @@ export default function FriendScreen() {
     //       console.error(err);
     //     }
     //   };
+    
+    const removeFriend = async () => {
+      if (!senderId || !friendId) return;
+    
+      try {
+        await api.post("/friend/remove", {
+          userId: senderId,
+          friendId,
+        });
+    
+        setStatus("none");
+      } catch (err) {
+        console.error(err);
+        alert("Failed to remove friend");
+      }
+    };
+    const confirmRemoveFriend = () => {
+      Alert.alert(
+        "Remove Friend",
+        "Are you sure you want to remove this friend? This action cannot be undone.",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Remove",
+            style: "destructive",
+            onPress: removeFriend,
+          },
+        ]
+      );
+    };
 
     const sendRequest = async (targetFriendId?: string) => {
         if (!senderId) {
@@ -370,8 +406,11 @@ export default function FriendScreen() {
         // already friends
         if (status === "friends") {
           return (
-            <TouchableOpacity style={[styles.addBtn, { backgroundColor: '#aaa' }]} disabled>
-              <Text style={styles.addText}>Friends</Text>
+            <TouchableOpacity
+              style={[styles.addBtn, { backgroundColor: "#2E6F40" }]}
+              onPress={confirmRemoveFriend}
+            >
+              <Text style={styles.addText}>Remove Friend</Text>
             </TouchableOpacity>
           );
         }
@@ -399,7 +438,7 @@ export default function FriendScreen() {
 
       const displayName = `${friend?.firstName ?? ""} ${friend?.lastName ?? ""}`;
       const publicTag = friend ? `@${friend.username}`: "";
-      const points = 0; // temp
+      const points = friend?.points ?? 0;
 
       const publicHabits = useMemo(
         () =>

@@ -528,6 +528,12 @@ app.post("/friend/request", async (req, res) => {
   try {
     const { senderId, friendId } = req.body;
 
+    if (senderId === friendId) {
+      return res.status(400).json({
+        error: "Cannot send friend request to yourself",
+      });
+    }
+
     // 1. Check if already friends
     const user = await prisma.user.findUnique({
       where: { id: senderId },
@@ -617,6 +623,35 @@ app.post("/friend/reject", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to reject request" });
+  }
+});
+
+app.post("/friend/remove", async (req, res) => {
+  const { userId, friendId } = req.body;
+
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        friends: {
+          disconnect: { id: friendId },
+        },
+      },
+    });
+
+    await prisma.user.update({
+      where: { id: friendId },
+      data: {
+        friends: {
+          disconnect: { id: userId },
+        },
+      },
+    });
+
+    return res.json({ message: "Friend removed" });
+  } catch (err) {
+    console.error("Remove friend failed:", err);
+    return res.status(500).json({ error: "Failed to remove friend" });
   }
 });
 

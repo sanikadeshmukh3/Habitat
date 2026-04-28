@@ -75,7 +75,7 @@ export default function Signup() {
 
       <TouchableOpacity
         onPress={() => router.back()}
-        style={{ position: "absolute", top: Spacing.top_margin, left: Spacing.lg, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md, backgroundColor: Colors.pageBg, borderRadius: Radius.sm,
+        style={{ position: "absolute", top: Spacing.top_margin, left: Spacing.lg, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md, backgroundColor: Colors.paleGreen, borderRadius: Radius.sm,
         }}
       >
         <Text style={{ color: Colors.primaryGreen, fontWeight: "600" }}>← Back</Text>

@@ -12,15 +12,15 @@
  * (e.g., calendar and habit detail) stay synchronized automatically.
  */
 
+import api from '@/lib/api';
 import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  UseQueryResult,
   UseMutationResult,
+  UseQueryResult,
+  useMutation,
+  useQuery,
+  useQueryClient,
 } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
-import api from '@/lib/api';
 import { habitKeys } from './use-habits';
 
 export type CheckInPayload = {
@@ -77,14 +77,16 @@ export const checkinKeys = {
  * - Handles both Date objects and ISO strings
  */
 export function buildMonthKey(habitId: string, dateInput: string | Date): string {
+  // If given an ISO string, extract the date portion directly to avoid
+  // timezone conversion issues and ensure the key matches the backend format
   if (typeof dateInput === 'string') {
-    return `${habitId}-${dateInput}`;
+    const datePart = dateInput.substring(0, 10); // "2026-04-25T12:00:00.000Z" → "2026-04-25"
+    return `${habitId}-${datePart}`;
   }
 
-  const year = dateInput.getFullYear();
+  const year  = dateInput.getFullYear();
   const month = String(dateInput.getMonth() + 1).padStart(2, '0');
-  const day = String(dateInput.getDate()).padStart(2, '0');
-
+  const day   = String(dateInput.getDate()).padStart(2, '0');
   return `${habitId}-${year}-${month}-${day}`;
 }
 
@@ -157,8 +159,10 @@ export function useUpsertCheckIn(
     mutationFn: (payload: CheckInPayload) => upsertCheckIn(payload),
 
     onMutate: async (payload) => {
+      // cancel all checkin queries, not just the current month,
+      // since the calendar merges prev/current/next month data
       await queryClient.cancelQueries({
-        queryKey: checkinKeys.month(year, month),
+        queryKey: checkinKeys.all(),
       });
 
       const previousMonthData = queryClient.getQueryData<MonthlyCheckInMap>(
@@ -211,16 +215,16 @@ export function useUpsertCheckIn(
     },
 
     onSettled: (_data, _error, payload) => {
-      queryClient.invalidateQueries({
-        queryKey: checkinKeys.month(year, month),
-      });
-
+      // intentionally NOT invalidating checkinKeys here
+      // onMutate and onSuccess already manage the checkin cache correctly
+      // invalidating causes a background refetch that races with onSuccess
+      // and overwrites the cache with stale data
       if (payload?.habitId) {
         queryClient.invalidateQueries({
           queryKey: habitKeys.detail(payload.habitId),
         });
       }
-
+    
       queryClient.invalidateQueries({
         queryKey: habitKeys.list(),
       });

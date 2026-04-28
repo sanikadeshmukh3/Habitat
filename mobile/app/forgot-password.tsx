@@ -57,7 +57,7 @@ import api from "@/lib/api";
             left: 20,
             paddingVertical: Spacing.sm,
             paddingHorizontal: Spacing.md,
-            backgroundColor: Colors.white,
+            backgroundColor: Colors.paleGreen,
             borderRadius: Radius.sm,
           }}
         >
@@ -87,7 +87,7 @@ import api from "@/lib/api";
           onChangeText={setEmail}
           style={{
             borderWidth: 1,
-            borderColor: Colors.white,
+            borderColor: Colors.darkBrown,
             padding: Spacing.ms,
             marginBottom: Spacing.lg,
             borderRadius: Radius.sm,

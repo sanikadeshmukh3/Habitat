@@ -23,6 +23,15 @@ function normalizeToStartOfDay(dateInput) {
   return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 0, 0, 0, 0);
 }
 
+// returns the Monday and Sunday that start/end the week that contains 'date'
+function getWeekBounds(d) {
+  const dayOfWeek    = d.getDay();
+  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const weekStart    = new Date(d.getFullYear(), d.getMonth(), d.getDate() + daysToMonday, 0, 0, 0, 0);
+  const weekEnd      = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 7, 0, 0, 0, 0);
+  return { weekStart, weekEnd };
+}
+
 // ─── Main upsert ──────────────────────────────────────────────────────────────
 
 /**
@@ -30,6 +39,10 @@ function normalizeToStartOfDay(dateInput) {
  *   1. Streak update (daily or weekly rules, with probation period for daily)
  *   2. Points award (1 + floor(log2(newStreak)))
  *   3. Badge evaluation and insert
+ *
+ * Only check-ins on or after `habit.createdAt` are counted towards streaks and
+ * points. This prevents backdated check-ins from farming streaks or points
+ * beyond what the habit's lifetime can legitimately produce.
  *
  * Returns the check-in row plus metadata the client can use for toasts/UI:
  *   { checkIn, pointsEarned, newStreak, streakBroke, newBadges, totalPoints }
@@ -71,27 +84,8 @@ async function upsertHabitCheckIn(userId, habitId, data) {
     throw { status: 400, message: 'Cannot check in an inactive habit' };
   }
 
-  // for weekly habits, block a second check-in within the same Mon–Sun week
-  if (habit.frequency === 'WEEKLY') {
-    const d = new Date(date);
-    const dayOfWeek = d.getDay();
-    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const weekStart = new Date(d.getFullYear(), d.getMonth(), d.getDate() + daysToMonday, 0, 0, 0, 0);
-    const weekEnd   = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 7);
-
-    const existingThisWeek = await prisma.habitCheckIn.findFirst({
-      where: {
-        habitId,
-        completed: true,
-        date: { gte: weekStart, lt: weekEnd },
-      },
-    });
-
-    if (existingThisWeek) {
-      throw { status: 409, message: 'This habit has already been completed this week' };
-    }
-  }
+  // any check-in or feedback edit within the same Mon-Sun week always lands on the same existing record,
+  // making duplicates physically impossible
 
   const checkInDate = normalizeToStartOfDay(date);
   const nextDay     = new Date(checkInDate);
@@ -100,10 +94,23 @@ async function upsertHabitCheckIn(userId, habitId, data) {
   // ── Wrap everything in a transaction so check-in + streak + points + badges are atomic ──
   const result = await prisma.$transaction(async (tx) => {
 
-    // 1. Find any existing check-in for this day (needed for both paths below)
-    const existing = await tx.habitCheckIn.findFirst({
-      where: { habitId, date: { gte: checkInDate, lt: nextDay } },
-    });
+    // 1. Find any existing check-in for this day/week
+    //    daily habits: look up by exact date.
+    //    weekly habits: look up by the full Mon–Sun week so that feedback edits
+    //      from any day of the week always find and update the original record,
+    //      rather than attempting to create a duplicate
+    let existing;
+    if (habit.frequency === 'WEEKLY') {
+      const { weekStart, weekEnd } = getWeekBounds(checkInDate);
+      existing = await tx.habitCheckIn.findFirst({
+        where: { habitId, date: { gte: weekStart, lt: weekEnd } },
+        orderBy: { date: 'desc' }, // always pick the most recently modified record
+      });
+    } else {
+      existing = await tx.habitCheckIn.findFirst({
+        where: { habitId, date: { gte: checkInDate, lt: nextDay } },
+      });
+    }
 
     // ── UNCHECK PATH ──────────────────────────────────────────────────────────
     // When unchecking we need to:
@@ -140,18 +147,20 @@ async function upsertHabitCheckIn(userId, habitId, data) {
         });
       }
 
-      // All completed check-ins that remain after this uncheck
+      // All completed check-ins that remain after this uncheck, restricted to
+      // dates on or after the habit's creation date so backdated entries cannot
+      // contribute to the recalculated streak.
       const remaining = await tx.habitCheckIn.findMany({
-        where: { habitId, completed: true },
+        where: { habitId, completed: true, date: { gte: habit.createdAt } },
         orderBy: { date: 'desc' },
       });
       const remainingDates = remaining.map((c) => new Date(c.date));
 
       let newStreak = 0;
       if (habit.frequency === 'DAILY') {
-        newStreak = recalculateDailyStreak(remainingDates).streak;
+        newStreak = recalculateDailyStreak(remainingDates, new Date()).streak;
       } else if (habit.frequency === 'WEEKLY') {
-        newStreak = recalculateWeeklyStreak(remainingDates).streak;
+        newStreak = recalculateWeeklyStreak(remainingDates, new Date()).streak;
       }
 
       await tx.habit.update({
@@ -180,7 +189,7 @@ async function upsertHabitCheckIn(userId, habitId, data) {
 
       return {
         checkIn,
-        pointsEarned:  -pointsToDeduct,
+        pointsEarned:  pointsToDeduct > 0 ? -pointsToDeduct : 0,
         newStreak,
         streakBroke:   newStreak < habit.currentStreak,
         newBadges:     [],
@@ -197,14 +206,13 @@ async function upsertHabitCheckIn(userId, habitId, data) {
           completed:        true,
           difficultyRating: difficultyRating == null ? null : Number(difficultyRating),
           notes:            notes === '' ? null : notes,
-          date:             checkInDate,
         },
       });
     } else {
       checkIn = await tx.habitCheckIn.create({
         data: {
           habitId,
-          date:             checkInDate,
+          date:             checkInDate, // only set on create
           completed:        true,
           pointsEarned:     0, // updated below once we know the streak
           difficultyRating: difficultyRating == null ? null : Number(difficultyRating),
@@ -213,13 +221,15 @@ async function upsertHabitCheckIn(userId, habitId, data) {
       });
     }
 
-    // 2. Compute new streak from prior completed check-ins
+    // 2. Compute new streak from prior completed check-ins, restricted to
+    //    dates on or after the habit's creation date so backdated entries
+    //    cannot contribute to the streak or earn points.
     let newStreak               = habit.currentStreak;
     let newProbationPeriodStart = habit.streakProbationPeriodStart;
     let streakBroke             = false;
 
     const priorCheckIns = await tx.habitCheckIn.findMany({
-      where: { habitId, completed: true, date: { lt: checkInDate } },
+      where: { habitId, completed: true, date: { gte: habit.createdAt, lt: checkInDate } },
       orderBy: { date: 'desc' },
     });
     const priorDates    = priorCheckIns.map((c) => new Date(c.date));
@@ -308,7 +318,7 @@ async function upsertHabitCheckIn(userId, habitId, data) {
       const def = BADGE_DEFINITIONS.find((b) => b.id === id);
       return { id: def.id, name: def.name, emoji: def.emoji, description: def.description };
     });
-
+    
     return {
       checkIn,
       pointsEarned,
