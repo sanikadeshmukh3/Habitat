@@ -1,20 +1,19 @@
+import { FontSize, Radius, Spacing, useTheme } from '@/constants/theme';
 import api from '@/lib/api';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import DraggableFlatList, {
-    RenderItemParams,
-    ScaleDecorator,
+  RenderItemParams,
+  ScaleDecorator,
 } from 'react-native-draggable-flatlist';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useTheme, FontSize, Radius, Spacing } from '@/constants/theme';
 
 const colors = {
   bg:            '#F7FAF5',
@@ -178,8 +177,7 @@ export default function HabitRankingScreen() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container}>
 
         {/* header */}
         <View style={styles.header}>
@@ -230,8 +228,8 @@ export default function HabitRankingScreen() {
           </View>
         )}
 
-        {/* draggable pending habits */}
-        <View style={styles.section}>
+        {/* draggable pending habits — flex: 1 so it fills all remaining space */}
+        <View style={[styles.section, { flex: 1 }]}>
           <Text style={styles.sectionLabel}>
             {isReorderMode ? 'Upcoming Habits' : 'Your Focus Order'}
           </Text>
@@ -241,6 +239,8 @@ export default function HabitRankingScreen() {
             keyExtractor={(item) => item.habitId}
             renderItem={renderDraggableItem}
             contentContainerStyle={{ paddingBottom: 20 }}
+            scrollEnabled={false}
+            activationDistance={10}
           />
         </View>
 
@@ -262,8 +262,7 @@ export default function HabitRankingScreen() {
           </TouchableOpacity>
         </View>
 
-      </SafeAreaView>
-    </GestureHandlerRootView>
+    </SafeAreaView>
   );
 }
 
@@ -317,7 +316,6 @@ const makeStyles = (Colors: ReturnType<typeof useTheme>['Colors']) => StyleSheet
   section: {
     paddingHorizontal: Spacing.md,
     marginBottom: Spacing.md,
-    flex: 1,
   },
   sectionLabel: {
     fontSize: FontSize.xs,

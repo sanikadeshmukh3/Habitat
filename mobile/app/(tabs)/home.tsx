@@ -4,6 +4,7 @@ import StackingStatusCard from "@/components/StackingStatusCard";
 import { FontSize, Radius, Spacing, useTheme } from "@/constants/theme";
 import api from "@/lib/api";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useMemo, useRef, useState } from "react";
 import {
@@ -69,6 +70,7 @@ export default function HomeScreen() {
   const animation = useRef(new Animated.Value(0)).current;
   const router = useRouter();
   const scrollX = useRef(new Animated.Value(0)).current;
+  const enrollmentModalDismissed = useRef(false);
 
   const [habits,       setHabits]       = useState<DashboardHabit[]>([]);
   const [friends,      setFriends]      = useState<Friend[]>([]);
@@ -108,15 +110,19 @@ export default function HomeScreen() {
         try {
           const response = await api.post("/stacking/app-open", {});
           const { enrollmentId, triggerStacking, triggeringHabitNames, activationSuggestion } = response.data;
-
+      
           setEnrollmentId(enrollmentId ?? null);
-
+      
           // show enrollment modal only if stacking is triggered and user isn't already enrolled
           if (triggerStacking && !enrollmentId) {
-            setTriggeringHabitNames(triggeringHabitNames ?? []);
-            setShowEnrollmentModal(true);
+            const dismissed = await AsyncStorage.getItem('stackingEnrollmentDismissed');
+            if (!dismissed) {
+              await AsyncStorage.setItem('stackingEnrollmentDismissed', 'true');
+              setTriggeringHabitNames(triggeringHabitNames ?? []);
+              setShowEnrollmentModal(true);
+            }
           }
-
+      
           // show activation modal if a habit just cleared its proving window
           if (activationSuggestion) {
             setActivationSuggestion(activationSuggestion);
@@ -181,7 +187,7 @@ export default function HomeScreen() {
   // habit stacking — confirms before opting the user out of their active schedule
   const handleOptOut = () => {
     if (!enrollmentId) return;
-
+    
     Alert.alert(
       "Opt Out of Habit Stacking",
       "Are you sure? All dormant habits will be reactivated and your current progress will be lost.",
@@ -193,7 +199,11 @@ export default function HomeScreen() {
           onPress: async () => {
             try {
               await api.post("/stacking/opt-out", { enrollmentId });
+              await AsyncStorage.setItem('stackingEnrollmentDismissed', 'true'); // suppress for this session
               setEnrollmentId(null);
+              // re-fetch so dormant habits reappear immediately without requiring navigation
+              const response = await api.get("/dashboard");
+              setHabits(response.data.habits || []);
             } catch (err) {
               console.error("Opt out error:", err);
               Alert.alert("Error", "Could not opt out. Please try again.");
@@ -528,7 +538,10 @@ export default function HomeScreen() {
           setShowEnrollmentModal(false);
           router.push({ pathname: "/habit-ranking" as any, params: { mode: "enroll" } });
         }}
-        onDismiss={() => setShowEnrollmentModal(false)}
+        onDismiss={() => {
+          enrollmentModalDismissed.current = true;
+          setShowEnrollmentModal(false);
+        }}
       />
 
       {/* HABIT STACKING ACTIVATION MODAL — shown when a habit clears its proving window */}
