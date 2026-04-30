@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Habitat Admin Manual</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+  <header class="header-flex">
+    <div class="header-left">
+      <img src="../mobile/assets/images/habitat-logo.png" alt="Habitat Logo" class="logo" />
+    </div>
+
+    <div class="header-right">
+      <h1>Habitat Admin Manual</h1>
+      <p>System setup, configuration, database management, maintenance, and troubleshooting guide</p>
+    </div>
+  </header>
+
+  <section>
+    <h2>Table of Contents</h2>
+    <ul>
+      <li><a href="#overview">System Overview</a></li>
+      <li><a href="#architecture">System Architecture</a></li>
+      <li><a href="#installation">Installation and Setup</a></li>
+      <li><a href="#configuration">Configuration</a></li>
+      <li><a href="#database">Database Setup and Management</a></li>
+      <li><a href="#commands">Command Reference</a></li>
+      <li><a href="#maintenance">Maintenance and Updates</a></li>
+      <li><a href="#testing">Testing</a></li>
+      <li><a href="#security">Security and Access Notes</a></li>
+      <li><a href="#troubleshooting">Troubleshooting</a></li>
+    </ul>
+  </section>
+
+  <section id="overview">
+    <h2>System Overview</h2>
+
+    <p>
+      Habitat is a full-stack mobile habit tracking application. The system allows users to create habits,
+      check in on habits, track progress, view weekly recaps, connect with friends, and manage their profile
+      and settings.
+    </p>
+
+    <p>
+      This admin manual is intended for system administrators, developers, or maintainers who need to install,
+      configure, run, update, troubleshoot, or manage the Habitat system.
+    </p>
+
+    <div class="admin-grid">
+      <details class="admin-card" open>
+        <summary>Primary Admin Responsibilities</summary>
+        <div class="admin-content">
+          <ul>
+            <li>Install and run the Habitat application locally or in a hosted environment.</li>
+            <li>Configure environment variables for the backend, database, and mobile app.</li>
+            <li>Manage the PostgreSQL database and Prisma schema.</li>
+            <li>Run migrations and seed test data when needed.</li>
+            <li>Monitor server and database availability.</li>
+            <li>Troubleshoot login, connectivity, API, and database issues.</li>
+            <li>Maintain documentation and release notes for future updates.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Main System Components</summary>
+        <div class="admin-content">
+          <ul>
+            <li><strong>Mobile App:</strong> React Native application built with Expo.</li>
+            <li><strong>Backend Server:</strong> Node.js and Express server that handles application requests.</li>
+            <li><strong>Database:</strong> PostgreSQL database managed through Prisma ORM.</li>
+            <li><strong>Authentication:</strong> User login and protected routes using token-based authentication.</li>
+            <li><strong>AI Features:</strong> Habit suggestions and Wrapped summaries where enabled.</li>
+          </ul>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section id="architecture">
+    <h2>System Architecture</h2>
+
+    <p>
+      Habitat uses a client-server architecture. The mobile app sends requests to the backend server.
+      The backend validates requests, applies business logic, and reads from or writes to the database.
+    </p>
+
+    <div class="note">
+      <p>
+        <strong>Architecture diagram:</strong>
+        <a href="https://lucid.app/lucidchart/40a98a36-238b-440d-ba9b-ec5630f5753a/edit?viewport_loc=-988%2C12%2C2433%2C1399%2C0_0&invitationId=inv_06646e6c-329a-49b4-b93d-c5a489a9f95c">View Habitat Architecture Diagram</a>
+      </p>
+    </div>
+    <p>
+
+    </p>
+
+    <div class="admin-grid">
+      <details class="admin-card" open>
+        <summary>Architecture Flow</summary>
+        <div class="admin-content">
+          <ol>
+            <li>The user interacts with the Habitat mobile app.</li>
+            <li>The mobile app sends a request to the backend API.</li>
+            <li>The backend checks authentication when required.</li>
+            <li>The backend processes the request using routes, controllers, and services.</li>
+            <li>Prisma communicates with the PostgreSQL database.</li>
+            <li>The backend returns a response to the mobile app.</li>
+            <li>The app updates the screen with the newest data.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Technology Stack</summary>
+        <div class="admin-content">
+          <ul>
+            <li><strong>Mobile:</strong> React Native, Expo, TypeScript</li>
+            <li><strong>Backend:</strong> Node.js, Express</li>
+            <li><strong>Database:</strong> PostgreSQL</li>
+            <li><strong>ORM:</strong> Prisma</li>
+            <li><strong>Authentication:</strong> JWT-based authentication</li>
+            <li><strong>Testing:</strong> Jest, Supertest</li>
+            <li><strong>Builds:</strong> Expo Application Services</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Repository Structure</summary>
+        <div class="admin-content">
+          <div class="code">
+Habitat/<br />
+&nbsp;&nbsp;backend/ &nbsp;&nbsp; Backend server, routes, controllers, services, Prisma schema, tests<br />
+&nbsp;&nbsp;mobile/ &nbsp;&nbsp;&nbsp; React Native Expo mobile application<br />
+&nbsp;&nbsp;docs/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Online documentation, manuals, release notes<br />
+&nbsp;&nbsp;setup.sh &nbsp;&nbsp; Setup script for running the project<br />
+&nbsp;&nbsp;README.md
+          </div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section id="installation">
+    <h2>Installation and Setup</h2>
+
+    <p>
+      This section explains how to prepare a machine to run Habitat locally. Administrators should confirm
+      that all required tools are installed before starting the app.
+    </p>
+
+    <div class="admin-grid">
+      <details class="admin-card" open>
+        <summary>Required Software</summary>
+        <div class="admin-content">
+          <ul>
+            <li>Node.js v18 or higher</li>
+            <li>npm</li>
+            <li>Git</li>
+            <li>PostgreSQL access</li>
+            <li>Expo CLI or Expo tooling through npm</li>
+            <li>Android Studio emulator or iOS simulator</li>
+          </ul>
+
+          <p>Verify common tools with:</p>
+
+          <div class="code">
+node -v<br />
+npm -v<br />
+git --version
+          </div>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Clone the Repository</summary>
+        <div class="admin-content">
+          <p>Clone the Habitat repository and move into the project folder.</p>
+
+          <div class="code">
+git clone https://github.com/sanikadeshmukh3/Habitat.git<br />
+cd Habitat
+          </div>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Run the Setup Script</summary>
+        <div class="admin-content">
+          <p>
+            The setup script is intended to simplify local startup. It should install dependencies and start
+            the required development services.
+          </p>
+
+          <div class="code">
+./setup.sh
+          </div>
+
+          <p>
+            Once Expo starts, press <span class="inline-code">a</span> for Android or
+            <span class="inline-code">i</span> for iOS when prompted.
+          </p>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Manual Backend Startup</summary>
+        <div class="admin-content">
+          <p>If the setup script is not used, the backend can be started manually.</p>
+
+          <div class="code">
+cd backend<br />
+npm install<br />
+npx prisma generate<br />
+npm run dev
+          </div>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Manual Mobile Startup</summary>
+        <div class="admin-content">
+          <p>Start the mobile app separately from the backend.</p>
+
+          <div class="code">
+cd mobile<br />
+npm install<br />
+npx expo start
+          </div>
+
+          <p>
+            Make sure the backend is running before testing login, habits, calendar, Wrapped, or friends.
+          </p>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>System Startup Flow</summary>
+        <div class="admin-content">
+            <ol>
+            <li>Start the backend server</li>
+            <li>Confirm database connection is successful</li>
+            <li>Start the mobile application</li>
+            <li>Verify API connectivity</li>
+            <li>Log in with a test user</li>
+            <li>Confirm dashboard loads correctly</li>
+            </ol>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section id="configuration">
+    <h2>Configuration</h2>
+
+    <p>
+      Habitat uses environment variables to keep configuration separate from source code.
+      Administrators should verify these values before running or deploying the app.
+    </p>
+
+    <div class="admin-grid">
+      <details class="admin-card" open>
+        <summary>Backend Environment Variables</summary>
+        <div class="admin-content">
+          <p>Typical backend variables include:</p>
+
+          <div class="code">
+DATABASE_URL="postgresql://username:password@host:port/database"<br />
+JWT_SECRET="your-secret-key"<br />
+PORT=3000
+          </div>
+
+          <ul>
+            <li><span class="inline-code">DATABASE_URL</span> connects the backend to PostgreSQL.</li>
+            <li><span class="inline-code">JWT_SECRET</span> is required for login/session authentication.</li>
+            <li><span class="inline-code">PORT</span> controls where the backend server runs.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Mobile Environment Variables</summary>
+        <div class="admin-content">
+          <p>When the app is in production, this variable should point to the live backend API endpoint that is deployed on render.</p>
+          <div class="code">
+EXPO_PUBLIC_API_URL="https://habitat-1.onrender.com"
+          </div>
+
+          <div class="note">
+            <p>
+                <strong>Deployment Note:</strong> In production, the backend is hosted remotely.
+                Ensure the mobile application points to the correct deployed API URL instead of local server.
+            </p>
+          </div>
+
+          <p>When the app is in development, this variable should point to the local backend API endpoint.</p>
+
+          <div class="code">
+EXPO_PUBLIC_API_URL="http://localhost:3000"
+          </div>
+
+          <div class="note">
+            <p>
+              <strong>Android emulator note:</strong>
+              Android emulators often require <span class="inline-code">http://10.0.2.2:3000</span>
+              instead of <span class="inline-code">http://localhost:3000</span>.
+            </p>
+          </div>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Configuration Checklist</summary>
+        <div class="admin-content">
+          <ul>
+            <li>Confirm backend environment variables are present.</li>
+            <li>Confirm the database URL points to the correct database.</li>
+            <li>Confirm JWT secret is set before testing login.</li>
+            <li>Confirm the mobile app points to the correct backend URL.</li>
+            <li>Restart the backend after changing environment variables.</li>
+            <li>Restart Expo after changing mobile environment variables.</li>
+          </ul>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section id="database">
+    <h2>Database Setup and Management</h2>
+
+    <p>
+      Habitat uses PostgreSQL to store user accounts, habits, check-ins, friend data, settings,
+      and progress-related information.
+    </p>
+
+    <p>
+    Prisma is used as the Object-Relational Mapping (ORM) layer. It defines the database schema,
+    generates type-safe queries, and manages migrations between schema versions.
+    </p>
+
+    <div class="admin-grid">
+      <details class="admin-card" open>
+        <summary>Important Data Stored</summary>
+        <div class="admin-content">
+          <ul>
+            <li><strong>Users:</strong> account information, email, password hash, timezone, profile data</li>
+            <li><strong>Habits:</strong> habit name, category, frequency, visibility, active/dormant status</li>
+            <li><strong>Check-ins:</strong> completion status, date, notes, difficulty rating</li>
+            <li><strong>Friends:</strong> friend requests and accepted friend relationships</li>
+            <li><strong>Settings:</strong> user preferences such as theme and notifications</li>
+            <li><strong>Wrapped data:</strong> recap-related data or cached summaries where applicable</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Generate Prisma Client</summary>
+        <div class="admin-content">
+          <p>
+            Run this after changing the Prisma schema or after installing dependencies.
+          </p>
+
+          <div class="code">
+cd backend<br />
+npx prisma generate
+          </div>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Run Database Migrations</summary>
+        <div class="admin-content">
+          <p>
+            Migrations apply schema changes to the database.
+          </p>
+
+          <div class="code">
+cd backend<br />
+npx prisma migrate dev
+          </div>
+
+          <div class="note">
+            <p>
+              Run migrations carefully. Schema changes can affect existing data if columns are renamed,
+              removed, or changed to required fields.
+            </p>
+          </div>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Seed the Database</summary>
+        <div class="admin-content">
+          <p>
+            Seeding creates sample users, habits, check-ins, and other test data.
+          </p>
+
+          <div class="code">
+cd backend<br />
+npx prisma db seed
+          </div>
+
+          <p>
+            Use seeded data for testing login, dashboard display, calendar history, Wrapped, and friends.
+          </p>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Open Prisma Studio</summary>
+        <div class="admin-content">
+          <p>
+            Prisma Studio provides a visual interface for inspecting and editing database records.
+          </p>
+
+          <div class="code">
+cd backend<br />
+npx prisma studio
+          </div>
+
+          <div class="warning-note">
+            <p>
+              <strong>Warning:</strong> Manual edits can affect streaks, completion rates, login behavior,
+              and recap generation. Edit production data carefully.
+            </p>
+          </div>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Recommended Data Management Practices</summary>
+        <div class="admin-content">
+          <ul>
+            <li>Back up important data before major schema changes.</li>
+            <li>Use migrations rather than manually changing database structure.</li>
+            <li>Confirm seeded users are only used for testing.</li>
+            <li>Avoid editing password fields manually unless absolutely necessary.</li>
+            <li>Check user IDs and habit IDs carefully before editing related records.</li>
+            <li>Document any manual database changes for future maintainers.</li>
+          </ul>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section id="commands">
+    <h2>Command Reference</h2>
+
+    <p>
+      This section lists common commands administrators may need while installing, running,
+      testing, debugging, or maintaining Habitat.
+    </p>
+
+    <div class="admin-grid">
+      <details class="admin-card" open>
+        <summary>Project Setup Commands</summary>
+        <div class="admin-content">
+          <div class="code">
+git clone https://github.com/sanikadeshmukh3/Habitat.git<br />
+cd Habitat<br />
+./setup.sh
+          </div>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Backend Commands</summary>
+        <div class="admin-content">
+          <div class="code">
+cd backend<br />
+npm install<br />
+npm run dev<br />
+npm test
+          </div>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Mobile Commands</summary>
+        <div class="admin-content">
+          <div class="code">
+cd mobile<br />
+npm install<br />
+npx expo start
+          </div>
+
+          <p>Expo shortcuts:</p>
+          <ul>
+            <li><span class="inline-code">a</span> opens Android emulator.</li>
+            <li><span class="inline-code">i</span> opens iOS simulator.</li>
+            <li><span class="inline-code">r</span> reloads the app.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Prisma Commands</summary>
+        <div class="admin-content">
+          <div class="code">
+cd backend<br />
+npx prisma generate<br />
+npx prisma migrate dev<br />
+npx prisma db seed<br />
+npx prisma studio
+          </div>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Port Debugging Commands</summary>
+        <div class="admin-content">
+          <p>If port 3000 is already in use, find the process using it:</p>
+
+          <div class="code">
+lsof -i :3000
+          </div>
+
+          <p>Stop the process if needed:</p>
+
+          <div class="code">
+kill -9 PROCESS_ID
+          </div>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Expo Build Commands</summary>
+        <div class="admin-content">
+          <p>Build an Android preview/internal distribution:</p>
+
+          <div class="code">
+npx eas-cli@latest build --platform android --profile preview
+          </div>
+
+          <p>Build for iOS:</p>
+
+          <div class="code">
+npx eas-cli@latest build --platform ios --profile preview
+          </div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section id="maintenance">
+    <h2>Maintenance and Updates</h2>
+
+    <p>
+      Regular maintenance helps keep Habitat stable and easier to support.
+    </p>
+
+    <div class="admin-grid">
+      <details class="admin-card" open>
+        <summary>Routine Maintenance Checklist</summary>
+        <div class="admin-content">
+          <ul>
+            <li>Confirm the backend server starts successfully.</li>
+            <li>Confirm the mobile app can reach the backend.</li>
+            <li>Confirm login works with a valid test user.</li>
+            <li>Confirm habits load on the dashboard.</li>
+            <li>Confirm calendar check-ins save correctly.</li>
+            <li>Confirm Wrapped loads when enough data exists.</li>
+            <li>Check for dependency or package errors after updates.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Updating Code</summary>
+        <div class="admin-content">
+          <p>Pull the latest project changes:</p>
+
+          <div class="code">
+git pull origin main
+          </div>
+
+          <p>Reinstall dependencies if package files changed:</p>
+
+          <div class="code">
+npm install
+          </div>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Updating the Database</summary>
+        <div class="admin-content">
+          <p>After schema changes, run:</p>
+
+          <div class="code">
+cd backend<br />
+npx prisma migrate dev<br />
+npx prisma generate
+          </div>
+
+          <p>
+            If sample data is needed after a reset or new environment setup, run the seed command.
+          </p>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Restarting Services</summary>
+        <div class="admin-content">
+          <p>
+            Restart the backend after configuration, dependency, or database changes.
+            Restart Expo after changing mobile environment variables or package versions.
+          </p>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Release Maintenance</summary>
+        <div class="admin-content">
+          <ul>
+            <li>Update release notes when features or known issues change.</li>
+            <li>Verify binary download links before submission or demo.</li>
+            <li>Confirm test credentials are valid.</li>
+            <li>Confirm the hosted backend and database services are active before demonstration.</li>
+            <li>Keep user and admin manuals updated with current functionality.</li>
+          </ul>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section id="testing">
+    <h2>Testing</h2>
+
+    <p>
+      Testing helps verify that important parts of Habitat continue to work after changes.
+    </p>
+
+    <div class="admin-grid">
+      <details class="admin-card" open>
+        <summary>Run Backend Tests</summary>
+        <div class="admin-content">
+          <div class="code">
+cd backend<br />
+npm test
+          </div>
+
+          <p>
+            Tests should be run after major backend changes, authentication updates,
+            database schema changes, or AI summary updates.
+          </p>
+        </div>
+      </details>
+
+      <details class="admin-card" open>
+        <summary>Run Frontend Tests</summary>
+        <div class="admin-content">
+          <div class="code">
+cd mobile<br />
+npm test
+          </div>
+
+          <p>
+            Tests should be run after major frontend changes, navigation updates, or UI changes that may affect user flows.
+          </p>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Test Areas</summary>
+        <div class="admin-content">
+          <ul>
+            <li>User registration and login</li>
+            <li>Protected routes</li>
+            <li>Habit creation, editing, and deletion</li>
+            <li>Habit check-ins</li>
+            <li>Streak tracking</li>
+            <li>Calendar data rendering</li>
+            <li>Habit stacking</li>
+            <li>Wrapped logic</li>
+            <li>Friend requests and friend lists</li>
+            <li>AI integration for creating habits and generating summaries</li>
+            <li>Profile and badge management</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>Manual Smoke Test</summary>
+        <div class="admin-content">
+          <ol>
+            <li>Start the backend.</li>
+            <li>Start the mobile app.</li>
+            <li>Log in with a test user.</li>
+            <li>Create a habit.</li>
+            <li>Complete a check-in.</li>
+            <li>Verify the dashboard updates.</li>
+            <li>Open the calendar and confirm the check-in appears.</li>
+            <li>Open the habit detail screen and confirm progress displays.</li>
+            <li>Open Wrapped and confirm the recap screen loads.</li>
+          </ol>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section id="security">
+    <h2>Security and Access Notes</h2>
+
+    <div class="admin-grid">
+      <details class="admin-card" open>
+        <summary>Environment Secrets</summary>
+        <div class="admin-content">
+          <ul>
+            <li>Do not commit real environment files to the public repository.</li>
+            <li>Keep database credentials private.</li>
+            <li>Keep JWT secrets private.</li>
+            <li>Rotate exposed secrets immediately if accidentally shared.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="admin-card">
+        <summary>User Data</summary>
+        <div class="admin-content">
+          <ul>
+            <li>User notes and difficulty ratings should be treated as private.</li>
+            <li>Friend profiles should only show public habits.</li>
+            <li>Manual database edits should be limited to authorized maintainers.</li>
+            <li>Test data should not be confused with real user data.</li>
+          </ul>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section id="troubleshooting">
+    <h2>Troubleshooting</h2>
+
+    <div class="faq-grid">
+      <details class="faq-item">
+        <summary>Backend server will not start</summary>
+        <p>
+          Run <span class="inline-code">npm install</span>, confirm Node.js is version 18 or higher,
+          and check whether another process is already using the backend port.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Port 3000 is already in use</summary>
+        <p>
+          Run <span class="inline-code">lsof -i :3000</span> to find the process, then stop it or change the port.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Database connection fails</summary>
+        <p>
+          Confirm the database is running and that <span class="inline-code">DATABASE_URL</span>
+          points to the correct database.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Prisma client errors occur</summary>
+        <p>
+          Run <span class="inline-code">npx prisma generate</span> from the backend folder.
+          If the schema changed, also run migrations.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Migration fails</summary>
+        <p>
+          Check whether the database already contains conflicting schema changes.
+          Review the migration error message before resetting or editing the database.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Login does not work</summary>
+        <p>
+          Confirm the backend is running, the database contains the user, the password is correct,
+          and <span class="inline-code">JWT_SECRET</span> is configured.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Mobile app cannot connect to backend</summary>
+        <p>
+          Confirm <span class="inline-code">EXPO_PUBLIC_API_URL</span> is correct. For Android emulator,
+          try <span class="inline-code">http://10.0.2.2:3000</span>.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Data does not update in the app</summary>
+        <p>
+          Refresh the screen, restart the app, and confirm the backend returned the expected response.
+          Also check whether cached data needs to be invalidated or refreshed.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Wrapped does not show a full recap</summary>
+        <p>
+          Confirm the user has enough habit check-in activity for the selected week.
+          Wrapped depends on recorded habit activity, notes, and ratings.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary>AI features fail</summary>
+        <p>
+          Check whether required AI configuration is present and whether the backend route is returning an error.
+          Review backend logs for the exact failure.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Expo app opens but features fail</summary>
+        <p>
+          This usually means the mobile app is running but cannot reach the backend. Confirm the API URL and backend status.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Build link expired</summary>
+        <p>
+          Generate a new build using Expo Application Services and update the documentation link.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary>Checking Logs</summary>
+        <div class="admin-content">
+            <ul>
+            <li>Backend logs appear in the terminal running the server.</li>
+            <li>Look for API errors, authentication failures, or database errors.</li>
+            <li>Expo logs appear in the terminal running the mobile app.</li>
+            <li>Use logs to trace request failures or unexpected behavior.</li>
+            </ul>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section>
+    <a href="./index.html" class="button">← Back to Documentation Home</a>
+  </section>
+
+  <footer>
+    <p>Habitat – Admin Online Manual</p>
+  </footer>
+</body>
+</html>
