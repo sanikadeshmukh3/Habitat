@@ -67,7 +67,11 @@ jest.mock('../../services/provingWindowService', () => ({
 }));
 
 // ─── Also mock lib/prisma (used by other route files loaded via server.js) ────
-jest.mock('openai', () => jest.fn().mockImplementation(() => ({})));
+jest.mock('openai', () => {
+  const MockOpenAI = jest.fn().mockImplementation(() => ({}));
+  return { __esModule: true, default: MockOpenAI, OpenAI: MockOpenAI };
+});
+
 jest.mock('../../lib/prisma', () => ({
   habit:              { findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn(), create: jest.fn(), delete: jest.fn() },
   habitCheckIn:       { findMany: jest.fn(), findFirst: jest.fn(), upsert: jest.fn(), create: jest.fn(), update: jest.fn() },
