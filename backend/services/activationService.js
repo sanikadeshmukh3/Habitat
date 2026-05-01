@@ -47,7 +47,29 @@ const runOnCheckIn = async (userId, habitId) => {
 };
 
 // handles the user accepting an activation suggestion for the next habit in the queue
+// entryId is the NEXT (PENDING) entry the user wants to activate.
+// Before activating it, we find and complete the currently ACTIVE entry in the
+// same enrollment — this is the transition that runProvingWindowCheckForUser
+// deliberately deferred until the user explicitly consented.
 const acceptActivation = async (entryId) => {
+  const nextEntry = await prisma.stackingScheduleEntry.findUnique({
+    where: { id: entryId },
+  });
+
+  if (!nextEntry) {
+    const err = new Error('Entry not found'); err.status = 404; throw err;
+  }
+
+  // complete the currently active entry in this enrollment (if one exists)
+  const activeEntry = await prisma.stackingScheduleEntry.findFirst({
+    where: { enrollmentId: nextEntry.enrollmentId, status: 'ACTIVE' },
+  });
+
+  if (activeEntry) {
+    await completeEntry(activeEntry.id);
+  }
+
+  // now activate the next entry — sets up its proving window and marks habit active
   await activateNextHabit(entryId);
 };
 

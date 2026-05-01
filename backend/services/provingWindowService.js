@@ -139,17 +139,20 @@ const runProvingWindowCheckForUser = async (userId) => {
     enrollment.entries.map((entry) => checkProvingWindowProgress(entry.id))
   );
 
-  const readyToUnlock  = progressResults.filter((r) => r?.thresholdMet);
+  const readyToUnlock   = progressResults.filter((r) => r?.thresholdMet);
   const stillInProgress = progressResults.filter((r) => r && !r.thresholdMet);
 
-  const unlockResults = await Promise.all(
-    readyToUnlock.map((r) => completeEntry(r.entryId))
-  );
-
+  // readyToUnlock entries are flagged for the frontend to present the activation
+  // suggestion — no DB mutation happens here. The actual completeEntry + activateEntry
+  // transition only occurs when the user explicitly accepts via POST /stacking/accept.
   return {
     readyToUnlock,
     stillInProgress,
-    unlockResults,
+    unlockResults: readyToUnlock.map((r) => ({
+      scheduleComplete: false,
+      nextEntryId:      null,  // resolved by acceptActivation after user consents
+      entryId:          r.entryId,
+    })),
   };
 };
 

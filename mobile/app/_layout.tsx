@@ -1,15 +1,12 @@
-import {
-  DarkTheme,
-  DefaultTheme,
-} from "@react-navigation/native";
+import type { ThemeName } from "@/constants/theme";
+import { ThemeProvider, useTheme } from "@/constants/theme";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "react-native-reanimated";
-import { useTheme, ThemeProvider } from "@/constants/theme";
-import type { ThemeName } from "@/constants/theme";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
@@ -44,7 +41,8 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <ThemeInitializer>
           <Stack
@@ -69,5 +67,6 @@ export default function RootLayout() {
         </ThemeInitializer>
       </ThemeProvider>
     </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }
