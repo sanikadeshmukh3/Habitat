@@ -364,25 +364,34 @@ router.post('/app-open', authenticateToken, async (req, res) => {
     const results = await runOnAppOpen(userId);
 
     // if any entries hit the unlock threshold, build the activation suggestion
-    // so the dashboard can show the activation modal without an extra fetch
+    // so the dashboard can show the activation modal without an extra fetch.
+    // note: runProvingWindowCheckForUser no longer auto-completes entries —
+    // we look up the next PENDING entry ourselves so the current ACTIVE entry
+    // stays in place until the user explicitly accepts.
     let activationSuggestion = null;
-    const unlockResults = results.provingWindowResults?.unlockResults ?? [];
+    const readyToUnlock = results.provingWindowResults?.readyToUnlock ?? [];
 
-    if (unlockResults.length > 0) {
-      const firstUnlock = unlockResults[0];
+    if (readyToUnlock.length > 0) {
+      const readyEntry = readyToUnlock[0];
 
-      if (!firstUnlock.scheduleComplete && firstUnlock.nextEntryId) {
-        const nextEntry = await prisma.stackingScheduleEntry.findUnique({
-          where: { id: firstUnlock.nextEntryId },
-          include: { habit: true },
-        });
+      // find the next PENDING entry in the same enrollment
+      const activeEntry = await prisma.stackingScheduleEntry.findFirst({
+        where: { status: 'ACTIVE', habit: { userId } },
+      });
 
-        const readyEntry = results.provingWindowResults.readyToUnlock[0];
+      const nextEntry = activeEntry
+        ? await prisma.stackingScheduleEntry.findFirst({
+            where: { enrollmentId: activeEntry.enrollmentId, status: 'PENDING' },
+            orderBy: { priorityRank: 'asc' },
+            include: { habit: true },
+          })
+        : null;
 
+      if (nextEntry) {
         activationSuggestion = {
-          nextEntryId:        firstUnlock.nextEntryId,
-          nextHabitName:      nextEntry?.habit?.name ?? '',
-          completedHabitName: readyEntry?.habitName ?? '',
+          nextEntryId:        nextEntry.id,
+          nextHabitName:      nextEntry.habit.name,
+          completedHabitName: readyEntry.habitName,
         };
       }
     }

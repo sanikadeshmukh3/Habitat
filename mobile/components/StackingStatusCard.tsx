@@ -1,14 +1,14 @@
+import { FontSize, Radius, Spacing, useTheme } from '@/constants/theme';
 import api from '@/lib/api';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useTheme, FontSize, Radius, Spacing } from '@/constants/theme';
 
 const colors = {
   bg:            '#F7FAF5',
@@ -88,9 +88,6 @@ export default function StackingStatusCard({ enrollmentId, onOptOut }: Props) {
 
   return (
     <View style={styles.card}>
-
-      {/* yellow accent bar at top */}
-      <View style={styles.accentBar} />
 
       <View style={styles.content}>
 
